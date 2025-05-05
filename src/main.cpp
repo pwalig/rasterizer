@@ -12,6 +12,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#include "rast/color.hpp"
+#include <chrono>
+
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
 static SDL_Surface* surface = nullptr;
@@ -45,7 +48,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     if (event->type == SDL_EVENT_WINDOW_RESIZED) {
         SDL_DestroySurface(surface);
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
-        std::cout << "resize\n";
+        SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -53,7 +56,15 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 /* This function runs once per frame, and is the heart of the program. */
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-    std::fill_n((uint32_t*)surface->pixels, surface->w * surface->h, 0xffffffff);
+    //measure time
+    using clock = std::chrono::high_resolution_clock;
+    static auto last_frame = clock::now();
+    auto now = clock::now();
+	float dt = std::chrono::duration_cast<std::chrono::duration<float>>(now - last_frame).count();
+	last_frame = now;
+	std::cout << dt << "\r";
+
+    std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
 
     SDL_Rect rect;
     rect.x = 0;
