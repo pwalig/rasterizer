@@ -16,6 +16,7 @@
 #include "rast/color.hpp"
 #include <chrono>
 #include "rast/api.hpp"
+#include "rast/mesh.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -78,15 +79,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //};
     //rast::api::draw_triangles_directX<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(255, 255, 255, 255));
 
-    std::vector<glm::vec3> vertex_data = {
-        glm::vec3(50, 50, 0),
-        glm::vec3(50, 100, 0),
-        glm::vec3(100, 50, 0),
-        glm::vec3(250, 250, 0),
-        glm::vec3(250, 300, 0),
-        glm::vec3(300, 250, 0)
-    };
-    rast::api::draw_triangles_glm<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(255, 255, 255, 255));
+    std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 40.0f);
+
+	rast::api::draw_triangles_glm<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(255, 255, 255, 255));
 
     SDL_Rect rect;
     rect.x = 0;

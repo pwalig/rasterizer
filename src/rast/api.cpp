@@ -9,25 +9,22 @@ namespace rast::api {
 		image::size_type miny;
 		image::size_type maxx;
 		image::size_type maxy;
+
+		inline bounds(
+			image::size_type MinX, image::size_type MinY, image::size_type MaxX, image::size_type MaxY
+		) : minx(MinX), miny(MinY), maxx(MaxX), maxy(MaxY) { }
 	};
+
 	inline bounds get_triangle_bounds(
 		f x1, f y1, f x2, f y2, f x3, f y3,
 		image::size_type width, image::size_type height
 	) {
-		bounds res;
-		res.miny = std::max<image::size_type>((image::size_type)std::min(
-			{ y1, y2, y3 }
-		), 0);
-		res.minx = std::max<image::size_type>((image::size_type)std::min(
-			{ x1, x2, x3 }
-		), 0);
-		res.maxy = std::min<image::size_type>((image::size_type)std::max(
-			{ y1, y2, y3 }
-		), height);
-		res.maxx = std::min<image::size_type>((image::size_type)std::max(
-			{ x1, x2, x3 }
-		), width);
-		return res;
+		return bounds(
+			std::max<image::size_type>((image::size_type)std::min({ x1, x2, x3 }), 0),
+			std::max<image::size_type>((image::size_type)std::min({ y1, y2, y3 }), 0),
+			std::min<image::size_type>((image::size_type)std::max({ x1, x2, x3 }), width),
+			std::min<image::size_type>((image::size_type)std::max({ y1, y2, y3 }), height)
+		);
 	}
 
 	template <typename color>
@@ -102,7 +99,7 @@ namespace rast::api {
 					glm::vec3 Y = glm::vec3(y, y, y) - y123;
 					glm::vec3 X = glm::vec3(x, x, x) - x123;
 
-					glm::vec3 res = (Dx * Y) - (Dy * X);
+					glm::vec3 res = (Dy * X) - (Dx * Y);
 
 					if (res.x > 0.0f && res.y > 0.0f && res.z > 0.0f) {
 						image_view.at(x, y) = col;
