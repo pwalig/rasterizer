@@ -1,0 +1,4 @@
+[submodule "ext/SDL"]
+	path = ext/SDL
+	url = https://github.com/libsdl-org/SDL.git
+	shallow = true
