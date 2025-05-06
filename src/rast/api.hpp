@@ -1,6 +1,8 @@
 #pragma once
-#include "color.hpp"
+#include "image.hpp"
 
 namespace rast::api {
-	void draw(color::rgba8* view);
+	using data_len_t = u32;
+	template <typename color>
+	void draw_triangles(image::view<color>& image_view, const f* vertex_data, data_len_t size);
 }

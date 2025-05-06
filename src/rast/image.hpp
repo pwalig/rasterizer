@@ -15,7 +15,7 @@ namespace rast::image {
 		inline view(color* Data, size_type Width, size_type Height) :
 			data(Data), width(Width), height(Height) { }
 
-		inline color& at(size_type x, size_type y) { return d[y * width + x]; }
+		inline color& at(size_type x, size_type y) { return data[y * width + x]; }
 	};
 
 	using rgba8 = view<color::rgba8>;

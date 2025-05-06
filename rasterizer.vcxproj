@@ -140,6 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\rast\api.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\rast\color.hpp" />
