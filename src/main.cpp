@@ -7,6 +7,7 @@
  */
 #include <iostream>
 #include <algorithm>
+#include <vector>
 
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
 #include <SDL3/SDL.h>
@@ -14,6 +15,7 @@
 
 #include "rast/color.hpp"
 #include <chrono>
+#include "rast/api.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -64,7 +66,20 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 	last_frame = now;
 	std::cout << dt << "\r";
 
+    rast::image::rgba8 iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
+    std::vector<DirectX::XMFLOAT3> vertex_data = {
+        DirectX::XMFLOAT3(50, 50, 0),
+        DirectX::XMFLOAT3(50, 100, 0),
+        DirectX::XMFLOAT3(100, 50, 0),
+
+        DirectX::XMFLOAT3(250, 250, 0),
+        DirectX::XMFLOAT3(300, 250, 0),
+        DirectX::XMFLOAT3(250, 300, 0)
+    };
+
     std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
+
+    rast::api::draw_triangles<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(255, 255, 255, 255));
 
     SDL_Rect rect;
     rect.x = 0;
