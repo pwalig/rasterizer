@@ -2,6 +2,8 @@
 #include "color.hpp"
 
 namespace rast::image {
+	using size_type = unsigned short;
+
 	template <typename T>
 	class view {
 	public:

@@ -4,27 +4,43 @@
 #include <DirectXMath.h>
 
 namespace rast::api {
+	struct bounds {
+		image::size_type minx;
+		image::size_type miny;
+		image::size_type maxx;
+		image::size_type maxy;
+	};
+	inline bounds get_triangle_bounds(
+		f x1, f y1, f x2, f y2, f x3, f y3,
+		image::size_type width, image::size_type height
+	) {
+		bounds res;
+		res.miny = std::max<image::size_type>((image::size_type)std::min(
+			{ y1, y2, y3 }
+		), 0);
+		res.minx = std::max<image::size_type>((image::size_type)std::min(
+			{ x1, x2, x3 }
+		), 0);
+		res.maxy = std::min<image::size_type>((image::size_type)std::max(
+			{ y1, y2, y3 }
+		), height);
+		res.maxx = std::min<image::size_type>((image::size_type)std::max(
+			{ x1, x2, x3 }
+		), width);
+		return res;
+	}
+
 	template <typename color>
-	void draw_triangles(image::view<color>& image_view, const DirectX::XMFLOAT3* vertex_data, data_len_t size, const color& col) {
+	void draw_triangles_directX(image::view<color>& image_view, const DirectX::XMFLOAT3* vertex_data, data_len_t size, const color& col) {
 		using img_siz = typename image::view<color>::size_type;
 
 
 		for (data_len_t i = 0; i + 2 < size; i += 3) {
-			img_siz miny = std::min<img_siz>(
-				std::min<img_siz>((img_siz)vertex_data[i].y, (img_siz)vertex_data[i + 1].y),
-				std::min<img_siz>((img_siz)vertex_data[i + 2].y, 0)
-			);
-			img_siz minx = std::min<img_siz>(
-				std::min<img_siz>((img_siz)vertex_data[i].x, (img_siz)vertex_data[i + 1].x),
-				std::min<img_siz>((img_siz)vertex_data[i + 2].x, 0)
-			);
-			img_siz maxy = std::max<img_siz>(
-				std::max<img_siz>((img_siz)vertex_data[i].y, (img_siz)vertex_data[i + 1].y),
-				std::max<img_siz>((img_siz)vertex_data[i + 2].y, image_view.height)
-			);
-			img_siz maxx = std::max<img_siz>(
-				std::max<img_siz>((img_siz)vertex_data[i].x, (img_siz)vertex_data[i + 1].x),
-				std::max<img_siz>((img_siz)vertex_data[i + 2].x, image_view.width)
+			bounds br = get_triangle_bounds(
+				vertex_data[i].x, vertex_data[i].y,
+				vertex_data[i+1].x, vertex_data[i+1].y,
+				vertex_data[i+2].x, vertex_data[i+2].y,
+				image_view.width, image_view.height
 			);
 
 			DirectX::XMVECTOR x123 = DirectX::XMVectorSet(vertex_data[i].x, vertex_data[i+1].x, vertex_data[i+2].x, 0.0f);
@@ -35,8 +51,8 @@ namespace rast::api {
 			DirectX::XMVECTOR Dx = DirectX::XMVectorSubtract(x123, x231);
 			DirectX::XMVECTOR Dy = DirectX::XMVectorSubtract(y123, y231);
 
-			for (img_siz y = miny; y < maxy; ++y) {
-				for (img_siz x = minx; x < maxx; ++x) {
+			for (img_siz y = br.miny; y < br.maxy; ++y) {
+				for (img_siz x = br.minx; x < br.maxx; ++x) {
 					DirectX::XMVECTOR Y = DirectX::XMVectorReplicate(y);
 					DirectX::XMVECTOR X = DirectX::XMVectorReplicate(x);
 
@@ -56,10 +72,55 @@ namespace rast::api {
 			}
 		}
 	}
+	template<typename color>
+	void draw_triangles_glm(
+		image::view<color>& image_view,
+		const glm::vec3* vertex_data,
+		data_len_t size, const color& col
+	) {
+		using img_siz = image::size_type;
+
+		for (data_len_t i = 0; i + 2 < size; i += 3) {
+			bounds br = get_triangle_bounds(
+				vertex_data[i].x, vertex_data[i].y,
+				vertex_data[i+1].x, vertex_data[i+1].y,
+				vertex_data[i+2].x, vertex_data[i+2].y,
+				image_view.width, image_view.height
+			);
+
+			glm::vec3 x123 = glm::vec3(vertex_data[i].x, vertex_data[i+1].x, vertex_data[i+2].x);
+			glm::vec3 x231 = glm::vec3(vertex_data[i+1].x, vertex_data[i+2].x, vertex_data[i].x);
+			glm::vec3 y123 = glm::vec3(vertex_data[i].y, vertex_data[i+1].y, vertex_data[i+2].y);
+			glm::vec3 y231 = glm::vec3(vertex_data[i+1].y, vertex_data[i+2].y, vertex_data[i].y);
+
+			glm::vec3 Dx = x123 - x231;
+			glm::vec3 Dy = y123 - y231;
+
+			for (img_siz y = br.miny; y < br.maxy; ++y) {
+				for (img_siz x = br.minx; x < br.maxx; ++x) {
+
+					glm::vec3 Y = glm::vec3(y, y, y) - y123;
+					glm::vec3 X = glm::vec3(x, x, x) - x123;
+
+					glm::vec3 res = (Dx * Y) - (Dy * X);
+
+					if (res.x > 0.0f && res.y > 0.0f && res.z > 0.0f) {
+						image_view.at(x, y) = col;
+					}
+				}
+			}
+		}
+	}
 }
 
-template void rast::api::draw_triangles<rast::color::rgba8>(
+template void rast::api::draw_triangles_directX<rast::color::rgba8>(
 	image::view<rast::color::rgba8>& image_view,
 	const DirectX::XMFLOAT3* vertex_data,
+	data_len_t size, const rast::color::rgba8& col
+);
+
+template void rast::api::draw_triangles_glm<rast::color::rgba8>(
+	image::view<rast::color::rgba8>& image_view,
+	const glm::vec3* vertex_data,
 	data_len_t size, const rast::color::rgba8& col
 );
