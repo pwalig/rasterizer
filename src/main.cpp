@@ -15,7 +15,6 @@
 
 #include "rast/color.hpp"
 #include <chrono>
-#include "rast/api.hpp"
 #include "rast/mesh.hpp"
 #include "rast/renderer.hpp"
 
@@ -76,29 +75,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
     rast::image::rgba8 iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
-    glm::mat4 M = glm::mat4(1.0f);
-    //std::vector<DirectX::XMFLOAT3> vertex_data = {
-    //    DirectX::XMFLOAT3(50, 50, 0),
-    //    DirectX::XMFLOAT3(50, 100, 0),
-    //    DirectX::XMFLOAT3(100, 50, 0),
-    //    DirectX::XMFLOAT3(250, 250, 0),
-    //    DirectX::XMFLOAT3(300, 250, 0),
-    //    DirectX::XMFLOAT3(250, 300, 0)
-    //};
-    //rast::api::draw_triangles_directX<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(255, 255, 255, 255));
+    static glm::mat4 M = glm::mat4(1.0f);
 
-    M = glm::rotate(M, 1.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+    M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 0.0f, 1.0f));
     renderer.setM(M);
 
     std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 2.0f);
-    //std::vector<glm::vec3> vertex_data = {
-    //    glm::vec3(10.0f, 10.0f, 0.0f),
-    //    glm::vec3(50.0f, 10.0f, 0.0f),
-    //    glm::vec3(10.0f, 50.0f, 0.0f)
-    //};
-
-	//rast::api::draw_triangles_glm<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
-	//glm::mat4 V = glm::lookAt(glm::vec3(0.0f, -10.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     renderer.draw_triangles_glm(iv, vertex_data.data(), (rast::renderer::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
 

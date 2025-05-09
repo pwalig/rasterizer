@@ -14,7 +14,7 @@ namespace rast {
 		glm::ivec2 viewportOffset = glm::ivec2(0, 0);
 
 		glm::mat4 M = glm::mat4(1.0f);
-		glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, 30.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -30.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
 
 		glm::ivec3 toWindowSpace(const glm::vec3& vertex);

@@ -3,16 +3,7 @@
 #include <iostream>
 
 glm::ivec3 rast::renderer::toWindowSpace(const glm::vec3& vertex) {
-	//return glm::ivec3(
-	//	vertex.x * 16.0f,
-	//	vertex.y * 16.0f,
-	//	vertex.z * 16.0f
-	//);
     glm::vec4 res = P * V * M * glm::vec4(vertex, 1.0f);
-    //glm::vec4 res = V * M * glm::vec4(vertex, 1.0f);
-
-
-	//std::cout << res.x << res.y << res.z << res.w;
 
     res /= res.w;
 
@@ -54,8 +45,8 @@ void rast::renderer::draw_triangles_glm(
 			std::max((int)std::min({ a.y, b.y, c.y }), 0)
 		);
 		glm::ivec2 max = glm::ivec2(
-			std::min<int>(std::max({ a.x, b.x, c.x }), image_view.width << 4),
-			std::min<int>(std::max({ a.y, b.y, c.y }), image_view.height << 4)
+			std::min<int>(std::max({ a.x, b.x, c.x }) + 16, image_view.width << 4),
+			std::min<int>(std::max({ a.y, b.y, c.y }) + 16, image_view.height << 4)
 		);
 
 		glm::ivec3 x123 = glm::ivec3(a.x, b.x, c.x);
@@ -66,28 +57,25 @@ void rast::renderer::draw_triangles_glm(
 		glm::ivec3 Dx = x123 - x231;
 		glm::ivec3 Dy = y123 - y231;
 
-		glm::ivec3 C = (Dy * x123) - (Dx * y123) +glm::ivec3(
-			(Dy.x < 0 || (Dy.x == 0 && Dx.x > 0)) ? 1 : 0,
-			(Dy.y < 0 || (Dy.y == 0 && Dx.y > 0)) ? 1 : 0,
-			(Dy.z < 0 || (Dy.z == 0 && Dx.z > 0)) ? 1 : 0
-		);
-
-		glm::ivec3 Cy = C + (Dx * min.y) - (Dy * min.x);
-
 		max /= 16;
 		min /= 16;
+		glm::ivec3 fill_convention = glm::ivec3(
+			(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
+			(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
+			(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
+		);
+
 		for (img_siz y = min.y; y < max.y; ++y) {
-			glm::ivec3 Cx = Cy;
+			glm::ivec3 Y = glm::ivec3(y, y, y) * 16 - y123;
 
 			for (img_siz x = min.x; x < max.x; ++x) {
+				glm::ivec3 X = glm::ivec3(x, x, x) * 16 - x123;
 
-				if (Cx.x > 0 && Cx.y > 0 && Cx.z > 0) {
+				glm::ivec3 res = (Dy * X) - (Dx * Y) - fill_convention;
+				if (res.x >= 0 && res.y >= 0 && res.z >= 0) {
 					image_view.at(x, y) += col;
 				}
-
-				Cx -= Dy * 16;
 			}
-			Cy += Dx * 16;
 		}
 	}
 }
