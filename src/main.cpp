@@ -81,7 +81,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 40.0f);
 
-	rast::api::draw_triangles_glm<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(255, 255, 255, 255));
+	rast::api::draw_triangles_glm<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(128, 128, 128, 0));
 
     SDL_Rect rect;
     rect.x = 0;

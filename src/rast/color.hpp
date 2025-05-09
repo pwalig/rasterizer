@@ -1,5 +1,6 @@
 #pragma once
 #include "types.hpp"
+#include <glm/glm.hpp>
 
 namespace rast::color {
 	template <typename T>
@@ -17,7 +18,7 @@ namespace rast::color {
 	};
 
 	using rgb8 = rgb<u8>;
-	using rgba8 = rgba<u8>;
+	using rgba8 = glm::vec<4, u8>;
 
 	using rgb32f = rgb<f32>;
 	using rgba32f = rgba<f32>;

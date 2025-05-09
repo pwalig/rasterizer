@@ -85,26 +85,38 @@ namespace rast::api {
 				image_view.width, image_view.height
 			);
 
-			glm::vec3 x123 = glm::vec3(vertex_data[i].x, vertex_data[i+1].x, vertex_data[i+2].x);
-			glm::vec3 x231 = glm::vec3(vertex_data[i+1].x, vertex_data[i+2].x, vertex_data[i].x);
-			glm::vec3 y123 = glm::vec3(vertex_data[i].y, vertex_data[i+1].y, vertex_data[i+2].y);
-			glm::vec3 y231 = glm::vec3(vertex_data[i+1].y, vertex_data[i+2].y, vertex_data[i].y);
+			glm::ivec3 x123 = glm::ivec3(vertex_data[i].x * 16.0f, vertex_data[i+1].x * 16.0f, vertex_data[i+2].x * 16.0f);
+			glm::ivec3 x231 = glm::ivec3(x123.y, x123.z, x123.x);
+			glm::ivec3 y123 = glm::ivec3(vertex_data[i].y * 16.0f, vertex_data[i+1].y * 16.0f, vertex_data[i+2].y * 16.0f);
+			glm::ivec3 y231 = glm::ivec3(y123.y, y123.z, y123.x);
 
-			glm::vec3 Dx = x123 - x231;
-			glm::vec3 Dy = y123 - y231;
+			glm::ivec3 Dx = x123 - x231;
+			glm::ivec3 Dy = y123 - y231;
+
+			glm::ivec3 C = (Dy * x123) - (Dx * y123) + glm::ivec3(
+				(Dy.x < 0 || (Dy.x == 0 && Dx.x > 0)) ? 1 : 0,
+				(Dy.y < 0 || (Dy.y == 0 && Dx.y > 0)) ? 1 : 0,
+				(Dy.z < 0 || (Dy.z == 0 && Dx.z > 0)) ? 1 : 0
+			);
+
+			glm::ivec3 Cy = C + (Dx * (br.miny << 4)) - (Dy * (br.minx << 4));
 
 			for (img_siz y = br.miny; y < br.maxy; ++y) {
+				glm::ivec3 Cx = Cy;
+
 				for (img_siz x = br.minx; x < br.maxx; ++x) {
+					glm::ivec3 Y = glm::ivec3(y, y, y) * 16 - y123;
+					glm::ivec3 X = glm::ivec3(x, x, x) * 16 - x123;
 
-					glm::vec3 Y = glm::vec3(y, y, y) - y123;
-					glm::vec3 X = glm::vec3(x, x, x) - x123;
+					glm::ivec3 res = (Dy * X) - (Dx * Y);
 
-					glm::vec3 res = (Dy * X) - (Dx * Y);
-
-					if (res.x > 0.0f && res.y > 0.0f && res.z > 0.0f) {
-						image_view.at(x, y) = col;
+					if (Cx.x <= 0 && Cx.y <= 0 && Cx.z <= 0) {
+						image_view.at(x, y) += col;
 					}
+
+					Cx -= Dy * 16;
 				}
+				Cy += Dx * 16;
 			}
 		}
 	}
