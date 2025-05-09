@@ -17,10 +17,12 @@
 #include <chrono>
 #include "rast/api.hpp"
 #include "rast/mesh.hpp"
+#include "rast/renderer.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
 static SDL_Surface* surface = nullptr;
+static rast::renderer renderer;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -39,6 +41,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     }
 	surface = SDL_CreateSurface(640, 480, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
+    renderer.setViewport(0, 0, 640, 480);
+    renderer.setP(glm::perspective(glm::radians(70.0f), 640.0f / 480.0f, 0.1f, 1000.0f));
+
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
 
@@ -52,6 +57,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         SDL_DestroySurface(surface);
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
+		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
+		renderer.setP(glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f));
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -69,6 +76,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
     rast::image::rgba8 iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
+    glm::mat4 M = glm::mat4(1.0f);
     //std::vector<DirectX::XMFLOAT3> vertex_data = {
     //    DirectX::XMFLOAT3(50, 50, 0),
     //    DirectX::XMFLOAT3(50, 100, 0),
@@ -79,9 +87,20 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //};
     //rast::api::draw_triangles_directX<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(255, 255, 255, 255));
 
-    std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 40.0f);
+    M = glm::rotate(M, 1.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+    renderer.setM(M);
 
-	rast::api::draw_triangles_glm<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(128, 128, 128, 0));
+    std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 2.0f);
+    //std::vector<glm::vec3> vertex_data = {
+    //    glm::vec3(10.0f, 10.0f, 0.0f),
+    //    glm::vec3(50.0f, 10.0f, 0.0f),
+    //    glm::vec3(10.0f, 50.0f, 0.0f)
+    //};
+
+	//rast::api::draw_triangles_glm<rast::color::rgba8>(iv, vertex_data.data(), (rast::api::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
+	//glm::mat4 V = glm::lookAt(glm::vec3(0.0f, -10.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    renderer.draw_triangles_glm(iv, vertex_data.data(), (rast::renderer::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
 
     SDL_Rect rect;
     rect.x = 0;

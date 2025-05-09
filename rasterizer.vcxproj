@@ -142,12 +142,14 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\rast\mesh.cpp" />
     <ClCompile Include="src\rast\api.cpp" />
+    <ClCompile Include="src\rast\renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\rast\mesh.hpp" />
     <ClInclude Include="src\rast\color.hpp" />
     <ClInclude Include="src\rast\api.hpp" />
     <ClInclude Include="src\rast\image.hpp" />
+    <ClInclude Include="src\rast\renderer.hpp" />
     <ClInclude Include="src\rast\types.hpp" />
   </ItemGroup>
   <ItemGroup>
