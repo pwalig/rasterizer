@@ -1,5 +1,61 @@
 #include "mesh.hpp"
 
+const glm::vec3 rast::mesh::cube[36] = {
+    // top
+    glm::vec3(1.0f, 1.0f, 1.0f),
+    glm::vec3(-1.0f, 1.0f, 1.0f),
+    glm::vec3(1.0f, 1.0f, -1.0f),
+
+    glm::vec3(1.0f, 1.0f, -1.0f),
+    glm::vec3(-1.0f, 1.0f, 1.0f),
+    glm::vec3(-1.0f, 1.0f, -1.0f),
+
+    // bottom
+    glm::vec3(1.0f, -1.0f, 1.0f),
+    glm::vec3(1.0f, -1.0f, -1.0f),
+    glm::vec3(-1.0f, -1.0f, 1.0f),
+
+    glm::vec3(1.0f, -1.0f, -1.0f),
+    glm::vec3(-1.0f, -1.0f, -1.0f),
+    glm::vec3(-1.0f, -1.0f, 1.0f),
+
+    // front
+    glm::vec3(1.0f, 1.0f, 1.0f),
+    glm::vec3(1.0f, -1.0f, 1.0f),
+    glm::vec3(-1.0f, 1.0f, 1.0f),
+
+    glm::vec3(-1.0f, -1.0f, 1.0f),
+    glm::vec3(-1.0f, 1.0f, 1.0f),
+    glm::vec3(1.0f, -1.0f, 1.0f),
+
+    // back
+    glm::vec3(1.0f, 1.0f, -1.0f),
+    glm::vec3(-1.0f, 1.0f, -1.0f),
+    glm::vec3(1.0f, -1.0f, -1.0f),
+
+    glm::vec3(-1.0f, -1.0f, -1.0f),
+    glm::vec3(1.0f, -1.0f, -1.0f),
+    glm::vec3(-1.0f, 1.0f, -1.0f),
+
+    // left
+    glm::vec3(-1.0f, 1.0f, -1.0f),
+    glm::vec3(-1.0f, -1.0f, 1.0f),
+    glm::vec3(-1.0f, -1.0f, -1.0f),
+
+    glm::vec3(-1.0f, 1.0f, 1.0f),
+    glm::vec3(-1.0f, -1.0f, 1.0f),
+    glm::vec3(-1.0f, 1.0f, -1.0f),
+
+    // right
+    glm::vec3(1.0f, 1.0f, -1.0f),
+    glm::vec3(1.0f, -1.0f, -1.0f),
+    glm::vec3(1.0f, -1.0f, 1.0f),
+
+    glm::vec3(1.0f, 1.0f, 1.0f),
+    glm::vec3(1.0f, 1.0f, -1.0f),
+    glm::vec3(1.0f, -1.0f, 1.0f),
+};
+
 std::vector<glm::vec3> rast::mesh::grid(u32 x, u32 y, f siz)
 {
     std::vector<glm::vec3> res;

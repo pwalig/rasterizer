@@ -66,12 +66,13 @@ void rast::renderer::draw_triangles_glm(
 		);
 
 		for (img_siz y = min.y; y < max.y; ++y) {
-			glm::ivec3 Y = glm::ivec3(y, y, y) * 16 - y123;
+			// Dx * Y + fill_convention
+			glm::ivec3 Cy = Dx * (glm::ivec3(y * 16) - y123) + fill_convention;
 
 			for (img_siz x = min.x; x < max.x; ++x) {
-				glm::ivec3 X = glm::ivec3(x, x, x) * 16 - x123;
+				glm::ivec3 X = glm::ivec3(x * 16) - x123;
 
-				glm::ivec3 res = (Dy * X) - (Dx * Y) - fill_convention;
+				glm::ivec3 res = (Dy * X) - Cy;
 				if (res.x >= 0 && res.y >= 0 && res.z >= 0) {
 					image_view.at(x, y) += col;
 				}

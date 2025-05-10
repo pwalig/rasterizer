@@ -42,6 +42,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     renderer.setViewport(0, 0, 640, 480);
     renderer.setP(glm::perspective(glm::radians(70.0f), 640.0f / 480.0f, 0.1f, 1000.0f));
+    renderer.setV(glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -75,12 +76,13 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
     rast::image::rgba8 iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
-    static glm::mat4 M = glm::mat4(1.0f);
+    static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
-    M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+    M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
     renderer.setM(M);
 
-    std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 2.0f);
+    //std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 1.0f);
+    std::vector<glm::vec3> vertex_data(rast::mesh::cube, rast::mesh::cube + 36);
 
     renderer.draw_triangles_glm(iv, vertex_data.data(), (rast::renderer::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
 
