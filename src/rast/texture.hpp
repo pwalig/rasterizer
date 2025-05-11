@@ -1,39 +1,33 @@
 #pragma once
-#include <stb_image.h>
-
 #include "color.hpp"
+#include "image.hpp"
 
 namespace rast {
+	template <typename ColorT = color::rgba8>
 	class texture {
 	public:
-		using size_type = unsigned int;
-		using color = color::rgba8;
-		
-	private:
-		color * data;
-		size_type width;
-		size_type height;
+		using size_type = u32;
+		using color = ColorT;
 
-	public:
-		inline texture(const char* filename) : data(nullptr), width(0), height(0) {
-			int imgWidth, imgHeight, channels;
-			data = (color*)stbi_load(filename, &imgWidth, &imgHeight, &channels, STBI_rgb_alpha);
-			if (!data) throw std::runtime_error("failed to load texture image!");
-			width = imgWidth;
-			height = imgHeight;
-		}
+		class sampler {
+		private:
+			const color* data;
+			size_type width;
+			size_type height;
 
-		inline ~texture() {
-			stbi_image_free(data);
-		}
+		public:
+			inline sampler() : data(nullptr), width(0), height(0) {}
+			inline sampler(const color* Data, size_type Width, size_type Height) :
+				data(Data), width(Width), height(Height) { }
+			inline sampler(const image<color>& img) : sampler(img.data(), img.width(), img.height()) {}
 
-		inline texture(color* Data, size_type Width, size_type Height) :
-			data(Data), width(Width), height(Height) { }
+			inline color sample(glm::vec2 coords) {
+				size_type x = (size_type)(coords.x * (width - 1)) % width;
+				size_type y = (size_type)(coords.y * (height - 1)) % height;
+				return data[y * width + x];
+			}
 
-		inline color& sample(glm::vec2 coords) {
-			size_type x = (size_type)(coords.x * (width - 1));
-			size_type y = (size_type)(coords.y * (height - 1));
-			return data[y * width + x];
-		}
+			inline explicit operator bool() { return data != nullptr; }
+		};
 	};
 }

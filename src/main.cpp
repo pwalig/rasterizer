@@ -28,7 +28,8 @@ static SDL_Surface* surface = nullptr;
 static rast::renderer renderer;
 static glm::mat4 V;
 static glm::mat4 P;
-static rast::texture* tex = nullptr;
+static rast::image<rast::color::rgba8> texture;
+static rast::image<int> depth_buffer;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -60,8 +61,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 	rast::shader::vertex_colored::V = V;
 	rast::shader::textured::V = V;
 
-    tex = new rast::texture("assets/textures/uvChecker1.png");
-    rast::shader::textured::fragment::texture = tex;
+    texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
+    rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
+    depth_buffer = rast::image<int>(640, 480);
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -78,6 +80,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
 		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f);
+		depth_buffer = rast::image<int>(event->window.data1, event->window.data2);
         rast::shader::constant::P = P;
         rast::shader::vertex_colored::P = P;
         rast::shader::textured::P = P;
@@ -97,7 +100,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 	std::cout << dt << "\r";
 
     std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
-    rast::image::rgba8 iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
+    std::fill(depth_buffer.storage().begin(), depth_buffer.storage().end(), std::numeric_limits<int>::max());
+    rast::image<rast::color::rgba8>::view iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
+    rast::image<int>::view dv(depth_buffer);
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -115,7 +120,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         1, 2, 3
     };
 
-    renderer.draw_indexed<rast::image::rgba8, rast::shader::textured>(iv, index_buffer, index_buffer + 6, vertex_data.data());
+    renderer.draw_indexed<rast::shader::textured>(iv, dv, index_buffer, index_buffer + 6, vertex_data.data());
+    rast::shader::textured::M = glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f));
+    renderer.draw_indexed<rast::shader::textured>(iv, dv, index_buffer, index_buffer + 6, vertex_data.data());
 
     //rast::shader::constant::M = glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
     //renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);
@@ -143,7 +150,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 /* This function runs once at shutdown. */
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
-    delete tex;
     /* SDL will clean up the window/renderer for us. */
 	SDL_DestroySurface(surface);
 }

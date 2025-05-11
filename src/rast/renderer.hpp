@@ -22,13 +22,24 @@ namespace rast {
 			return glm::ivec3(
 				(( res.x + 1.0f ) * (float)viewportDims.x * 0.5f + (float)viewportOffset.x) * 16.0f,
 				(( -res.y + 1.0f ) * (float)viewportDims.y * 0.5f + (float)viewportOffset.y) * 16.0f,
-				res.z * 16000.0f // (-1 : 1) ==> (0 : 100000)
+				( res.z * 0.5f + 0.5f) * std::numeric_limits<int>::max()
 			);
 		}
+		
+		template <typename T>
+		inline T interpolate(const T& a, const T& b, const T& c, const glm::vec3& coefs) {
+			return (a * coefs.x) + (b * coefs.y) + (c * coefs.z);
+		}
 
-		template <typename Image, typename Shader>
+		template <typename T>
+		inline T interpolate2(T a, T b, T c, const glm::vec3& coefs) {
+			return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
+		}
+
+		template <typename Shader, typename Image, typename DepthImage>
 		void rasterize(
 			Image& image,
+			DepthImage& depthImage,
 			const typename Shader::vertex::output* vertex_begin,
 			const typename Shader::vertex::output* vertex_end
 		) {
@@ -82,15 +93,22 @@ namespace rast {
 								(float)res.x / area / vert[2].rastPos.w
 							);
 							float sum = coefs.x + coefs.y + coefs.z;
+							coefs /= sum;
 
-							image.at(x, y) += Shader::fragment::shade(
-								Shader::fragment::interpolate(
-									vertex_begin[0].data,
-									vertex_begin[1].data,
-									vertex_begin[2].data,
-									coefs / sum
-								)
-							);
+							int newDepth = interpolate2(a.z, b.z, c.z, coefs);
+							if (newDepth < depthImage.at(x, y)) {
+
+								depthImage.at(x, y) = newDepth;
+
+								image.at(x, y) = Shader::fragment::shade(
+									Shader::fragment::interpolate(
+										vertex_begin[0].data,
+										vertex_begin[1].data,
+										vertex_begin[2].data,
+										coefs
+									)
+								);
+							}
 						}
 					}
 				}
@@ -100,9 +118,10 @@ namespace rast {
 	public:
 		void setViewport(int xoffset, int yoffset, int width, int height);
 
-		template <typename Image, typename Shader>
+		template <typename Shader, typename Image, typename DepthImage>
 		void draw_array(
 			Image& image,
+			DepthImage& depthImage,
 			const typename Shader::vertex::input* vertex_begin,
 			const typename Shader::vertex::input* vertex_end
 		) {
@@ -125,17 +144,19 @@ namespace rast {
 					clipped_verts[2].rastPos.z < -clipped_verts[2].rastPos.w
 					) continue;
 
-				rasterize<Image, Shader>(
+				rasterize<Shader, Image, DepthImage>(
 					image,
+					depthImage,
 					clipped_verts,
 					clipped_verts + 3
 				);
 			}
 		}
 
-		template <typename Image, typename Shader>
+		template <typename Shader, typename Image, typename DepthImage>
 		void draw_indexed(
 			Image& image,
+			DepthImage& depthImage,
 			const u32* index_begin,
 			const u32* index_end,
 			const typename Shader::vertex::input* vertex_buffer
@@ -159,8 +180,9 @@ namespace rast {
 					clipped_verts[2].rastPos.z < -clipped_verts[2].rastPos.w
 					) continue;
 
-				rasterize<Image, Shader>(
+				rasterize<Shader, Image, DepthImage>(
 					image,
+					depthImage,
 					clipped_verts,
 					clipped_verts + 3
 				);

@@ -18,7 +18,7 @@ namespace rast::shader {
 		class fragment {
 		public:
 
-			inline static texture* texture = nullptr;
+			inline static texture<rast::color::rgba8>::sampler texture;
 
 			class input {
 			public:
@@ -26,7 +26,7 @@ namespace rast::shader {
 			};
 
 			inline static color::rgba8 shade(const input& frag) {
-				if (texture) return texture->sample(frag.uv);
+				if (texture) return texture.sample(frag.uv);
 				else return color::rgba8(255, 0, 255, 255);
 			}
 
