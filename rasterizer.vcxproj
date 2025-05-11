@@ -76,7 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -93,7 +93,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -127,7 +127,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -142,6 +142,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\rast\mesh.cpp" />
     <ClCompile Include="src\rast\renderer.cpp" />
+    <ClCompile Include="src\stb_implementation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\rast\mesh.hpp" />
@@ -149,7 +150,9 @@
     <ClInclude Include="src\rast\image.hpp" />
     <ClInclude Include="src\rast\renderer.hpp" />
     <ClInclude Include="src\rast\shader\constant.hpp" />
+    <ClInclude Include="src\rast\shader\textured.hpp" />
     <ClInclude Include="src\rast\shader\vertex_colored.hpp" />
+    <ClInclude Include="src\rast\texture.hpp" />
     <ClInclude Include="src\rast\types.hpp" />
   </ItemGroup>
   <ItemGroup>

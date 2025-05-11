@@ -1,6 +1,7 @@
 #pragma once
-#include "types.hpp"
 #include <glm/glm.hpp>
+
+#include "types.hpp"
 
 namespace rast::color {
 	using rgb8 = glm::vec<3, u8>;
