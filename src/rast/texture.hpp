@@ -31,9 +31,9 @@ namespace rast {
 			data(Data), width(Width), height(Height) { }
 
 		inline color& sample(glm::vec2 coords) {
-			size_type x = (size_type)(coords.x * width);
-			size_type y = (size_type)(coords.y * height);
-			return data[std::min(y * width + x, width * height)];
+			size_type x = (size_type)(coords.x * (width - 1));
+			size_type y = (size_type)(coords.y * (height - 1));
+			return data[y * width + x];
 		}
 	};
 }

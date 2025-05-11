@@ -16,7 +16,15 @@ namespace rast {
 		glm::ivec2 viewportDims = glm::ivec2(100, 100);
 		glm::ivec2 viewportOffset = glm::ivec2(0, 0);
 
-		glm::ivec3 toScreenSpace(const glm::vec4& vertex);
+		inline glm::ivec3 toScreenSpace(const glm::vec4& vertex) {
+			glm::vec4 res = vertex / vertex.w;
+
+			return glm::ivec3(
+				(( res.x + 1.0f ) * (float)viewportDims.x * 0.5f + (float)viewportOffset.x) * 16.0f,
+				(( -res.y + 1.0f ) * (float)viewportDims.y * 0.5f + (float)viewportOffset.y) * 16.0f,
+				res.z * 16000.0f // (-1 : 1) ==> (0 : 100000)
+			);
+		}
 
 		template <typename Image, typename Shader>
 		void rasterize(
@@ -70,16 +78,19 @@ namespace rast {
 						glm::ivec3 res = Cy - (Dy * X);
 						if (res.x >= 0 && res.y >= 0 && res.z >= 0) {
 
+							glm::vec3 coefs(
+								(float)res.y / area / vert[0].rastPos.w,
+								(float)res.z / area / vert[1].rastPos.w,
+								(float)res.x / area / vert[2].rastPos.w
+							);
+							float sum = coefs.x + coefs.y + coefs.z;
+
 							image.at(x, y) += Shader::fragment::shade(
 								Shader::fragment::interpolate(
 									vertex_begin[0].data,
 									vertex_begin[1].data,
 									vertex_begin[2].data,
-									glm::vec3(
-										(float)res.y / area,
-										(float)res.z / area,
-										(float)res.x / area
-									)
+									coefs / sum
 								)
 							);
 						}
