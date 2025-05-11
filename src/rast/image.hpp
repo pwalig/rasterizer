@@ -21,11 +21,6 @@ namespace rast {
 		inline image() : _data(), _width(0), _height(0) {}
 		inline image(size_type Width, size_type Height) : _data(Width * Height), _width(Width), _height(Height) {}
 
-		//image(const image& other) = delete;
-		//image(image&& other) = delete;
-		//image& operator[](const image& other) = delete;
-		//image& operator[](image&& other) = delete;
-
 		inline size_type width() const { return _width; }
 		inline size_type height() const { return _height; }
 		inline color* data() { return _data.data(); }

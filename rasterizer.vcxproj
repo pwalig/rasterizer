@@ -150,6 +150,7 @@
     <ClInclude Include="src\rast\image.hpp" />
     <ClInclude Include="src\rast\renderer.hpp" />
     <ClInclude Include="src\rast\shader\constant.hpp" />
+    <ClInclude Include="src\rast\shader\lambert_textured.hpp" />
     <ClInclude Include="src\rast\shader\textured.hpp" />
     <ClInclude Include="src\rast\shader\vertex_colored.hpp" />
     <ClInclude Include="src\rast\texture.hpp" />

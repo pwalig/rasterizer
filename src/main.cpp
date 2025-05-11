@@ -21,6 +21,7 @@
 #include "rast/shader/vertex_colored.hpp"
 #include "rast/shader/textured.hpp"
 #include "rast/texture.hpp"
+#include "rast/shader/lambert_textured.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -30,7 +31,7 @@ static glm::mat4 V;
 static glm::mat4 P;
 static rast::image<int> depth_buffer;
 static rast::image<rast::color::rgba8> texture;
-static std::vector<rast::shader::textured::vertex::input> vertex_data(24);
+static std::vector<rast::shader::lambert_textured::vertex::input> vertex_data(24);
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -57,16 +58,20 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 	rast::shader::constant::P = P;
 	rast::shader::vertex_colored::P = P;
 	rast::shader::textured::P = P;
+	rast::shader::lambert_textured::P = P;
 
 	rast::shader::constant::V = V;
 	rast::shader::vertex_colored::V = V;
 	rast::shader::textured::V = V;
+	rast::shader::lambert_textured::V = V;
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
     rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
+    rast::shader::lambert_textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     depth_buffer = rast::image<int>(640, 480);
-    rast::shader::textured::vertex::format(
+    rast::shader::lambert_textured::vertex::format(
         (glm::vec3*)rast::mesh::cube::vertices, (glm::vec3*)rast::mesh::cube::vertices + 24,
+        (glm::vec3*)rast::mesh::cube::normals, (glm::vec3*)rast::mesh::cube::normals + 24,
         (glm::vec2*)rast::mesh::cube::uv, (glm::vec2*)rast::mesh::cube::uv + 24,
         vertex_data.begin()
     );
@@ -90,6 +95,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         rast::shader::constant::P = P;
         rast::shader::vertex_colored::P = P;
         rast::shader::textured::P = P;
+        rast::shader::lambert_textured::P = P;
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -113,6 +119,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
     rast::shader::textured::M = M;
+    rast::shader::lambert_textured::M = M;
 
     //std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 1.0f);
   //  std::vector<rast::shader::textured::vertex::input> vertex_data = {
@@ -126,9 +133,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
   //      1, 2, 3
   //  };
 
-    renderer.draw_indexed<rast::shader::textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
-    rast::shader::textured::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
-    renderer.draw_indexed<rast::shader::textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
+    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
+    rast::shader::lambert_textured::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
+    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
 
     //rast::shader::constant::M = M;
     //renderer.draw_indexed<rast::shader::constant>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, (glm::vec3*)rast::mesh::cube::vertices);
