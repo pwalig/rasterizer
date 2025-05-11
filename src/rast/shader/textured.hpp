@@ -59,6 +59,21 @@ namespace rast::shader {
 			inline static output shade(const input& vert) {
 				return { P * V * M * glm::vec4(vert.position, 1.0f), {vert.uv} };
 			}
+
+			template <typename posIter, typename uvIter, typename outIter>
+			inline static void format(
+				posIter posBegin, posIter posEnd,
+				uvIter uvBegin, uvIter uvEnd,
+				outIter outBegin
+			) {
+				while (posBegin != posEnd && uvBegin != uvEnd) {
+					outBegin->position = *posBegin;
+					outBegin->uv = *uvBegin;
+					++posBegin;
+					++uvBegin;
+					++outBegin;
+				}
+			}
 		};
 	};
 }

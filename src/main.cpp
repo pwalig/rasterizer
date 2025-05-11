@@ -28,8 +28,9 @@ static SDL_Surface* surface = nullptr;
 static rast::renderer renderer;
 static glm::mat4 V;
 static glm::mat4 P;
-static rast::image<rast::color::rgba8> texture;
 static rast::image<int> depth_buffer;
+static rast::image<rast::color::rgba8> texture;
+static std::vector<rast::shader::textured::vertex::input> vertex_data(24);
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -49,9 +50,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 	surface = SDL_CreateSurface(640, 480, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
     renderer.setViewport(0, 0, 640, 480);
-    P = glm::perspective(glm::radians(70.0f), 640.0f / 480.0f, 0.1f, 1000.0f);
+    P = glm::perspective(glm::radians(70.0f), 640.0f / 480.0f, 0.1f, 100.0f);
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    rast::shader::constant::color = rast::color::rgba8(51, 51, 51, 0);
+    rast::shader::constant::color = rast::color::rgba8(51, 51, 51, 255);
 
 	rast::shader::constant::P = P;
 	rast::shader::vertex_colored::P = P;
@@ -64,6 +65,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
     rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     depth_buffer = rast::image<int>(640, 480);
+    rast::shader::textured::vertex::format(
+        (glm::vec3*)rast::mesh::cube::vertices, (glm::vec3*)rast::mesh::cube::vertices + 24,
+        (glm::vec2*)rast::mesh::cube::uv, (glm::vec2*)rast::mesh::cube::uv + 24,
+        vertex_data.begin()
+    );
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -79,7 +85,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
-		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f);
+		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 100.0f);
 		depth_buffer = rast::image<int>(event->window.data1, event->window.data2);
         rast::shader::constant::P = P;
         rast::shader::vertex_colored::P = P;
@@ -109,23 +115,23 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     rast::shader::textured::M = M;
 
     //std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 1.0f);
-    std::vector<rast::shader::textured::vertex::input> vertex_data = {
-        { glm::vec3(1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-		{ glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f) },
-        { glm::vec3(-1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
-        { glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec2(0.0f, 0.0f) }
-    };
-    rast::u32 index_buffer[6] = {
-        0, 2, 1,
-        1, 2, 3
-    };
+  //  std::vector<rast::shader::textured::vertex::input> vertex_data = {
+  //      { glm::vec3(1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
+		//{ glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f) },
+  //      { glm::vec3(-1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
+  //      { glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec2(0.0f, 0.0f) }
+  //  };
+  //  rast::u32 index_buffer[6] = {
+  //      0, 2, 1,
+  //      1, 2, 3
+  //  };
 
-    renderer.draw_indexed<rast::shader::textured>(iv, dv, index_buffer, index_buffer + 6, vertex_data.data());
-    rast::shader::textured::M = glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f));
-    renderer.draw_indexed<rast::shader::textured>(iv, dv, index_buffer, index_buffer + 6, vertex_data.data());
+    renderer.draw_indexed<rast::shader::textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
+    rast::shader::textured::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
+    renderer.draw_indexed<rast::shader::textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
 
-    //rast::shader::constant::M = glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
-    //renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);
+    //rast::shader::constant::M = M;
+    //renderer.draw_indexed<rast::shader::constant>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, (glm::vec3*)rast::mesh::cube::vertices);
 
     //rast::shader::constant::M = glm::translate(M, glm::vec3(0.0f, 0.0f, 3.0f));
     //renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);

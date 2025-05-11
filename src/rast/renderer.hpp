@@ -94,16 +94,21 @@ namespace rast {
 
 							// interpolation coefitients
 							glm::vec3 coefs(
-								(float)res.y / area / vert[0].rastPos.w,
-								(float)res.z / area / vert[1].rastPos.w,
-								(float)res.x / area / vert[2].rastPos.w
+								(float)res.y / area,
+								(float)res.z / area,
+								(float)res.x / area
 							);
-							float sum = coefs.x + coefs.y + coefs.z;
-							coefs /= sum;
 
 							// depth test
 							int& oldDepth = depthImage.at(x, y);
 							int newDepth = interpolate2(a.z, b.z, c.z, coefs);
+							coefs /= glm::vec3(
+								vert[0].rastPos.w,
+								vert[1].rastPos.w,
+								vert[2].rastPos.w
+							);
+							float sum = coefs.x + coefs.y + coefs.z;
+							coefs /= sum;
 							if (newDepth < oldDepth) {
 								oldDepth = newDepth;
 
