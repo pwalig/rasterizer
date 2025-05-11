@@ -36,9 +36,9 @@ namespace rast {
 
 			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
 
-				glm::ivec3 a = toScreenSpace(vert->rastPos);
-				glm::ivec3 b = toScreenSpace((vert + 1)->rastPos);
-				glm::ivec3 c = toScreenSpace((vert + 2)->rastPos);
+				glm::ivec3 a = toScreenSpace(vert[0].rastPos);
+				glm::ivec3 b = toScreenSpace(vert[1].rastPos);
+				glm::ivec3 c = toScreenSpace(vert[2].rastPos);
 
 				glm::ivec2 min = glm::ivec2(
 					std::max((int)std::min({ a.x, b.x, c.x }), 0),
@@ -51,11 +51,9 @@ namespace rast {
 
 				glm::ivec3 x012 = glm::ivec3(a.x, b.x, c.x);
 				glm::ivec3 x120 = glm::ivec3(b.x, c.x, a.x);
-				glm::ivec3 x201 = glm::ivec3(c.x, a.x, b.x);
 
 				glm::ivec3 y012 = glm::ivec3(a.y, b.y, c.y);
 				glm::ivec3 y120 = glm::ivec3(b.y, c.y, a.y);
-				glm::ivec3 y201 = glm::ivec3(c.y, c.y, c.y);
 
 				glm::ivec3 Dx = x120 - x012;
 				glm::ivec3 Dy = y120 - y012;
@@ -118,6 +116,15 @@ namespace rast {
 				clipped_verts[1] = Shader::vertex::shade(vert[1]);
 				clipped_verts[2] = Shader::vertex::shade(vert[2]);
 
+				if (
+					clipped_verts[0].rastPos.z > clipped_verts[0].rastPos.w ||
+					clipped_verts[0].rastPos.z < -clipped_verts[0].rastPos.w ||
+					clipped_verts[1].rastPos.z > clipped_verts[1].rastPos.w ||
+					clipped_verts[1].rastPos.z < -clipped_verts[1].rastPos.w ||
+					clipped_verts[2].rastPos.z > clipped_verts[2].rastPos.w ||
+					clipped_verts[2].rastPos.z < -clipped_verts[2].rastPos.w
+					) continue;
+
 				rasterize<Image, Shader>(
 					image,
 					clipped_verts,
@@ -142,6 +149,15 @@ namespace rast {
 				clipped_verts[0] = Shader::vertex::shade(vertex_buffer[i[0]]);
 				clipped_verts[1] = Shader::vertex::shade(vertex_buffer[i[1]]);
 				clipped_verts[2] = Shader::vertex::shade(vertex_buffer[i[2]]);
+
+				if (
+					clipped_verts[0].rastPos.z > clipped_verts[0].rastPos.w ||
+					clipped_verts[0].rastPos.z < -clipped_verts[0].rastPos.w ||
+					clipped_verts[1].rastPos.z > clipped_verts[1].rastPos.w ||
+					clipped_verts[1].rastPos.z < -clipped_verts[1].rastPos.w ||
+					clipped_verts[2].rastPos.z > clipped_verts[2].rastPos.w ||
+					clipped_verts[2].rastPos.z < -clipped_verts[2].rastPos.w
+					) continue;
 
 				rasterize<Image, Shader>(
 					image,

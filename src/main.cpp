@@ -101,11 +101,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    //renderer.setM(M);
     rast::shader::textured::M = M;
 
     //std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 1.0f);
-    //std::vector<glm::vec3> vertex_data(rast::mesh::cube, rast::mesh::cube + 36);
     std::vector<rast::shader::textured::vertex::input> vertex_data = {
         { glm::vec3(1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
 		{ glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f) },
@@ -117,7 +115,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         1, 2, 3
     };
 
-    //renderer.draw_triangles_glm(iv, vertex_data.data(), (rast::renderer::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
     renderer.draw_indexed<rast::image::rgba8, rast::shader::textured>(iv, index_buffer, index_buffer + 6, vertex_data.data());
 
     //rast::shader::constant::M = glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
