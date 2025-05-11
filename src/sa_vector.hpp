@@ -2,6 +2,9 @@
 #include <algorithm>
 #include "trivial_iterator.hpp"
 
+// vector which size is always equal to capacity
+// allows to omit storing capacity
+// is 8 bytes smaller than STL vector
 template <typename T>
 class sa_vector {
 public:
@@ -68,7 +71,16 @@ public:
 	inline const_reference back() const { return storage[siz-1]; }
 
 	inline bool empty() const { return siz > 0; }
-	inline void reserve(size_type newCapacity) const {
-		if (newCapacity > siz) throw std::bad_alloc("required capacity exeeds allocated size");
+	inline void resize(size_type newCapacity) {
+		pointer old = storage;
+		storage = new value_type[newCapacity];
+		if (old) {
+			std::memcpy(storage, old, std::min(newCapacity, siz));
+			delete[] old;
+		}
+		siz = newCapacity;
+	}
+	inline void reserve(size_type newCapacity) {
+		if (newCapacity > siz) resize(newCapacity);
 	}
 };

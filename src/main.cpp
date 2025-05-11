@@ -32,6 +32,7 @@ static glm::mat4 P;
 static rast::image<int> depth_buffer;
 static rast::image<rast::color::rgba8> texture;
 static std::vector<rast::shader::lambert_textured::vertex::input> vertex_data(24);
+static rast::mesh::indexed<rast::shader::lambert_textured::vertex::input> model;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -75,6 +76,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         (glm::vec2*)rast::mesh::cube::uv, (glm::vec2*)rast::mesh::cube::uv + 24,
         vertex_data.begin()
     );
+    
+    model = rast::mesh::indexed<rast::shader::lambert_textured::vertex::input>("assets/models/icosphere.mesh");
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -133,9 +136,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
   //      1, 2, 3
   //  };
 
-    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
+    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
     rast::shader::lambert_textured::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
-    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, vertex_data.data());
+    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
 
     //rast::shader::constant::M = M;
     //renderer.draw_indexed<rast::shader::constant>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, (glm::vec3*)rast::mesh::cube::vertices);
