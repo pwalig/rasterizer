@@ -60,7 +60,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 	rast::shader::vertex_colored::V = V;
 	rast::shader::textured::V = V;
 
-    tex = new rast::texture("uvChecker1.png");
+    tex = new rast::texture("assets/textures/uvChecker1.png");
     rast::shader::textured::fragment::texture = tex;
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
@@ -108,16 +108,17 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //std::vector<glm::vec3> vertex_data(rast::mesh::cube, rast::mesh::cube + 36);
     std::vector<rast::shader::textured::vertex::input> vertex_data = {
         { glm::vec3(1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-		{ glm::vec3(-1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
-		{ glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f) },
-
 		{ glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f) },
         { glm::vec3(-1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
         { glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec2(0.0f, 0.0f) }
     };
+    rast::u32 index_buffer[6] = {
+        0, 2, 1,
+        1, 2, 3
+    };
 
     //renderer.draw_triangles_glm(iv, vertex_data.data(), (rast::renderer::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
-    renderer.draw_array<rast::image::rgba8, rast::shader::textured>(iv, vertex_data.data(), vertex_data.data() + 6);
+    renderer.draw_indexed<rast::image::rgba8, rast::shader::textured>(iv, index_buffer, index_buffer + 6, vertex_data.data());
 
     //rast::shader::constant::M = glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
     //renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);

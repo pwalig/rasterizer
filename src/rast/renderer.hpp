@@ -114,9 +114,9 @@ namespace rast {
 			for (const input_vertex* vert = vertex_begin; vert < vertex_end; vert += 3) {
 				output_vertex clipped_verts[3];
 
-				clipped_verts[0] = Shader::vertex::shade(*vert);
-				clipped_verts[1] = Shader::vertex::shade(*(vert + 1));
-				clipped_verts[2] = Shader::vertex::shade(*(vert + 2));
+				clipped_verts[0] = Shader::vertex::shade(vert[0]);
+				clipped_verts[1] = Shader::vertex::shade(vert[1]);
+				clipped_verts[2] = Shader::vertex::shade(vert[2]);
 
 				rasterize<Image, Shader>(
 					image,
@@ -126,5 +126,29 @@ namespace rast {
 			}
 		}
 
+		template <typename Image, typename Shader>
+		void draw_indexed(
+			Image& image,
+			const u32* index_begin,
+			const u32* index_end,
+			const typename Shader::vertex::input* vertex_buffer
+		) {
+			using input_vertex = typename Shader::vertex::input;
+			using output_vertex = typename Shader::vertex::output;
+
+			for (const u32* i = index_begin; i < index_end; i += 3) {
+				output_vertex clipped_verts[3];
+
+				clipped_verts[0] = Shader::vertex::shade(vertex_buffer[i[0]]);
+				clipped_verts[1] = Shader::vertex::shade(vertex_buffer[i[1]]);
+				clipped_verts[2] = Shader::vertex::shade(vertex_buffer[i[2]]);
+
+				rasterize<Image, Shader>(
+					image,
+					clipped_verts,
+					clipped_verts + 3
+				);
+			}
+		}
 	};
 }
