@@ -47,11 +47,7 @@ namespace rast::shader {
 				glm::vec4 color;
 			};
 
-			class output {
-			public:
-				glm::vec4 rastPos;
-				fragment::input data;
-			};
+			using output = vertex_shader_output<vertex_colored>;
 
 			inline static output shade(const input& vert) {
 				return { P * V * M * glm::vec4(vert.position, 1.0f), {vert.color} };

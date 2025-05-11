@@ -50,11 +50,7 @@ namespace rast::shader {
 				glm::vec2 uv;
 			};
 
-			class output {
-			public:
-				glm::vec4 rastPos;
-				fragment::input data;
-			};
+			using output = vertex_shader_output<textured>;
 
 			inline static output shade(const input& vert) {
 				return { P * V * M * glm::vec4(vert.position, 1.0f), {vert.uv} };

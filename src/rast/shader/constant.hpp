@@ -37,11 +37,7 @@ namespace rast::shader {
 		public:
 			using input = glm::vec3;
 
-			class output {
-			public:
-				glm::vec4 rastPos;
-				fragment::input data;
-			};
+			using output = vertex_shader_output<constant>;
 
 			inline static output shade(const input& vert) {
 				return { P * V * M * glm::vec4(vert, 1.0f), {} };
