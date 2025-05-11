@@ -30,7 +30,7 @@ static SDL_Surface* surface = nullptr;
 static rast::renderer renderer;
 static glm::mat4 V;
 static glm::mat4 P;
-static rast::image<int> depth_buffer;
+static rast::image<rast::u32> depth_buffer;
 static rast::image<rast::color::rgba8> texture;
 static std::vector<rast::shader::lambert_textured::vertex::input> vertex_data(24);
 static rast::mesh::indexed<rast::shader::lambert_textured::vertex::input> model;
@@ -70,7 +70,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
     rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     rast::shader::lambert_textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
-    depth_buffer = rast::image<int>(640, 480);
+    depth_buffer = rast::image<rast::u32>(640, 480);
     rast::shader::lambert_textured::vertex::format(
         (glm::vec3*)rast::mesh::cube::vertices, (glm::vec3*)rast::mesh::cube::vertices + 24,
         (glm::vec3*)rast::mesh::cube::normals, (glm::vec3*)rast::mesh::cube::normals + 24,
@@ -95,7 +95,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
 		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 100.0f);
-		depth_buffer = rast::image<int>(event->window.data1, event->window.data2);
+		depth_buffer = rast::image<rast::u32>(event->window.data1, event->window.data2);
         rast::shader::constant::P = P;
         rast::shader::vertex_colored::P = P;
         rast::shader::textured::P = P;
@@ -115,10 +115,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 	last_frame = now;
 	std::cout << dt << "\r";
 
-    std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
-    std::fill(depth_buffer.storage().begin(), depth_buffer.storage().end(), std::numeric_limits<int>::max());
     rast::image<rast::color::rgba8>::view iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
-    rast::image<int>::view dv(depth_buffer);
+    rast::image<rast::u32>::view dv(depth_buffer);
+    rast::framebuffer::rgba8_depth framebuf(iv, dv);
+    std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
+    framebuf.clear_depth_buffer();
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -137,7 +138,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
   //      1, 2, 3
   //  };
 
-    rast::framebuffer::rgba8_depth framebuf(iv, dv);
 
     renderer.draw_indexed<rast::shader::lambert_textured>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
     rast::shader::lambert_textured::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
