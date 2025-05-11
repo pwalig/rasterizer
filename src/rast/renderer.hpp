@@ -28,7 +28,12 @@ namespace rast {
 		
 		template <typename T>
 		inline T interpolate(const T& a, const T& b, const T& c, const glm::vec3& coefs) {
-			return (a * coefs.x) + (b * coefs.y) + (c * coefs.z);
+			return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
+		}
+
+		template <typename T>
+		inline T interpolate(const glm::vec<3, T>& values, const glm::vec3& coefs) {
+			return (T)(values.x * coefs.x) + (T)(values.y * coefs.y) + (T)(values.z * coefs.z);
 		}
 
 		template <typename T>
@@ -87,6 +92,7 @@ namespace rast {
 						glm::ivec3 res = Cy - (Dy * X);
 						if (res.x >= 0 && res.y >= 0 && res.z >= 0) {
 
+							// interpolation coefitients
 							glm::vec3 coefs(
 								(float)res.y / area / vert[0].rastPos.w,
 								(float)res.z / area / vert[1].rastPos.w,
@@ -95,11 +101,13 @@ namespace rast {
 							float sum = coefs.x + coefs.y + coefs.z;
 							coefs /= sum;
 
+							// depth test
+							int& oldDepth = depthImage.at(x, y);
 							int newDepth = interpolate2(a.z, b.z, c.z, coefs);
-							if (newDepth < depthImage.at(x, y)) {
+							if (newDepth < oldDepth) {
+								oldDepth = newDepth;
 
-								depthImage.at(x, y) = newDepth;
-
+								// output color
 								image.at(x, y) = Shader::fragment::shade(
 									Shader::fragment::interpolate(
 										vertex_begin[0].data,
