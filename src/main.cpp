@@ -16,12 +16,13 @@
 
 #include "rast/color.hpp"
 #include "rast/mesh.hpp"
-#include "rast/renderer.hpp"
 #include "rast/shader/constant.hpp"
 #include "rast/shader/vertex_colored.hpp"
 #include "rast/shader/textured.hpp"
 #include "rast/texture.hpp"
 #include "rast/shader/lambert_textured.hpp"
+#include "rast/framebuffer.hpp"
+#include "rast/renderer.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -136,9 +137,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
   //      1, 2, 3
   //  };
 
-    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    rast::framebuffer::rgba8_depth framebuf(iv, dv);
+
+    renderer.draw_indexed<rast::shader::lambert_textured>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
     rast::shader::lambert_textured::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
-    renderer.draw_indexed<rast::shader::lambert_textured>(iv, dv, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    renderer.draw_indexed<rast::shader::lambert_textured>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
 
     //rast::shader::constant::M = M;
     //renderer.draw_indexed<rast::shader::constant>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, (glm::vec3*)rast::mesh::cube::vertices);

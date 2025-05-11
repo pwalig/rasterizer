@@ -1,4 +1,6 @@
 #pragma once
+#include <stdexcept>
+
 #include <stb_image.h>
 
 #include "../sa_vector.hpp"

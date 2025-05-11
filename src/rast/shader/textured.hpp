@@ -7,6 +7,7 @@
 
 #include "../color.hpp"
 #include "../texture.hpp"
+#include "vertex_shader_output.hpp"
 
 namespace rast::shader {
 	class textured {

@@ -6,6 +6,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 
 #include "../color.hpp"
+#include "vertex_shader_output.hpp"
 
 namespace rast::shader {
 	class vertex_colored {
