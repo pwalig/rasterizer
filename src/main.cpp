@@ -17,6 +17,7 @@
 #include <chrono>
 #include "rast/mesh.hpp"
 #include "rast/renderer.hpp"
+#include "rast/shader/constant.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -41,8 +42,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 	surface = SDL_CreateSurface(640, 480, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
     renderer.setViewport(0, 0, 640, 480);
-    renderer.setP(glm::perspective(glm::radians(70.0f), 640.0f / 480.0f, 0.1f, 1000.0f));
-    renderer.setV(glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
+    rast::shader::constant::P = glm::perspective(glm::radians(70.0f), 640.0f / 480.0f, 0.1f, 1000.0f);
+    rast::shader::constant::V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    rast::shader::constant::color = rast::color::rgba8(51, 51, 51, 0);
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -58,7 +60,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
-		renderer.setP(glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f));
+		rast::shader::constant::P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f);
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -79,12 +81,14 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    renderer.setM(M);
+    //renderer.setM(M);
+    rast::shader::constant::M = M;
 
     //std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 1.0f);
-    std::vector<glm::vec3> vertex_data(rast::mesh::cube, rast::mesh::cube + 36);
+    //std::vector<glm::vec3> vertex_data(rast::mesh::cube, rast::mesh::cube + 36);
 
-    renderer.draw_triangles_glm(iv, vertex_data.data(), (rast::renderer::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
+    //renderer.draw_triangles_glm(iv, vertex_data.data(), (rast::renderer::data_len_t)vertex_data.size(), rast::color::rgba8(51, 51, 51, 0));
+    renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);
 
     SDL_Rect rect;
     rect.x = 0;
