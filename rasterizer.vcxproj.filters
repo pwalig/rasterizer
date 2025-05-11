@@ -44,5 +44,8 @@
     <ClInclude Include="src\rast\shader\constant.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\shader\vertex_colored.hpp">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

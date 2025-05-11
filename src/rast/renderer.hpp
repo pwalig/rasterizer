@@ -35,38 +35,53 @@ namespace rast {
 				glm::ivec2 min = glm::ivec2(
 					std::max((int)std::min({ a.x, b.x, c.x }), 0),
 					std::max((int)std::min({ a.y, b.y, c.y }), 0)
-				);
+				) / 16;
 				glm::ivec2 max = glm::ivec2(
 					std::min<int>(std::max({ a.x, b.x, c.x }) + 16, image.width << 4),
 					std::min<int>(std::max({ a.y, b.y, c.y }) + 16, image.height << 4)
-				);
+				) / 16;
 
-				glm::ivec3 x123 = glm::ivec3(a.x, b.x, c.x);
-				glm::ivec3 x231 = glm::ivec3(x123.y, x123.z, x123.x);
-				glm::ivec3 y123 = glm::ivec3(a.y, b.y, c.y);
-				glm::ivec3 y231 = glm::ivec3(y123.y, y123.z, y123.x);
+				glm::ivec3 x012 = glm::ivec3(a.x, b.x, c.x);
+				glm::ivec3 x120 = glm::ivec3(b.x, c.x, a.x);
+				glm::ivec3 x201 = glm::ivec3(c.x, a.x, b.x);
 
-				glm::ivec3 Dx = x123 - x231;
-				glm::ivec3 Dy = y123 - y231;
+				glm::ivec3 y012 = glm::ivec3(a.y, b.y, c.y);
+				glm::ivec3 y120 = glm::ivec3(b.y, c.y, a.y);
+				glm::ivec3 y201 = glm::ivec3(c.y, c.y, c.y);
 
-				max /= 16;
-				min /= 16;
+				glm::ivec3 Dx = x120 - x012;
+				glm::ivec3 Dy = y120 - y012;
+
 				glm::ivec3 fill_convention = glm::ivec3(
 					(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
 					(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
 					(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
 				);
 
+				int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
+
 				for (int y = min.y; y < max.y; ++y) {
-					// Dx * Y + fill_convention
-					glm::ivec3 Cy = Dx * (glm::ivec3(y * 16) - y123) + fill_convention;
+					// Dx * Y - fill_convention
+					glm::ivec3 Cy = Dx * (glm::ivec3(y << 4) - y012) - fill_convention;
 
 					for (int x = min.x; x < max.x; ++x) {
-						glm::ivec3 X = glm::ivec3(x * 16) - x123;
+						glm::ivec3 X = glm::ivec3(x << 4) - x012;
 
-						glm::ivec3 res = (Dy * X) - Cy;
+						glm::ivec3 res = Cy - (Dy * X);
 						if (res.x >= 0 && res.y >= 0 && res.z >= 0) {
-							image.at(x, y) += Shader::fragment::shade(vertex_begin->data);
+
+							image.at(x, y) += Shader::fragment::shade(
+								Shader::fragment::interpolate(
+									vertex_begin[0].data,
+									vertex_begin[1].data,
+									vertex_begin[2].data,
+									glm::vec3(
+										(float)res.y / area,
+										(float)res.z / area,
+										(float)res.x / area
+									)
+								)
+							);
 						}
 					}
 				}
