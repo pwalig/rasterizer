@@ -125,21 +125,21 @@ namespace rast {
 			viewportOffset = glm::ivec2(xoffset << 4, yoffset << 4);
 		}
 
-		template <typename Shader, typename Framebuffer>
+		template <typename Shader, typename Framebuffer, typename VertIter>
 		void draw_array(
 			Framebuffer& framebuffer,
-			const typename Shader::vertex::input* vertex_begin,
-			const typename Shader::vertex::input* vertex_end
+			VertIter vertex_begin,
+			VertIter vertex_end
 		) {
 			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
 
-			for (const input_vertex* vert = vertex_begin; vert < vertex_end; vert += 3) {
+			for (auto vert = vertex_begin; vert != vertex_end;) {
 				output_vertex verts[3];
 
-				verts[0] = Shader::vertex::shade(vert[0]);
-				verts[1] = Shader::vertex::shade(vert[1]);
-				verts[2] = Shader::vertex::shade(vert[2]);
+				verts[0] = Shader::vertex::shade(*(vert++));
+				verts[1] = Shader::vertex::shade(*(vert++));
+				verts[2] = Shader::vertex::shade(*(vert++));
 
 				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
@@ -148,28 +148,60 @@ namespace rast {
 			}
 		}
 
-		template <typename Shader, typename Framebuffer>
+		template <typename Shader, typename Framebuffer, typename VertexBuffer>
+		void draw_array(
+			Framebuffer& framebuffer,
+			const VertexBuffer& vertex_buffer
+		) {
+			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end());
+		}
+
+		template <typename Shader, typename Framebuffer, typename IndexIter, typename VertIter>
 		void draw_indexed(
 			Framebuffer& framebuffer,
-			const u32* index_begin,
-			const u32* index_end,
-			const typename Shader::vertex::input* vertex_buffer
+			IndexIter index_begin,
+			IndexIter index_end,
+			VertIter vertex_begin,
+			VertIter vertex_end
 		) {
 			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
 
-			for (const u32* i = index_begin; i < index_end; i += 3) {
+			std::vector<output_vertex> vertex_buffer;
+			vertex_buffer.reserve(vertex_end - vertex_begin);
+			for (auto vert = vertex_begin; vert != vertex_end; ++vert) {
+				vertex_buffer.push_back(Shader::vertex::shade(*vert));
+			}
+
+			for (auto i = index_begin; i != index_end;) {
 				output_vertex verts[3];
 
-				verts[0] = Shader::vertex::shade(vertex_buffer[i[0]]);
-				verts[1] = Shader::vertex::shade(vertex_buffer[i[1]]);
-				verts[2] = Shader::vertex::shade(vertex_buffer[i[2]]);
+				verts[0] = vertex_buffer[*(i++)];
+				verts[1] = vertex_buffer[*(i++)];
+				verts[2] = vertex_buffer[*(i++)];
 
 				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
 					verts
 				);
 			}
+		}
+
+		template <typename Shader, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
+		void draw_indexed(
+			Framebuffer& framebuffer,
+			const IndexBuffer& index_buffer,
+			const VertexBuffer& vertex_buffer
+		) {
+			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end());
+		}
+
+		template <typename Shader, typename Framebuffer, typename VertexT>
+		void draw_indexed(
+			Framebuffer& framebuffer,
+			const mesh::indexed<VertexT>& mesh
+		) {
+			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end());
 		}
 
 		template <typename Shader, typename ImageView>

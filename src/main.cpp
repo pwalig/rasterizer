@@ -35,12 +35,15 @@ static rast::image<rast::u32> depth_buffer;
 using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
 static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
-static std::vector<rast::shader::lambert_textured::vertex::input> vertex_data(24);
-static rast::mesh::indexed<rast::shader::deferred::first_pass::vertex::input> model;
+static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> icosphere;
+static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
+    int width = 640;
+    int height = 480;
+
     SDL_SetAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -48,15 +51,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
-    window = SDL_CreateWindow("rasterizer", 640, 480, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow("rasterizer", width, height, SDL_WINDOW_RESIZABLE);
 	if (!window) {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-	surface = SDL_CreateSurface(640, 480, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
+	surface = SDL_CreateSurface(width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
-    renderer.setViewport(0, 0, 640, 480);
-    P = glm::perspective(glm::radians(70.0f), 640.0f / 480.0f, 0.1f, 100.0f);
+    renderer.setViewport(0, 0, width, height);
+    P = glm::perspective(glm::radians(70.0f), (float)width / height, 0.1f, 100.0f);
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     rast::shader::constant::color = rast::color::rgba8(51, 51, 51, 255);
 
@@ -74,17 +77,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     rast::shader::lambert_textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     rast::shader::deferred::first_pass::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
-    depth_buffer = rast::image<rast::u32>(640, 480);
-    g_buffer = GBuffer(640, 480);
+    depth_buffer = rast::image<rast::u32>(width, height);
+    g_buffer = GBuffer(width, height);
     rast::shader::deferred::second_pass::fragment::texture = rast::texture<GBuffer::color>::sampler(g_buffer);
-    rast::shader::lambert_textured::vertex::format(
-        (glm::vec3*)rast::mesh::cube::vertices, (glm::vec3*)rast::mesh::cube::vertices + 24,
-        (glm::vec3*)rast::mesh::cube::normals, (glm::vec3*)rast::mesh::cube::normals + 24,
-        (glm::vec2*)rast::mesh::cube::uv, (glm::vec2*)rast::mesh::cube::uv + 24,
-        vertex_data.begin()
-    );
     
-    model = rast::mesh::indexed<rast::shader::deferred::first_pass::vertex::input>("assets/models/icosphere.mesh");
+    icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/icosphere.mesh");
+    plane = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/plane.mesh");
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -140,47 +138,30 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    //std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 1.0f);
-  //  std::vector<rast::shader::textured::vertex::input> vertex_data = {
-  //      { glm::vec3(1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-		//{ glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f) },
-  //      { glm::vec3(-1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
-  //      { glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec2(0.0f, 0.0f) }
-  //  };
-  //  rast::u32 index_buffer[6] = {
-  //      0, 2, 1,
-  //      1, 2, 3
-  //  };
-
-
     // render
     using shader = rast::shader::lambert_textured;
     shader::M = M;
-    renderer.draw_indexed<shader>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), (shader::vertex::input*)model.vertex_buffer.data());
+    renderer.draw_indexed<shader>(framebuf, icosphere);
     shader::M = glm::translate(M, glm::vec3(0.0f, 0.0f, 2.0f));
-    renderer.draw_indexed<shader>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), (shader::vertex::input*)model.vertex_buffer.data());
+    renderer.draw_indexed<shader>(framebuf, icosphere);
     shader::M = glm::translate(M, glm::vec3(2.0f, 0.0f, 0.0f));
-    renderer.draw_indexed<shader>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), (shader::vertex::input*)model.vertex_buffer.data());
+    renderer.draw_indexed<shader>(framebuf, icosphere);
     shader::M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 0.0f));
-    renderer.draw_indexed<shader>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), (shader::vertex::input*)model.vertex_buffer.data());
+    renderer.draw_indexed<shader>(framebuf, icosphere);
     shader::M = glm::translate(M, glm::vec3(0.0f, 0.0f, -2.0f));
-    renderer.draw_indexed<shader>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), (shader::vertex::input*)model.vertex_buffer.data());
+    renderer.draw_indexed<shader>(framebuf, icosphere);
     shader::M = glm::translate(M, glm::vec3(2.0f, 0.0f, 2.0f));
-    renderer.draw_indexed<shader>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), (shader::vertex::input*)model.vertex_buffer.data());
+    renderer.draw_indexed<shader>(framebuf, icosphere);
+    shader::M = glm::translate(M, glm::vec3(-2.0f, 0.0f, -2.0f));
+    renderer.draw_indexed<shader>(framebuf, icosphere);
+    shader::M = glm::translate(M, glm::vec3(2.0f, 0.0f, -2.0f));
+    renderer.draw_indexed<shader>(framebuf, icosphere);
+    shader::M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 2.0f));
+    renderer.draw_indexed<shader>(framebuf, icosphere);
+    shader::M = glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
+    renderer.draw_indexed<shader>(framebuf, plane);
 
     //renderer.draw_screen_quad<rast::shader::deferred::second_pass>(iv);
-
-    //rast::shader::constant::M = M;
-    //renderer.draw_indexed<rast::shader::constant>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, (glm::vec3*)rast::mesh::cube::vertices);
-
-    //rast::shader::constant::M = glm::translate(M, glm::vec3(0.0f, 0.0f, 3.0f));
-    //renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);
-
-    //rast::shader::constant::M = glm::translate(M, glm::vec3(-3.0f, 0.0f, 0.0f));
-    //renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);
-
-    //rast::shader::constant::M = glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
-    //renderer.draw_array<rast::image::rgba8, rast::shader::constant>(iv, rast::mesh::cube, rast::mesh::cube + 36);
 
     SDL_Rect rect;
     rect.x = 0;
