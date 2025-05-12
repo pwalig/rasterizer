@@ -130,6 +130,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //rast::framebuffer::color_depth<GBuffer::color, rast::u32> framebuf(gv, depth_buffer);
     rast::framebuffer::color_depth<rast::color::rgba8, rast::u32> framebuf(iv, depth_buffer);
     framebuf.clear_depth_buffer();
+    //rast::framebuffer::rgba8 noDepthFramebuffer(iv);
     //framebuf.clear_color({glm::vec3(0.0f), glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
     iv.clear(rast::color::rgba8(0, 0, 0, 255));
 

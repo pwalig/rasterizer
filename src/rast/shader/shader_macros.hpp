@@ -13,6 +13,12 @@ namespace rast::shader {
 	public:
 		glm::vec4 rastPos;
 		typename Shader::fragment::input data;
+		friend inline vertex_shader_output operator* (const vertex_shader_output& rhs, float lhs) {
+			return { rhs.rastPos * lhs, rhs.data * lhs };
+		}
+		friend inline vertex_shader_output operator+ (const vertex_shader_output& rhs, const vertex_shader_output& lhs) {
+			return { rhs.rastPos + lhs.rastPos, rhs.data + lhs.data };
+		}
 	};
 
 	namespace inputs {
@@ -25,22 +31,46 @@ namespace rast::shader {
 		public:
 			position position;
 			normal normal;
+			friend inline position_normal operator* (const position_normal& rhs, float lhs) {
+				return { rhs.position * lhs, rhs.normal * lhs };
+			}
+			friend inline position_normal operator+ (const position_normal& rhs, const position_normal& lhs) {
+				return { rhs.position + lhs.position, rhs.normal + lhs.normal };
+			}
 		};
 		class position_uv {
 		public:
 			position position;
 			uv uv;
+			friend inline position_uv operator* (const position_uv& rhs, float lhs) {
+				return { rhs.position * lhs, rhs.uv * lhs };
+			}
+			friend inline position_uv operator+ (const position_uv& rhs, const position_uv& lhs) {
+				return { rhs.position + lhs.position, rhs.uv + lhs.uv };
+			}
 		};
 		class position_normal_uv {
 		public:
 			position position;
 			normal normal;
 			uv uv;
+			friend inline position_normal_uv operator* (const position_normal_uv& rhs, float lhs) {
+				return { rhs.position * lhs, rhs.normal * lhs };
+			}
+			friend inline position_normal_uv operator+ (const position_normal_uv& rhs, const position_normal_uv& lhs) {
+				return { rhs.position + lhs.position, rhs.normal + lhs.normal, rhs.uv + lhs.uv };
+			}
 		};
 		class normal_uv {
 		public:
 			normal normal;
 			uv uv;
+			friend inline normal_uv operator* (const normal_uv& rhs, float lhs) {
+				return { rhs.normal * lhs, rhs.uv * lhs };
+			}
+			friend inline normal_uv operator+ (const normal_uv& rhs, const normal_uv& lhs) {
+				return { rhs.normal + lhs.normal, rhs.uv + lhs.uv };
+			}
 		};
 	}
 }
