@@ -14,4 +14,28 @@ namespace rast::shader {
 		glm::vec4 rastPos;
 		typename Shader::fragment::input data;
 	};
+
+	namespace inputs {
+		using position = glm::vec3;
+		using normal = glm::vec3;
+		using uv = glm::vec2;
+		using tangent = glm::vec3;
+		using bitangent = glm::vec3;
+		class position_normal {
+		public:
+			position position;
+			normal normal;
+		};
+		class position_uv {
+		public:
+			position position;
+			uv uv;
+		};
+		class position_normal_uv {
+		public:
+			position position;
+			normal normal;
+			uv uv;
+		};
+	}
 }

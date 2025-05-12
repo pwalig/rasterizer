@@ -184,6 +184,16 @@ const rast::f32 rast::mesh::cube::uv[48] = {
     1.0f, 1.0f,
 };
 
+const float rast::mesh::screen_quad::vertex_array[30] = {
+    -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+    -1.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+    1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+
+    -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+    1.0f, -1.0f, 0.0f, 1.0f, 1.0f
+};
+
 std::vector<glm::vec3> rast::mesh::grid(u32 x, u32 y, f siz)
 {
     std::vector<glm::vec3> res;

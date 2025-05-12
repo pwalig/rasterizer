@@ -68,5 +68,8 @@
     <ClInclude Include="src\rast\framebuffer.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\shader\deferred.hpp">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

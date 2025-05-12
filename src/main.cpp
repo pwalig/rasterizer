@@ -21,6 +21,7 @@
 #include "rast/shader/textured.hpp"
 #include "rast/texture.hpp"
 #include "rast/shader/lambert_textured.hpp"
+#include "rast/shader/deferred.hpp"
 #include "rast/framebuffer.hpp"
 #include "rast/renderer.hpp"
 
@@ -31,9 +32,11 @@ static rast::renderer renderer;
 static glm::mat4 V;
 static glm::mat4 P;
 static rast::image<rast::u32> depth_buffer;
+using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
+static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
 static std::vector<rast::shader::lambert_textured::vertex::input> vertex_data(24);
-static rast::mesh::indexed<rast::shader::lambert_textured::vertex::input> model;
+static rast::mesh::indexed<rast::shader::deferred::first_pass::vertex::input> model;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -59,18 +62,21 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 	rast::shader::constant::P = P;
 	rast::shader::vertex_colored::P = P;
-	rast::shader::textured::P = P;
+	rast::shader::deferred::first_pass::P = P;
 	rast::shader::lambert_textured::P = P;
 
 	rast::shader::constant::V = V;
 	rast::shader::vertex_colored::V = V;
-	rast::shader::textured::V = V;
+	rast::shader::deferred::first_pass::V = V;
 	rast::shader::lambert_textured::V = V;
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
     rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     rast::shader::lambert_textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
+    rast::shader::deferred::first_pass::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     depth_buffer = rast::image<rast::u32>(640, 480);
+    g_buffer = GBuffer(640, 480);
+    rast::shader::deferred::second_pass::fragment::texture = rast::texture<GBuffer::color>::sampler(g_buffer);
     rast::shader::lambert_textured::vertex::format(
         (glm::vec3*)rast::mesh::cube::vertices, (glm::vec3*)rast::mesh::cube::vertices + 24,
         (glm::vec3*)rast::mesh::cube::normals, (glm::vec3*)rast::mesh::cube::normals + 24,
@@ -78,7 +84,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         vertex_data.begin()
     );
     
-    model = rast::mesh::indexed<rast::shader::lambert_textured::vertex::input>("assets/models/icosphere.mesh");
+    model = rast::mesh::indexed<rast::shader::deferred::first_pass::vertex::input>("assets/models/icosphere.mesh");
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -96,9 +102,11 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
 		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 100.0f);
 		depth_buffer = rast::image<rast::u32>(event->window.data1, event->window.data2);
+        g_buffer = GBuffer(event->window.data1, event->window.data2);
+		rast::shader::deferred::second_pass::fragment::texture = rast::texture<GBuffer::color>::sampler(g_buffer);
         rast::shader::constant::P = P;
         rast::shader::vertex_colored::P = P;
-        rast::shader::textured::P = P;
+        rast::shader::deferred::first_pass::P = P;
         rast::shader::lambert_textured::P = P;
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
@@ -116,13 +124,17 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 	std::cout << dt << "\r";
 
     rast::image<rast::color::rgba8>::view iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
+    GBuffer::view gv(g_buffer);
     rast::image<rast::u32>::view dv(depth_buffer);
-    rast::framebuffer::rgba8 framebuf(iv);
-    framebuf.clear(rast::color::rgba8(0, 0, 0, 255));
+    rast::framebuffer::color_depth<GBuffer::color, rast::u32> framebuf(gv, dv);
+    rast::framebuffer::rgba8 presentFrameBuf(iv);
+    framebuf.clear_depth_buffer();
+    framebuf.clear_color(GBuffer::color());
+    presentFrameBuf.clear(rast::color::rgba8(0, 0, 0, 255));
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    rast::shader::textured::M = M;
+    rast::shader::deferred::first_pass::M = M;
     rast::shader::lambert_textured::M = M;
 
     //std::vector<glm::vec3> vertex_data = rast::mesh::grid(10, 10, 1.0f);
@@ -138,9 +150,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
   //  };
 
 
-    renderer.draw_indexed<rast::shader::lambert_textured>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
-    rast::shader::lambert_textured::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
-    renderer.draw_indexed<rast::shader::lambert_textured>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
+    renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+
+    renderer.draw_array<rast::shader::deferred::second_pass>(presentFrameBuf, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array + 6);
 
     //rast::shader::constant::M = M;
     //renderer.draw_indexed<rast::shader::constant>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, (glm::vec3*)rast::mesh::cube::vertices);

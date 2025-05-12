@@ -15,6 +15,9 @@ namespace rast::mesh {
 		extern const f32 normals [72];
 		extern const f32 uv[48];
 	};
+	namespace screen_quad {
+		extern const f32 vertex_array[30];
+	}
 	std::vector<glm::vec3> grid(u32 x, u32 y, f siz);
 
 	template <typename VertexT>

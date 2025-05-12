@@ -22,16 +22,18 @@ namespace rast::framebuffer {
 		return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
 	}
 
-	class rgba8_depth {
+	template<typename ColorFormat, typename DepthFormat>
+	class color_depth {
 	public:
-		using depth_format = u32;
-		image<color::rgba8>::view colorImage;
-		image<depth_format>::view depthImage;
+		using depth_format = DepthFormat;
+		using color_format = ColorFormat;
+		typename image<color_format>::view colorImage;
+		typename image<depth_format>::view depthImage;
 
-		inline rgba8_depth(const image<color::rgba8>::view& ColorImage, const image<depth_format>::view DepthImage) :
+		inline color_depth(const typename image<color_format>::view& ColorImage, const typename image<depth_format>::view DepthImage) :
 			colorImage(ColorImage), depthImage(DepthImage) { }
 
-		void clear_color(color::rgba8 clear_value) {
+		void clear_color(color_format clear_value) {
 			std::fill_n(colorImage.data, colorImage.width * colorImage.height, clear_value);
 		}
 
