@@ -51,6 +51,8 @@ namespace rast {
 					std::min<int>(std::max({ a.y, b.y, c.y }) + 16, viewportDims.y + viewportOffset.y)
 				) / 16;
 
+				if (min.x >= max.x || min.y >= max.y) continue;
+
 				glm::ivec3 x012 = glm::ivec3(a.x, b.x, c.x);
 				glm::ivec3 x120 = glm::ivec3(b.x, c.x, a.x);
 
@@ -68,28 +70,53 @@ namespace rast {
 
 				int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
 
+				// Dx * Y - fill_convention
+				glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention;
+				glm::ivec3 CCx = Dy * (glm::ivec3(min.x << 4) - x012);
+				Dx *= 16;
+				Dy *= 16;
+
 				for (int y = min.y; y < max.y; ++y) {
-					// Dx * Y - fill_convention
-					glm::ivec3 Cy = Dx * (glm::ivec3(y << 4) - y012) - fill_convention;
-
+					glm::ivec3 Cx = Cy - CCx;
 					for (int x = min.x; x < max.x; ++x) {
-						glm::ivec3 X = glm::ivec3(x << 4) - x012;
 
-						glm::ivec3 res = Cy - (Dy * X);
-						if (res.x >= 0 && res.y >= 0 && res.z >= 0) {
+						if (Cx.x >= 0 && Cx.y >= 0 && Cx.z >= 0) {
 
 							// interpolation coefitients
 							glm::vec3 coefs(
-								(float)res.y / area,
-								(float)res.z / area,
-								(float)res.x / area
+								(float)Cx.y / area,
+								(float)Cx.z / area,
+								(float)Cx.x / area
 							);
 
 							framebuffer.draw<Shader>(x, y, vert, coefs);
 						}
+						Cx -= Dy;
 					}
+					Cy += Dx;
 				}
 			}
+		}
+
+		template <typename Shader, typename Framebuffer>
+		void clip_and_draw(
+			Framebuffer& framebuffer,
+			const typename Shader::vertex::output* verts
+		) {
+			if (
+				verts[0].rastPos.z > verts[0].rastPos.w ||
+				verts[0].rastPos.z < -verts[0].rastPos.w ||
+				verts[1].rastPos.z > verts[1].rastPos.w ||
+				verts[1].rastPos.z < -verts[1].rastPos.w ||
+				verts[2].rastPos.z > verts[2].rastPos.w ||
+				verts[2].rastPos.z < -verts[2].rastPos.w
+			) return;
+
+			rasterize<Shader, Framebuffer>(
+				framebuffer,
+				verts,
+				verts + 3
+			);
 		}
 
 	public:
@@ -108,25 +135,15 @@ namespace rast {
 			using output_vertex = typename Shader::vertex::output;
 
 			for (const input_vertex* vert = vertex_begin; vert < vertex_end; vert += 3) {
-				output_vertex clipped_verts[3];
+				output_vertex verts[3];
 
-				clipped_verts[0] = Shader::vertex::shade(vert[0]);
-				clipped_verts[1] = Shader::vertex::shade(vert[1]);
-				clipped_verts[2] = Shader::vertex::shade(vert[2]);
+				verts[0] = Shader::vertex::shade(vert[0]);
+				verts[1] = Shader::vertex::shade(vert[1]);
+				verts[2] = Shader::vertex::shade(vert[2]);
 
-				if (
-					clipped_verts[0].rastPos.z > clipped_verts[0].rastPos.w ||
-					clipped_verts[0].rastPos.z < -clipped_verts[0].rastPos.w ||
-					clipped_verts[1].rastPos.z > clipped_verts[1].rastPos.w ||
-					clipped_verts[1].rastPos.z < -clipped_verts[1].rastPos.w ||
-					clipped_verts[2].rastPos.z > clipped_verts[2].rastPos.w ||
-					clipped_verts[2].rastPos.z < -clipped_verts[2].rastPos.w
-					) continue;
-
-				rasterize<Shader, Framebuffer>(
+				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
-					clipped_verts,
-					clipped_verts + 3
+					verts
 				);
 			}
 		}
@@ -142,25 +159,15 @@ namespace rast {
 			using output_vertex = typename Shader::vertex::output;
 
 			for (const u32* i = index_begin; i < index_end; i += 3) {
-				output_vertex clipped_verts[3];
+				output_vertex verts[3];
 
-				clipped_verts[0] = Shader::vertex::shade(vertex_buffer[i[0]]);
-				clipped_verts[1] = Shader::vertex::shade(vertex_buffer[i[1]]);
-				clipped_verts[2] = Shader::vertex::shade(vertex_buffer[i[2]]);
+				verts[0] = Shader::vertex::shade(vertex_buffer[i[0]]);
+				verts[1] = Shader::vertex::shade(vertex_buffer[i[1]]);
+				verts[2] = Shader::vertex::shade(vertex_buffer[i[2]]);
 
-				if (
-					clipped_verts[0].rastPos.z > clipped_verts[0].rastPos.w ||
-					clipped_verts[0].rastPos.z < -clipped_verts[0].rastPos.w ||
-					clipped_verts[1].rastPos.z > clipped_verts[1].rastPos.w ||
-					clipped_verts[1].rastPos.z < -clipped_verts[1].rastPos.w ||
-					clipped_verts[2].rastPos.z > clipped_verts[2].rastPos.w ||
-					clipped_verts[2].rastPos.z < -clipped_verts[2].rastPos.w
-					) continue;
-
-				rasterize<Shader, Framebuffer>(
+				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
-					clipped_verts,
-					clipped_verts + 3
+					verts
 				);
 			}
 		}
