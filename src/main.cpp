@@ -129,8 +129,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     rast::framebuffer::color_depth<GBuffer::color, rast::u32> framebuf(gv, dv);
     rast::framebuffer::rgba8 presentFrameBuf(iv);
     framebuf.clear_depth_buffer();
-    framebuf.clear_color(GBuffer::color());
-    presentFrameBuf.clear(rast::color::rgba8(0, 0, 0, 255));
+    framebuf.clear_color({glm::vec3(0.0f), glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
+    presentFrameBuf.clear(rast::color::rgba8(0, 0, 0, 0));
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -154,7 +154,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
     renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
 
-    renderer.draw_array<rast::shader::deferred::second_pass>(presentFrameBuf, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array + 6);
+    //renderer.draw_array<rast::shader::deferred::second_pass>(presentFrameBuf, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array + 6);
+    renderer.draw_screen_quad<rast::shader::deferred::second_pass>(iv);
 
     //rast::shader::constant::M = M;
     //renderer.draw_indexed<rast::shader::constant>(iv, dv, rast::mesh::cube::indices, rast::mesh::cube::indices + 36, (glm::vec3*)rast::mesh::cube::vertices);

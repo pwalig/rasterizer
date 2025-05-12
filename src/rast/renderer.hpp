@@ -89,7 +89,7 @@ namespace rast {
 								(float)Cx.x / area
 							);
 
-							framebuffer.draw<Shader>(x, y, vert, coefs);
+							framebuffer.template draw<Shader>(x, y, vert, coefs);
 						}
 						Cx -= Dy;
 					}
@@ -169,6 +169,18 @@ namespace rast {
 					framebuffer,
 					verts
 				);
+			}
+		}
+
+		template <typename Shader, typename ImageView>
+		void draw_screen_quad(ImageView& imageView) {
+			glm::ivec2 max = viewportDims / 16;
+			glm::ivec2 off = viewportOffset / 16;
+			for (int y = 0; y < max.y; ++y) {
+				for (int x = 0; x < max.x; ++x) {
+					glm::vec2 frag = glm::vec2((float)x / max.x, (float)y / max.y);
+					imageView.at(x + off.x, y + off.y) = Shader::fragment::shade(frag);
+				}
 			}
 		}
 	};

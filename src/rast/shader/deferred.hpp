@@ -85,7 +85,7 @@ namespace rast::shader::deferred {
 				first_pass::fragment::output F = texture.sample(frag);
 				glm::vec3 N = glm::normalize(F.normal);
 				float nl = std::clamp(glm::dot(N, light_direction), 0.0f, 1.0f);
-				return color::rgba8(F.albedo.r * nl + ambient.r, F.albedo.g * nl + ambient.g, F.albedo.b * nl + ambient.b, 255);
+				return color::rgba8(F.albedo.r * nl + ambient.r, F.albedo.g * nl + ambient.g, F.albedo.b * nl + ambient.b, F.albedo.a);
 			}
 
 			inline static input interpolate(

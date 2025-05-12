@@ -84,6 +84,14 @@ namespace rast::framebuffer {
 
 		template <typename Shader>
 		void draw(u32 x, u32 y, const typename Shader::vertex::output* triangle, glm::vec3 coefs) {
+			glm::vec3 w(
+				triangle[0].rastPos.w,
+				triangle[1].rastPos.w,
+				triangle[2].rastPos.w
+			);
+			coefs /= w;
+			float sum = coefs.x + coefs.y + coefs.z;
+			coefs /= sum;
 			// output color
 			colorImage.at(x, y) = Shader::fragment::shade(
 				triangle[0].data, triangle[1].data, triangle[2].data, coefs
