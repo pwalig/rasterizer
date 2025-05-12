@@ -54,12 +54,7 @@ namespace rast::shader::deferred {
 
 		class vertex {
 		public:
-			class input {
-			public:
-				glm::vec3 position;
-				glm::vec3 normal;
-				glm::vec2 uv;
-			};
+			using input = inputs::position_normal_uv;
 
 			using output = vertex_shader_output<first_pass>;
 

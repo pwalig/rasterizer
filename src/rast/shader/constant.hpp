@@ -38,7 +38,7 @@ namespace rast::shader {
 
 		class vertex {
 		public:
-			using input = glm::vec3;
+			using input = inputs::position;
 
 			using output = vertex_shader_output<constant>;
 

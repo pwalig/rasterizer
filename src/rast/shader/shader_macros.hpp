@@ -37,5 +37,10 @@ namespace rast::shader {
 			normal normal;
 			uv uv;
 		};
+		class normal_uv {
+		public:
+			normal normal;
+			uv uv;
+		};
 	}
 }

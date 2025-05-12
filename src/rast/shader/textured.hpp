@@ -21,14 +21,11 @@ namespace rast::shader {
 
 			inline static texture<rast::color::rgba8>::sampler texture;
 
-			class input {
-			public:
-				glm::vec2 uv;
-			};
+			using input = inputs::uv;
 			using output = color::rgba8;
 
 			inline static color::rgba8 shade(const input& frag) {
-				if (texture) return texture.sample(frag.uv);
+				if (texture) return texture.sample(frag);
 				else return color::rgba8(255, 0, 255, 255);
 			}
 
@@ -38,7 +35,7 @@ namespace rast::shader {
 				const input& frag2,
 				const glm::vec3& coefs
 			) {
-				glm::vec2 new_uv = (frag0.uv * coefs.x) + (frag1.uv * coefs.y) + (frag2.uv * coefs.z);
+				glm::vec2 new_uv = (frag0 * coefs.x) + (frag1 * coefs.y) + (frag2 * coefs.z);
 				return { new_uv };
 			}
 

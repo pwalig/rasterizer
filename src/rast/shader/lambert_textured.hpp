@@ -23,11 +23,7 @@ namespace rast::shader {
 			inline static glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
 			inline static color::rgb8 ambient = color::rgb8(5, 5, 5);
 
-			class input {
-			public:
-				glm::vec3 normal;
-				glm::vec2 uv;
-			};
+			using input = inputs::normal_uv;
 			using output = color::rgba8;
 
 			inline static output shade(const input& frag) {
@@ -56,13 +52,7 @@ namespace rast::shader {
 
 		class vertex {
 		public:
-			class input {
-			public:
-				glm::vec3 position;
-				glm::vec3 normal;
-				glm::vec2 uv;
-			};
-
+			using input = inputs::position_normal_uv;
 			using output = vertex_shader_output<lambert_textured>;
 
 			inline static output shade(const input& vert) {
