@@ -117,9 +117,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     rast::image<rast::color::rgba8>::view iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
     rast::image<rast::u32>::view dv(depth_buffer);
-    rast::framebuffer::rgba8_depth framebuf(iv, dv);
-    std::fill_n((rast::color::rgba8*)surface->pixels, surface->w * surface->h, rast::color::rgba8(0x00, 0x00, 0x00, 0xff));
-    framebuf.clear_depth_buffer();
+    rast::framebuffer::rgba8 framebuf(iv);
+    framebuf.clear(rast::color::rgba8(0, 0, 0, 255));
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));

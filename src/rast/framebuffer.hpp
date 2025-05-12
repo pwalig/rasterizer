@@ -31,6 +31,10 @@ namespace rast::framebuffer {
 		inline rgba8_depth(const image<color::rgba8>::view& ColorImage, const image<depth_format>::view DepthImage) :
 			colorImage(ColorImage), depthImage(DepthImage) { }
 
+		void clear_color(color::rgba8 clear_value) {
+			std::fill_n(colorImage.data, colorImage.width * colorImage.height, clear_value);
+		}
+
 		void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
 			std::fill_n(depthImage.data, depthImage.width * depthImage.height, clear_value);
 		}
@@ -61,6 +65,27 @@ namespace rast::framebuffer {
 					triangle[0].data, triangle[1].data, triangle[2].data, coefs
 				);
 			}
+		}
+	};
+
+	class rgba8 {
+	public:
+		using color = color::rgba8;
+		image<color>::view colorImage;
+
+		inline rgba8(const image<color>::view& ColorImage) :
+			colorImage(ColorImage) { }
+
+		void clear(color clear_value) {
+			std::fill_n(colorImage.data, colorImage.width * colorImage.height, clear_value);
+		}
+
+		template <typename Shader>
+		void draw(u32 x, u32 y, const typename Shader::vertex::output* triangle, glm::vec3 coefs) {
+			// output color
+			colorImage.at(x, y) = Shader::fragment::shade(
+				triangle[0].data, triangle[1].data, triangle[2].data, coefs
+			);
 		}
 	};
 }
