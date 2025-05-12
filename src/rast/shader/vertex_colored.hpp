@@ -6,7 +6,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 
 #include "../color.hpp"
-#include "vertex_shader_output.hpp"
+#include "shader_macros.hpp"
 
 namespace rast::shader {
 	class vertex_colored {
@@ -19,6 +19,7 @@ namespace rast::shader {
 		public:
 
 			using input = glm::vec4;
+			using output = color::rgba8;
 
 			inline static color::rgba8 shade(const input& frag) {
 				return color::rgba8(
@@ -37,6 +38,8 @@ namespace rast::shader {
 			) {
 				return (frag0 * coefs.x) + (frag1 * coefs.y) + (frag2 * coefs.z);
 			}
+
+			rast_shader_fragment_shade()
 		};
 
 

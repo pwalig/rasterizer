@@ -7,7 +7,7 @@
 
 #include "../color.hpp"
 #include "../texture.hpp"
-#include "vertex_shader_output.hpp"
+#include "shader_macros.hpp"
 
 namespace rast::shader {
 	class textured {
@@ -25,6 +25,7 @@ namespace rast::shader {
 			public:
 				glm::vec2 uv;
 			};
+			using output = color::rgba8;
 
 			inline static color::rgba8 shade(const input& frag) {
 				if (texture) return texture.sample(frag.uv);
@@ -40,6 +41,8 @@ namespace rast::shader {
 				glm::vec2 new_uv = (frag0.uv * coefs.x) + (frag1.uv * coefs.y) + (frag2.uv * coefs.z);
 				return { new_uv };
 			}
+
+			rast_shader_fragment_shade()
 		};
 
 

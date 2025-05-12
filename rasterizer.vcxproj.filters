@@ -62,7 +62,7 @@
     <ClInclude Include="src\rast\shader\lambert_textured.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\shader\vertex_shader_output.hpp">
+    <ClInclude Include="src\rast\shader\shader_macros.hpp">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\framebuffer.hpp">

@@ -5,7 +5,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 
-#include "vertex_shader_output.hpp"
+#include "shader_macros.hpp"
 #include "../color.hpp"
 #include "../texture.hpp"
 
@@ -28,8 +28,9 @@ namespace rast::shader {
 				glm::vec3 normal;
 				glm::vec2 uv;
 			};
+			using output = color::rgba8;
 
-			inline static color::rgba8 shade(const input& frag) {
+			inline static output shade(const input& frag) {
 				glm::vec3 N = glm::normalize(frag.normal);
 				float nl = std::clamp(glm::dot(N, light_direction), 0.0f, 1.0f);
 				color::rgba8 color;
@@ -48,6 +49,8 @@ namespace rast::shader {
 				glm::vec3 new_normal = (frag0.normal * coefs.x) + (frag1.normal * coefs.y) + (frag2.normal * coefs.z);
 				return { new_normal, new_uv };
 			}
+
+			rast_shader_fragment_shade()
 		};
 
 

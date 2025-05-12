@@ -1,10 +1,10 @@
 #pragma once
 #include <glm/glm.hpp>
-
-#include "../color.hpp"
-#include "vertex_shader_output.hpp"
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
+
+#include "../color.hpp"
+#include "shader_macros.hpp"
 
 namespace rast::shader {
 	class constant {
@@ -19,8 +19,9 @@ namespace rast::shader {
 		public:
 
 			class input { };
+			using output = color::rgba8;
 
-			inline static color::rgba8 shade(const input& frag) {
+			inline static output shade(const input& frag) {
 				return color;
 			}
 
@@ -32,6 +33,7 @@ namespace rast::shader {
 			) {
 				return frag0;
 			}
+			rast_shader_fragment_shade()
 		};
 
 		class vertex {
