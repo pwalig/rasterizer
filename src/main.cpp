@@ -99,10 +99,13 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         SDL_DestroySurface(surface);
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
+
 		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
 		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 100.0f);
-		depth_buffer = rast::image<rast::u32>(event->window.data1, event->window.data2);
-        g_buffer = GBuffer(event->window.data1, event->window.data2);
+
+		depth_buffer.resize(event->window.data1, event->window.data2);
+        g_buffer.resize(event->window.data1, event->window.data2);
+
 		rast::shader::deferred::second_pass::fragment::texture = rast::texture<GBuffer::color>::sampler(g_buffer);
         rast::shader::constant::P = P;
         rast::shader::vertex_colored::P = P;
@@ -125,12 +128,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     rast::image<rast::color::rgba8>::view iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
     GBuffer::view gv(g_buffer);
-    rast::image<rast::u32>::view dv(depth_buffer);
-    rast::framebuffer::color_depth<GBuffer::color, rast::u32> framebuf(gv, dv);
-    rast::framebuffer::rgba8 presentFrameBuf(iv);
+    rast::framebuffer::color_depth<GBuffer::color, rast::u32> framebuf(gv, depth_buffer);
     framebuf.clear_depth_buffer();
     framebuf.clear_color({glm::vec3(0.0f), glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
-    presentFrameBuf.clear(rast::color::rgba8(0, 0, 0, 0));
+    iv.clear(rast::color::rgba8(0, 0, 0, 0));
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
 
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -151,10 +152,17 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
 
     renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
-    rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(1.0f, -1.0f, 1.0f));
+    rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(0.0f, 0.0f, 2.0f));
+    renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(2.0f, 0.0f, 0.0f));
+    renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 0.0f));
+    renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(0.0f, 0.0f, -2.0f));
+    renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
+    rast::shader::deferred::first_pass::M = glm::translate(M, glm::vec3(2.0f, 0.0f, 2.0f));
     renderer.draw_indexed<rast::shader::deferred::first_pass>(framebuf, model.index_buffer.data(), model.index_buffer.data() + model.index_buffer.size(), model.vertex_buffer.data());
 
-    //renderer.draw_array<rast::shader::deferred::second_pass>(presentFrameBuf, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array, (rast::shader::inputs::position_uv*)rast::mesh::screen_quad::vertex_array + 6);
     renderer.draw_screen_quad<rast::shader::deferred::second_pass>(iv);
 
     //rast::shader::constant::M = M;

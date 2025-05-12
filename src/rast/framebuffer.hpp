@@ -30,15 +30,24 @@ namespace rast::framebuffer {
 		typename image<color_format>::view colorImage;
 		typename image<depth_format>::view depthImage;
 
-		inline color_depth(const typename image<color_format>::view& ColorImage, const typename image<depth_format>::view DepthImage) :
+		inline color_depth(const typename image<color_format>::view& ColorImage, const typename image<depth_format>::view& DepthImage) :
+			colorImage(ColorImage), depthImage(DepthImage) { }
+
+		inline color_depth(typename image<color_format>& ColorImage, typename image<depth_format>& DepthImage) :
+			colorImage(ColorImage), depthImage(DepthImage) { }
+
+		inline color_depth(typename image<color_format>& ColorImage, const typename image<depth_format>::view& DepthImage) :
+			colorImage(ColorImage), depthImage(DepthImage) { }
+
+		inline color_depth(const typename image<color_format>::view& ColorImage, typename image<depth_format>& DepthImage) :
 			colorImage(ColorImage), depthImage(DepthImage) { }
 
 		void clear_color(color_format clear_value) {
-			std::fill_n(colorImage.data, colorImage.width * colorImage.height, clear_value);
+			colorImage.clear(clear_value);
 		}
 
 		void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
-			std::fill_n(depthImage.data, depthImage.width * depthImage.height, clear_value);
+			depthImage.clear(clear_value);
 		}
 
 		template <typename Shader>

@@ -25,10 +25,20 @@ namespace rast {
 
 		inline size_type width() const { return _width; }
 		inline size_type height() const { return _height; }
+		inline color& at(size_type x, size_type y) { return _data.at(y * _width + x); }
+		inline const color& at(size_type x, size_type y) const { return _data.at(y * _width + x); }
 		inline color* data() { return _data.data(); }
 		inline const color* data() const { return _data.data(); }
 		inline sa_vector<color>& storage() { return _data; }
 		inline const sa_vector<color>& storage() const { return _data; }
+		inline void resize(size_type Width, size_type Height) {
+			_data.resize(Width * Height);
+			_width = Width;
+			_height = Height;
+		}
+		inline void clear(color clear_color) {
+			std::fill_n(_data.data(), _width * _height, clear_color);
+		}
 
 		class view {
 		public:
@@ -46,6 +56,9 @@ namespace rast {
 			inline view(image& img) : view(img.data(), img.width(), img.height()) {}
 
 			inline color& at(size_type x, size_type y) { return data[y * width + x]; }
+			inline void clear(color clear_color) {
+				std::fill_n(data, width * height, clear_color);
+			}
 		};
 
 		inline static image load(const char* filename) {
