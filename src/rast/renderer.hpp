@@ -16,6 +16,14 @@ namespace rast {
 		inline scissor(int xoffset, int yoffset, int width, int height) :
 			offset(xoffset << 4, yoffset << 4), extent(width << 4, height << 4) {}
 	};
+
+	class tile {
+	public:
+		glm::ivec2 min;
+		glm::ivec2 max;
+		inline tile(int minx, int miny, int maxx, int maxy) :
+			min(minx << 4, miny << 4), max(maxx << 4, maxy << 4) {}
+	};
 	class renderer {
 	private:
 		inline static glm::ivec2 toScreenSpace(const glm::vec4& vertex, const scissor& viewport) {
@@ -36,7 +44,8 @@ namespace rast {
 			const typename Shader::vertex::output* vertex_begin,
 			const typename Shader::vertex::output* vertex_end,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
 			using vertex = typename Shader::vertex::output;
 
@@ -47,12 +56,12 @@ namespace rast {
 				glm::ivec2 c = toScreenSpace(vert[2].rastPos, viewport);
 
 				glm::ivec2 min = glm::ivec2(
-					std::max((int)std::min({ a.x, b.x, c.x }), viewport.offset.x),
-					std::max((int)std::min({ a.y, b.y, c.y }), viewport.offset.y)
+					std::max((int)std::min({ a.x, b.x, c.x }), std::max(tile.min.x, viewport.offset.x)),
+					std::max((int)std::min({ a.y, b.y, c.y }), std::max(tile.min.y, viewport.offset.y))
 				) / 16;
 				glm::ivec2 max = glm::ivec2(
-					std::min<int>(std::max({ a.x, b.x, c.x }) + 16, viewport.extent.x + viewport.offset.x),
-					std::min<int>(std::max({ a.y, b.y, c.y }) + 16, viewport.extent.y + viewport.offset.y)
+					std::min<int>({ std::max({ a.x, b.x, c.x }) + 16, tile.max.x, viewport.offset.x + viewport.extent.x }),
+					std::min<int>({ std::max({ a.y, b.y, c.y }) + 16, tile.max.y, viewport.offset.y + viewport.extent.y })
 				) / 16;
 
 				if (min.x >= max.x || min.y >= max.y) continue;
@@ -116,7 +125,8 @@ namespace rast {
 			Framebuffer& framebuffer,
 			typename Shader::vertex::output* verts,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
 			if (
 				verts[0].rastPos.z > verts[0].rastPos.w ||
@@ -191,7 +201,8 @@ namespace rast {
 				framebuffer,
 				verts, end,
 				uniform_buffer,
-				viewport
+				viewport,
+				tile
 			);
 		}
 
@@ -202,7 +213,8 @@ namespace rast {
 			VertIter vertex_begin,
 			VertIter vertex_end,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
 			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
@@ -218,7 +230,8 @@ namespace rast {
 					framebuffer,
 					verts,
 					uniform_buffer.fragment,
-					viewport
+					viewport,
+					tile
 				);
 			}
 		}
@@ -228,9 +241,10 @@ namespace rast {
 			Framebuffer& framebuffer,
 			const VertexBuffer& vertex_buffer,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
-			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport);
+			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
 		template <typename Shader, typename Framebuffer, typename IndexIter, typename VertIter>
@@ -241,7 +255,8 @@ namespace rast {
 			VertIter vertex_begin,
 			VertIter vertex_end,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
 			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
@@ -263,7 +278,8 @@ namespace rast {
 					framebuffer,
 					verts,
 					uniform_buffer.fragment,
-					viewport
+					viewport,
+					tile
 				);
 			}
 		}
@@ -274,9 +290,10 @@ namespace rast {
 			const IndexBuffer& index_buffer,
 			const VertexBuffer& vertex_buffer,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
-			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport);
+			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
 		template <typename Shader, typename Framebuffer, typename VertexT>
@@ -284,21 +301,23 @@ namespace rast {
 			Framebuffer& framebuffer,
 			const mesh::indexed<VertexT>& mesh,
 			const typename Shader::uniform_buffer uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
-			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, viewport);
+			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
 		template <typename FragmentShader, typename ImageView>
 		inline static void draw_screen_quad(
 			ImageView& imageView,
 			const typename FragmentShader::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const scissor& viewport,
+			const tile& tile
 		) {
 			glm::ivec2 max = viewport.extent / 16;
 			glm::ivec2 off = viewport.offset / 16;
-			for (int y = 0; y < max.y; ++y) {
-				for (int x = 0; x < max.x; ++x) {
+			for (int y = tile.min.y; y < tile.max.y; ++y) {
+				for (int x = tile.min.x; x < tile.max.x; ++x) {
 					glm::vec2 frag = glm::vec2((float)x / max.x, (float)y / max.y);
 					imageView.at(x + off.x, y + off.y) = FragmentShader::shade(frag, uniform_buffer);
 				}

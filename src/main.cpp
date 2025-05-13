@@ -24,6 +24,7 @@
 #include "rast/shader/deferred.hpp"
 #include "rast/framebuffer.hpp"
 #include "rast/renderer.hpp"
+#include "thread_pool.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -36,6 +37,8 @@ static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> icosphere;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
+static thd::thread_pool tp(std::thread::hardware_concurrency());
+//static thd::thread_pool tp(1);
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -133,34 +136,40 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 
     using shader = rast::shader::lambert_textured;
-    rast::scissor scissor(0, 0, iv.width, iv.height);
-
-    shader::uniform_buffer ubo;
-    ubo.fragment.texture = texture;
-    ubo.vertex.M = M;
-    ubo.vertex.P = P;
-    ubo.vertex.V = V;
+	rast::scissor scissor(0, 0, iv.width, iv.height);
 
     // render
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(0.0f, 0.0f, 2.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(2.0f, 0.0f, 0.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 0.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(0.0f, 0.0f, -2.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(2.0f, 0.0f, 2.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, -2.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(2.0f, 0.0f, -2.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 2.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor);
-    ubo.vertex.M = glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
-    rast::renderer::draw_indexed<shader>(framebuf, plane, ubo, scissor);
+    float stride = (float)iv.width / tp.thread_count();
+    for (int i = 0; i < tp.thread_count(); ++i) {
+        tp.enque([&framebuf, &scissor, i, stride, height = iv.height]() {
+			shader::uniform_buffer ubo;
+			ubo.fragment.texture = texture;
+			ubo.vertex.M = M;
+			ubo.vertex.P = P;
+			ubo.vertex.V = V;
+            rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), height);
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(0.0f, 0.0f, 2.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(2.0f, 0.0f, 0.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 0.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(0.0f, 0.0f, -2.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(2.0f, 0.0f, 2.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, -2.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(2.0f, 0.0f, -2.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 2.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			ubo.vertex.M = glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, plane, ubo, scissor, tile);
+            });
+    }
+    tp.wait();
 
     SDL_Rect rect;
     rect.x = 0;
