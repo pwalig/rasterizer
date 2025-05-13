@@ -6,7 +6,7 @@ Parallel software rasterizer written in C++.
 
 ## Performance
 
-Above scene (~35k triangles) renders in 60fps at 1920 x 1080 resolution on AMD Ryzen 3600 CPU.
+Above scene (~35k triangles) renders in 60fps at 1920 x 1080 resolution on AMD Ryzen 5 3600 CPU.
 
 ## Features
 
