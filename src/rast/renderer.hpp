@@ -35,6 +35,7 @@ namespace rast {
 			Framebuffer& framebuffer,
 			const typename Shader::vertex::output* vertex_begin,
 			const typename Shader::vertex::output* vertex_end,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const scissor& viewport
 		) {
 			using vertex = typename Shader::vertex::output;
@@ -92,7 +93,7 @@ namespace rast {
 								(float)Cx.x / area
 							);
 
-							framebuffer.template draw<Shader>(x, y, vert, coefs);
+							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, coefs);
 						}
 						Cx -= Dy;
 					}
@@ -114,6 +115,7 @@ namespace rast {
 		inline static void clip_and_draw(
 			Framebuffer& framebuffer,
 			typename Shader::vertex::output* verts,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const scissor& viewport
 		) {
 			if (
@@ -187,8 +189,8 @@ namespace rast {
 
 			rasterize<Shader, Framebuffer>(
 				framebuffer,
-				verts,
-				end,
+				verts, end,
+				uniform_buffer,
 				viewport
 			);
 		}
@@ -199,6 +201,7 @@ namespace rast {
 			Framebuffer& framebuffer,
 			VertIter vertex_begin,
 			VertIter vertex_end,
+			const typename Shader::uniform_buffer& uniform_buffer,
 			const scissor& viewport
 		) {
 			using input_vertex = typename Shader::vertex::input;
@@ -207,13 +210,14 @@ namespace rast {
 			for (auto vert = vertex_begin; vert != vertex_end;) {
 				output_vertex verts[6];
 
-				verts[0] = Shader::vertex::shade(*(vert++));
-				verts[1] = Shader::vertex::shade(*(vert++));
-				verts[2] = Shader::vertex::shade(*(vert++));
+				verts[0] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
+				verts[1] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
+				verts[2] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 
 				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
 					verts,
+					uniform_buffer.fragment,
 					viewport
 				);
 			}
@@ -223,9 +227,10 @@ namespace rast {
 		inline static void draw_array(
 			Framebuffer& framebuffer,
 			const VertexBuffer& vertex_buffer,
+			const typename Shader::uniform_buffer& uniform_buffer,
 			const scissor& viewport
 		) {
-			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), viewport);
+			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport);
 		}
 
 		template <typename Shader, typename Framebuffer, typename IndexIter, typename VertIter>
@@ -235,6 +240,7 @@ namespace rast {
 			IndexIter index_end,
 			VertIter vertex_begin,
 			VertIter vertex_end,
+			const typename Shader::uniform_buffer& uniform_buffer,
 			const scissor& viewport
 		) {
 			using input_vertex = typename Shader::vertex::input;
@@ -243,7 +249,7 @@ namespace rast {
 			std::vector<output_vertex> vertex_buffer;
 			vertex_buffer.reserve(vertex_end - vertex_begin);
 			for (auto vert = vertex_begin; vert != vertex_end; ++vert) {
-				vertex_buffer.push_back(Shader::vertex::shade(*vert));
+				vertex_buffer.push_back(Shader::vertex::shade(*vert, uniform_buffer.vertex));
 			}
 
 			for (auto i = index_begin; i != index_end;) {
@@ -256,6 +262,7 @@ namespace rast {
 				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
 					verts,
+					uniform_buffer.fragment,
 					viewport
 				);
 			}
@@ -266,28 +273,34 @@ namespace rast {
 			Framebuffer& framebuffer,
 			const IndexBuffer& index_buffer,
 			const VertexBuffer& vertex_buffer,
+			const typename Shader::uniform_buffer& uniform_buffer,
 			const scissor& viewport
 		) {
-			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), viewport);
+			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport);
 		}
 
 		template <typename Shader, typename Framebuffer, typename VertexT>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const mesh::indexed<VertexT>& mesh,
+			const typename Shader::uniform_buffer uniform_buffer,
 			const scissor& viewport
 		) {
-			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), viewport);
+			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, viewport);
 		}
 
-		template <typename Shader, typename ImageView>
-		inline static void draw_screen_quad(ImageView& imageView, const scissor& viewport) {
+		template <typename FragmentShader, typename ImageView>
+		inline static void draw_screen_quad(
+			ImageView& imageView,
+			const typename FragmentShader::uniform_buffer& uniform_buffer,
+			const scissor& viewport
+		) {
 			glm::ivec2 max = viewport.extent / 16;
 			glm::ivec2 off = viewport.offset / 16;
 			for (int y = 0; y < max.y; ++y) {
 				for (int x = 0; x < max.x; ++x) {
 					glm::vec2 frag = glm::vec2((float)x / max.x, (float)y / max.y);
-					imageView.at(x + off.x, y + off.y) = Shader::fragment::shade(frag);
+					imageView.at(x + off.x, y + off.y) = FragmentShader::shade(frag, uniform_buffer);
 				}
 			}
 		}

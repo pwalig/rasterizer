@@ -25,9 +25,7 @@ namespace rast::shader {
 				color::rgb8 ambient = color::rgb8(5, 5, 5);
 			};
 
-			inline static uniform_buffer uniforms;
-
-			inline static output shade(const input& frag, const uniform_buffer& uniforms = uniforms) {
+			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
 				glm::vec3 N = glm::normalize(frag.normal);
 				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);
 				color::rgba8 color;
@@ -50,9 +48,7 @@ namespace rast::shader {
 				glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
 			};
 
-			inline static uniform_buffer uniforms;
-
-			inline static output shade(const input& vert, const uniform_buffer& uniforms = uniforms) {
+			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
 				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert.position, 1.0f), {vert.normal, vert.uv} };
 			}
 

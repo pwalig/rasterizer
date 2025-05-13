@@ -51,7 +51,12 @@ namespace rast::framebuffer {
 		}
 
 		template <typename Shader>
-		void draw(u32 x, u32 y, const typename Shader::vertex::output* triangle, glm::vec3 coefs) {
+		void draw(
+			u32 x, u32 y,
+			const typename Shader::vertex::output* triangle,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			glm::vec3 coefs
+		) {
 			// depth test
 			glm::vec3 w(
 				triangle[0].rastPos.w,
@@ -73,7 +78,8 @@ namespace rast::framebuffer {
 
 				// output color
 				colorImage.at(x, y) = Shader::fragment::shade(
-					interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs)
+					interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs),
+					uniform_buffer
 				);
 			}
 		}
@@ -92,7 +98,12 @@ namespace rast::framebuffer {
 		}
 
 		template <typename Shader>
-		void draw(u32 x, u32 y, const typename Shader::vertex::output* triangle, glm::vec3 coefs) {
+		void draw(
+			u32 x, u32 y,
+			const typename Shader::vertex::output* triangle,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			glm::vec3 coefs
+		) {
 			glm::vec3 w(
 				triangle[0].rastPos.w,
 				triangle[1].rastPos.w,
@@ -103,7 +114,8 @@ namespace rast::framebuffer {
 			coefs /= sum;
 			// output color
 			colorImage.at(x, y) = Shader::fragment::shade(
-				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs)
+				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs),
+				uniform_buffer
 			);
 		}
 	};
