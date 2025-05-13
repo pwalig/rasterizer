@@ -28,7 +28,6 @@
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
 static SDL_Surface* surface = nullptr;
-static rast::renderer renderer;
 static glm::mat4 V;
 static glm::mat4 P;
 static rast::image<rast::u32> depth_buffer;
@@ -58,7 +57,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     }
 	surface = SDL_CreateSurface(width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
-    renderer.setViewport(0, 0, width, height);
     P = glm::perspective(glm::radians(70.0f), (float)width / height, 0.1f, 100.0f);
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     rast::shader::constant::color = rast::color::rgba8(51, 51, 51, 255);
@@ -66,16 +64,16 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 	rast::shader::constant::P = P;
 	rast::shader::vertex_colored::P = P;
 	rast::shader::deferred::first_pass::P = P;
-	rast::shader::lambert_textured::P = P;
+	rast::shader::lambert_textured::vertex::uniforms.P = P;
 
 	rast::shader::constant::V = V;
 	rast::shader::vertex_colored::V = V;
 	rast::shader::deferred::first_pass::V = V;
-	rast::shader::lambert_textured::V = V;
+	rast::shader::lambert_textured::vertex::uniforms.V = V;
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
     rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
-    rast::shader::lambert_textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
+    rast::shader::lambert_textured::fragment::uniforms.texture = rast::texture<rast::color::rgba8>::sampler(texture);
     rast::shader::deferred::first_pass::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     depth_buffer = rast::image<rast::u32>(width, height);
     g_buffer = GBuffer(width, height);
@@ -98,7 +96,6 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 
-		renderer.setViewport(0, 0, event->window.data1, event->window.data2);
 		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 100.0f);
 
 		depth_buffer.resize(event->window.data1, event->window.data2);
@@ -108,7 +105,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         rast::shader::constant::P = P;
         rast::shader::vertex_colored::P = P;
         rast::shader::deferred::first_pass::P = P;
-        rast::shader::lambert_textured::P = P;
+        rast::shader::lambert_textured::vertex::uniforms.P = P;
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -139,28 +136,30 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
     M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 
+    rast::scissor scissor(0, 0, surface->w, surface->h);
+
     // render
     using shader = rast::shader::lambert_textured;
-    shader::M = M;
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(0.0f, 0.0f, 2.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(2.0f, 0.0f, 0.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 0.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(0.0f, 0.0f, -2.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(2.0f, 0.0f, 2.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(-2.0f, 0.0f, -2.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(2.0f, 0.0f, -2.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 2.0f));
-    renderer.draw_indexed<shader>(framebuf, icosphere);
-    shader::M = glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
-    renderer.draw_indexed<shader>(framebuf, plane);
+    shader::vertex::uniforms.M = M;
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(0.0f, 0.0f, 2.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(2.0f, 0.0f, 0.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 0.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(0.0f, 0.0f, -2.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(2.0f, 0.0f, 2.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, -2.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(2.0f, 0.0f, -2.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::translate(M, glm::vec3(-2.0f, 0.0f, 2.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, icosphere, scissor);
+    shader::vertex::uniforms.M = glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
+    rast::renderer::draw_indexed<shader>(framebuf, plane, scissor);
 
     //renderer.draw_screen_quad<rast::shader::deferred::second_pass>(iv);
 

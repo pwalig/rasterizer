@@ -9,46 +9,49 @@
 #include "image.hpp"
 
 namespace rast {
-	class renderer {
+	class scissor {
 	public:
-		using data_len_t = u32;
+		glm::ivec2 offset;
+		glm::ivec2 extent;
+		inline scissor(int xoffset, int yoffset, int width, int height) :
+			offset(xoffset << 4, yoffset << 4), extent(width << 4, height << 4) {}
+	};
+	class renderer {
 	private:
-		glm::ivec2 viewportDims = glm::ivec2(100, 100);
-		glm::ivec2 viewportOffset = glm::ivec2(0, 0);
-
-		inline glm::ivec2 toScreenSpace(const glm::vec4& vertex) {
+		inline static glm::ivec2 toScreenSpace(const glm::vec4& vertex, const scissor& viewport) {
 			glm::vec2 res(
 				vertex.x / vertex.w,
 				vertex.y / vertex.w
 			);
 
 			return glm::ivec2(
-				(( res.x + 1.0f ) * (float)viewportDims.x * 0.5f + (float)viewportOffset.x),
-				(( -res.y + 1.0f ) * (float)viewportDims.y * 0.5f + (float)viewportOffset.y)
+				(( res.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
+				(( -res.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
 			);
 		}
 		
 		template <typename Shader, typename Framebuffer>
-		void rasterize(
+		inline static void rasterize(
 			Framebuffer& framebuffer,
 			const typename Shader::vertex::output* vertex_begin,
-			const typename Shader::vertex::output* vertex_end
+			const typename Shader::vertex::output* vertex_end,
+			const scissor& viewport
 		) {
 			using vertex = typename Shader::vertex::output;
 
 			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
 
-				glm::ivec2 a = toScreenSpace(vert[0].rastPos);
-				glm::ivec2 b = toScreenSpace(vert[1].rastPos);
-				glm::ivec2 c = toScreenSpace(vert[2].rastPos);
+				glm::ivec2 a = toScreenSpace(vert[0].rastPos, viewport);
+				glm::ivec2 b = toScreenSpace(vert[1].rastPos, viewport);
+				glm::ivec2 c = toScreenSpace(vert[2].rastPos, viewport);
 
 				glm::ivec2 min = glm::ivec2(
-					std::max((int)std::min({ a.x, b.x, c.x }), viewportOffset.x),
-					std::max((int)std::min({ a.y, b.y, c.y }), viewportOffset.y)
+					std::max((int)std::min({ a.x, b.x, c.x }), viewport.offset.x),
+					std::max((int)std::min({ a.y, b.y, c.y }), viewport.offset.y)
 				) / 16;
 				glm::ivec2 max = glm::ivec2(
-					std::min<int>(std::max({ a.x, b.x, c.x }) + 16, viewportDims.x + viewportOffset.x),
-					std::min<int>(std::max({ a.y, b.y, c.y }) + 16, viewportDims.y + viewportOffset.y)
+					std::min<int>(std::max({ a.x, b.x, c.x }) + 16, viewport.extent.x + viewport.offset.x),
+					std::min<int>(std::max({ a.y, b.y, c.y }) + 16, viewport.extent.y + viewport.offset.y)
 				) / 16;
 
 				if (min.x >= max.x || min.y >= max.y) continue;
@@ -108,9 +111,10 @@ namespace rast {
 		}
 
 		template <typename Shader, typename Framebuffer>
-		void clip_and_draw(
+		inline static void clip_and_draw(
 			Framebuffer& framebuffer,
-			typename Shader::vertex::output* verts
+			typename Shader::vertex::output* verts,
+			const scissor& viewport
 		) {
 			if (
 				verts[0].rastPos.z > verts[0].rastPos.w ||
@@ -184,21 +188,18 @@ namespace rast {
 			rasterize<Shader, Framebuffer>(
 				framebuffer,
 				verts,
-				end
+				end,
+				viewport
 			);
 		}
 
 	public:
-		inline void setViewport(int xoffset, int yoffset, int width, int height) {
-			viewportDims = glm::ivec2(width << 4, height << 4);
-			viewportOffset = glm::ivec2(xoffset << 4, yoffset << 4);
-		}
-
 		template <typename Shader, typename Framebuffer, typename VertIter>
-		void draw_array(
+		inline static void draw_array(
 			Framebuffer& framebuffer,
 			VertIter vertex_begin,
-			VertIter vertex_end
+			VertIter vertex_end,
+			const scissor& viewport
 		) {
 			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
@@ -212,26 +213,29 @@ namespace rast {
 
 				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
-					verts
+					verts,
+					viewport
 				);
 			}
 		}
 
 		template <typename Shader, typename Framebuffer, typename VertexBuffer>
-		void draw_array(
+		inline static void draw_array(
 			Framebuffer& framebuffer,
-			const VertexBuffer& vertex_buffer
+			const VertexBuffer& vertex_buffer,
+			const scissor& viewport
 		) {
-			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end());
+			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), viewport);
 		}
 
 		template <typename Shader, typename Framebuffer, typename IndexIter, typename VertIter>
-		void draw_indexed(
+		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			IndexIter index_begin,
 			IndexIter index_end,
 			VertIter vertex_begin,
-			VertIter vertex_end
+			VertIter vertex_end,
+			const scissor& viewport
 		) {
 			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
@@ -251,32 +255,35 @@ namespace rast {
 
 				clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
-					verts
+					verts,
+					viewport
 				);
 			}
 		}
 
 		template <typename Shader, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
-		void draw_indexed(
+		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const IndexBuffer& index_buffer,
-			const VertexBuffer& vertex_buffer
+			const VertexBuffer& vertex_buffer,
+			const scissor& viewport
 		) {
-			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end());
+			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), viewport);
 		}
 
 		template <typename Shader, typename Framebuffer, typename VertexT>
-		void draw_indexed(
+		inline static void draw_indexed(
 			Framebuffer& framebuffer,
-			const mesh::indexed<VertexT>& mesh
+			const mesh::indexed<VertexT>& mesh,
+			const scissor& viewport
 		) {
-			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end());
+			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), viewport);
 		}
 
 		template <typename Shader, typename ImageView>
-		void draw_screen_quad(ImageView& imageView) {
-			glm::ivec2 max = viewportDims / 16;
-			glm::ivec2 off = viewportOffset / 16;
+		inline static void draw_screen_quad(ImageView& imageView, const scissor& viewport) {
+			glm::ivec2 max = viewport.extent / 16;
+			glm::ivec2 off = viewport.offset / 16;
 			for (int y = 0; y < max.y; ++y) {
 				for (int x = 0; x < max.x; ++x) {
 					glm::vec2 frag = glm::vec2((float)x / max.x, (float)y / max.y);

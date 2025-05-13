@@ -24,16 +24,6 @@ namespace rast::shader {
 			inline static output shade(const input& frag) {
 				return color;
 			}
-
-			inline static input interpolate(
-				const input& frag0,
-				const input& frag1,
-				const input& frag2,
-				const glm::vec3& coefs
-			) {
-				return frag0;
-			}
-			rast_shader_fragment_shade()
 		};
 
 		class vertex {

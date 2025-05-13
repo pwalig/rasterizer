@@ -73,7 +73,7 @@ namespace rast::framebuffer {
 
 				// output color
 				colorImage.at(x, y) = Shader::fragment::shade(
-					triangle[0].data, triangle[1].data, triangle[2].data, coefs
+					interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs)
 				);
 			}
 		}
@@ -103,7 +103,7 @@ namespace rast::framebuffer {
 			coefs /= sum;
 			// output color
 			colorImage.at(x, y) = Shader::fragment::shade(
-				triangle[0].data, triangle[1].data, triangle[2].data, coefs
+				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs)
 			);
 		}
 	};

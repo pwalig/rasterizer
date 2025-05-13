@@ -28,18 +28,6 @@ namespace rast::shader {
 				if (texture) return texture.sample(frag);
 				else return color::rgba8(255, 0, 255, 255);
 			}
-
-			inline static input interpolate(
-				const input& frag0,
-				const input& frag1,
-				const input& frag2,
-				const glm::vec3& coefs
-			) {
-				glm::vec2 new_uv = (frag0 * coefs.x) + (frag1 * coefs.y) + (frag2 * coefs.z);
-				return { new_uv };
-			}
-
-			rast_shader_fragment_shade()
 		};
 
 

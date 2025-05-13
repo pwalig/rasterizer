@@ -35,20 +35,6 @@ namespace rast::shader::deferred {
 					texture.sample(frag.uv)
 				};
 			}
-
-			inline static input interpolate(
-				const input& frag0,
-				const input& frag1,
-				const input& frag2,
-				const glm::vec3& coefs
-			) {
-				glm::vec2 new_uv = (frag0.uv * coefs.x) + (frag1.uv * coefs.y) + (frag2.uv * coefs.z);
-				glm::vec3 new_normal = (frag0.normal * coefs.x) + (frag1.normal * coefs.y) + (frag2.normal * coefs.z);
-				glm::vec3 new_position = (frag0.position * coefs.x) + (frag1.position * coefs.y) + (frag2.position * coefs.z);
-				return { new_position, new_normal, new_uv };
-			}
-
-			rast_shader_fragment_shade()
 		};
 
 
@@ -82,17 +68,6 @@ namespace rast::shader::deferred {
 				float nl = std::clamp(glm::dot(N, light_direction), 0.0f, 1.0f);
 				return color::rgba8(F.albedo.r * nl + ambient.r, F.albedo.g * nl + ambient.g, F.albedo.b * nl + ambient.b, F.albedo.a);
 			}
-
-			inline static input interpolate(
-				const input& frag0,
-				const input& frag1,
-				const input& frag2,
-				const glm::vec3& coefs
-			) {
-				return (frag0 * coefs.x) + (frag1 * coefs.y) + (frag2 * coefs.z);
-			}
-
-			rast_shader_fragment_shade()
 		};
 
 

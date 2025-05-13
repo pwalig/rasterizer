@@ -21,13 +21,13 @@ namespace rast {
 				data(Data), width(Width), height(Height) { }
 			inline sampler(const image<color>& img) : sampler(img.data(), img.width(), img.height()) {}
 
-			inline color sample(glm::vec2 coords) {
+			inline color sample(glm::vec2 coords) const {
 				size_type x = (size_type)(coords.x * (width - 1)) % width;
 				size_type y = (size_type)(coords.y * (height - 1)) % height;
 				return data[y * width + x];
 			}
 
-			inline explicit operator bool() { return data != nullptr; }
+			inline explicit operator bool() const { return data != nullptr; }
 		};
 	};
 }

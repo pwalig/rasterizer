@@ -12,41 +12,29 @@
 namespace rast::shader {
 	class lambert_textured {
 	public:
-		inline static glm::mat4 M = glm::mat4(1.0f);
-		inline static glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		inline static glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
-
 		class fragment {
 		public:
-
-			inline static texture<rast::color::rgba8>::sampler texture;
-			inline static glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
-			inline static color::rgb8 ambient = color::rgb8(5, 5, 5);
 
 			using input = inputs::normal_uv;
 			using output = color::rgba8;
 
-			inline static output shade(const input& frag) {
+			class uniform_buffer {
+			public:
+				texture<rast::color::rgba8>::sampler texture;
+				glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
+				color::rgb8 ambient = color::rgb8(5, 5, 5);
+			};
+
+			inline static uniform_buffer uniforms;
+
+			inline static output shade(const input& frag, const uniform_buffer& uniforms = uniforms) {
 				glm::vec3 N = glm::normalize(frag.normal);
-				float nl = std::clamp(glm::dot(N, light_direction), 0.0f, 1.0f);
+				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);
 				color::rgba8 color;
-				if (texture) color = texture.sample(frag.uv);
+				if (uniforms.texture) color = uniforms.texture.sample(frag.uv);
 				else color = color::rgba8(255, 0, 255, 255);
-				return color::rgba8(color.r * nl + ambient.r, color.g * nl + ambient.g, color.b * nl + ambient.b, color.a);
+				return color::rgba8(color.r * nl + uniforms.ambient.r, color.g * nl + uniforms.ambient.g, color.b * nl + uniforms.ambient.b, color.a);
 			}
-
-			inline static input interpolate(
-				const input& frag0,
-				const input& frag1,
-				const input& frag2,
-				const glm::vec3& coefs
-			) {
-				glm::vec2 new_uv = (frag0.uv * coefs.x) + (frag1.uv * coefs.y) + (frag2.uv * coefs.z);
-				glm::vec3 new_normal = (frag0.normal * coefs.x) + (frag1.normal * coefs.y) + (frag2.normal * coefs.z);
-				return { new_normal, new_uv };
-			}
-
-			rast_shader_fragment_shade()
 		};
 
 
@@ -55,8 +43,17 @@ namespace rast::shader {
 			using input = inputs::position_normal_uv;
 			using output = vertex_shader_output<lambert_textured>;
 
-			inline static output shade(const input& vert) {
-				return { P * V * M * glm::vec4(vert.position, 1.0f), {vert.normal, vert.uv} };
+			class uniform_buffer {
+			public:
+				glm::mat4 M = glm::mat4(1.0f);
+				glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+			};
+
+			inline static uniform_buffer uniforms;
+
+			inline static output shade(const input& vert, const uniform_buffer& uniforms = uniforms) {
+				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert.position, 1.0f), {vert.normal, vert.uv} };
 			}
 
 			template <typename posIter, typename normIter, typename uvIter, typename outIter>
@@ -77,5 +74,7 @@ namespace rast::shader {
 				}
 			}
 		};
+
+		rast_shader_uniform_buffer()
 	};
 }

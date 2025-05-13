@@ -29,17 +29,6 @@ namespace rast::shader {
 					std::clamp(frag.w, 0.0f, 1.0f) * 255
 				);
 			}
-
-			inline static input interpolate(
-				const input& frag0,
-				const input& frag1,
-				const input& frag2,
-				const glm::vec3& coefs
-			) {
-				return (frag0 * coefs.x) + (frag1 * coefs.y) + (frag2 * coefs.z);
-			}
-
-			rast_shader_fragment_shade()
 		};
 
 
