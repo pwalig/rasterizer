@@ -9,32 +9,36 @@
 namespace rast::shader {
 	class constant {
 	public:
-		inline static glm::mat4 M = glm::mat4(1.0f);
-		inline static glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		inline static glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
-
-		inline static color::rgba8 color;
-
 		class fragment {
 		public:
-
 			class input { };
 			using output = color::rgba8;
 
-			inline static output shade(const input& frag) {
-				return color;
+			struct uniform_buffer {
+				color::rgba8 color;
+			};
+
+			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
+				return uniforms.color;
 			}
 		};
 
 		class vertex {
 		public:
 			using input = inputs::position;
-
 			using output = vertex_shader_output<constant>;
 
-			inline static output shade(const input& vert) {
-				return { P * V * M * glm::vec4(vert, 1.0f), {} };
+			struct uniform_buffer {
+				glm::mat4 M = glm::mat4(1.0f);
+				glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+			};
+
+			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
+				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert, 1.0f), {} };
 			}
 		};
+
+		rast_shader_uniform_buffer()
 	};
 }

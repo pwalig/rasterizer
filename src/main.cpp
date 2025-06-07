@@ -62,22 +62,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     P = glm::perspective(glm::radians(70.0f), (float)width / height, 0.1f, 100.0f);
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    rast::shader::constant::color = rast::color::rgba8(51, 51, 51, 255);
-
-	rast::shader::constant::P = P;
-	rast::shader::vertex_colored::P = P;
-	rast::shader::deferred::first_pass::P = P;
-
-	rast::shader::constant::V = V;
-	rast::shader::vertex_colored::V = V;
-	rast::shader::deferred::first_pass::V = V;
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
-    rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
-    rast::shader::deferred::first_pass::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     depth_buffer = rast::image<uint32_t>(width, height);
     g_buffer = GBuffer(width, height);
-    rast::shader::deferred::second_pass::fragment::texture = rast::texture<GBuffer::color>::sampler(g_buffer);
     
     icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/SuzanneSmooth.mesh");
     plane = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/plane.mesh");
@@ -100,11 +88,6 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 		depth_buffer.resize(event->window.data1, event->window.data2);
         g_buffer.resize(event->window.data1, event->window.data2);
-
-		rast::shader::deferred::second_pass::fragment::texture = rast::texture<GBuffer::color>::sampler(g_buffer);
-        rast::shader::constant::P = P;
-        rast::shader::vertex_colored::P = P;
-        rast::shader::deferred::first_pass::P = P;
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
