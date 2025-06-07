@@ -56,7 +56,7 @@ const float rast::mesh::cube::vertex_array[108] = {
     1.0f, -1.0f, 1.0f,
 };
 
-const rast::u32 rast::mesh::cube::indices[36] = {
+const uint32_t rast::mesh::cube::indices[36] = {
     0, 2, 1,
     1, 2, 3,
 
@@ -152,7 +152,7 @@ const float rast::mesh::cube::normals[72] = {
     1.0f, 0.0f, 0.0f,
 };
 
-const rast::f32 rast::mesh::cube::uv[48] = {
+const float rast::mesh::cube::uv[48] = {
     0.0f, 0.0f,
     0.0f, 1.0f,
     1.0f, 0.0f,
@@ -194,13 +194,13 @@ const float rast::mesh::screen_quad::vertex_array[30] = {
     1.0f, -1.0f, 0.0f, 1.0f, 1.0f
 };
 
-std::vector<glm::vec3> rast::mesh::grid(u32 x, u32 y, f siz)
+std::vector<glm::vec3> rast::mesh::grid(uint32_t x, uint32_t y, float siz)
 {
     std::vector<glm::vec3> res;
     res.reserve(3 * 2 * x * y);
 
-    for (f i = 0; i < siz * y; i += siz) {
-        for (f j = 0; j < siz * x; j += siz) {
+    for (float i = 0; i < siz * y; i += siz) {
+        for (float j = 0; j < siz * x; j += siz) {
             res.push_back(glm::vec3(j, i, 0.0f));
             res.push_back(glm::vec3(j + siz, i, 0.0f));
             res.push_back(glm::vec3(j, i + siz, 0.0f));

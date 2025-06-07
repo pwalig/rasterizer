@@ -158,7 +158,6 @@
     <ClInclude Include="src\rast\shader\vertex_colored.hpp" />
     <ClInclude Include="src\rast\shader\shader_macros.hpp" />
     <ClInclude Include="src\rast\texture.hpp" />
-    <ClInclude Include="src\rast\types.hpp" />
     <ClInclude Include="src\sa_vector.hpp" />
     <ClInclude Include="src\trivial_iterator.hpp" />
   </ItemGroup>

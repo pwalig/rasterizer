@@ -6,7 +6,7 @@ namespace rast {
 	template <typename ColorT = color::rgba8>
 	class texture {
 	public:
-		using size_type = u32;
+		using size_type = uint32_t;
 		using color = ColorT;
 
 		class sampler {

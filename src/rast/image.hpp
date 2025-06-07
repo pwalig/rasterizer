@@ -10,7 +10,7 @@ namespace rast {
 	template <typename PixelT>
 	class image {
 	public:
-		using size_type = u32;
+		using size_type = uint32_t;
 		using color = PixelT;
 		using pixel = PixelT;
 
@@ -42,7 +42,7 @@ namespace rast {
 
 		class view {
 		public:
-			using size_type = u32;
+			using size_type = uint32_t;
 			using color = PixelT;
 			using pixel = PixelT;
 			

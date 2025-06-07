@@ -5,7 +5,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 
-#include "types.hpp"
+#include "mesh.hpp"
 #include "image.hpp"
 
 namespace rast {
@@ -141,7 +141,7 @@ namespace rast {
 				glm::dot(verts[2].rastPos, equation)
 			};
 
-			u8 mask =
+			uint8_t mask =
 				(values[0] < 0.0f ? 1 : 0) |
 				(values[1] < 0.0f ? 2 : 0) |
 				(values[2] < 0.0f ? 4 : 0);

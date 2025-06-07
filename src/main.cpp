@@ -31,13 +31,13 @@ static SDL_Window *window = NULL;
 static SDL_Surface* surface = nullptr;
 static glm::mat4 V;
 static glm::mat4 P;
-static rast::image<rast::u32> depth_buffer;
+static rast::image<uint32_t> depth_buffer;
 using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
 static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> icosphere;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
-static thd::thread_pool tp(std::thread::hardware_concurrency());
+static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
 
 /* This function runs once at startup. */
@@ -75,7 +75,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
     rast::shader::textured::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
     rast::shader::deferred::first_pass::fragment::texture = rast::texture<rast::color::rgba8>::sampler(texture);
-    depth_buffer = rast::image<rast::u32>(width, height);
+    depth_buffer = rast::image<uint32_t>(width, height);
     g_buffer = GBuffer(width, height);
     rast::shader::deferred::second_pass::fragment::texture = rast::texture<GBuffer::color>::sampler(g_buffer);
     
@@ -123,8 +123,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // prepare framebuffers
     rast::image<rast::color::rgba8>::view iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
     GBuffer::view gv(g_buffer);
-    //rast::framebuffer::color_depth<GBuffer::color, rast::u32> framebuf(gv, depth_buffer);
-    rast::framebuffer::color_depth<rast::color::rgba8, rast::u32> framebuf(iv, depth_buffer);
+    //rast::framebuffer::color_depth<GBuffer::color, rast::uint32_t> framebuf(gv, depth_buffer);
+    rast::framebuffer::color_depth<rast::color::rgba8, uint32_t> framebuf(iv, depth_buffer);
     framebuf.clear_depth_buffer();
     //rast::framebuffer::rgba8 noDepthFramebuffer(iv);
     //framebuf.clear_color({glm::vec3(0.0f), glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});

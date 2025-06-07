@@ -3,7 +3,6 @@
 
 #include <glm/glm.hpp>
 
-#include "types.hpp"
 #include "image.hpp"
 
 namespace rast::framebuffer {
@@ -52,7 +51,7 @@ namespace rast::framebuffer {
 
 		template <typename Shader>
 		void draw(
-			u32 x, u32 y,
+			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			glm::vec3 coefs
@@ -99,7 +98,7 @@ namespace rast::framebuffer {
 
 		template <typename Shader>
 		void draw(
-			u32 x, u32 y,
+			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			glm::vec3 coefs
