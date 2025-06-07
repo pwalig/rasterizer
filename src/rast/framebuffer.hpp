@@ -54,30 +54,23 @@ namespace rast::framebuffer {
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			glm::vec3 coefs
+			const glm::vec3& coefs
 		) {
 			// depth test
-			glm::vec3 w(
-				triangle[0].rastPos.w,
-				triangle[1].rastPos.w,
-				triangle[2].rastPos.w
-			);
 			glm::vec3 z(
 				triangle[0].rastPos.z,
 				triangle[1].rastPos.z,
 				triangle[2].rastPos.z
 			);
 			depth_format& oldDepth = depthImage.at(x, y);
-			depth_format newDepth = (depth_format)((interpolate(z / w, coefs) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max());
-			coefs /= w;
-			float sum = coefs.x + coefs.y + coefs.z;
-			coefs /= sum;
+			depth_format newDepth = (depth_format)((interpolate(z, coefs) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max());
 			if (newDepth < oldDepth) {
 				oldDepth = newDepth;
 
 				// output color
+				float sum = coefs.x + coefs.y + coefs.z;
 				colorImage.at(x, y) = Shader::fragment::shade(
-					interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs),
+					interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs / sum),
 					uniform_buffer
 				);
 			}
@@ -101,19 +94,12 @@ namespace rast::framebuffer {
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			glm::vec3 coefs
+			const glm::vec3& coefs
 		) {
-			glm::vec3 w(
-				triangle[0].rastPos.w,
-				triangle[1].rastPos.w,
-				triangle[2].rastPos.w
-			);
-			coefs /= w;
 			float sum = coefs.x + coefs.y + coefs.z;
-			coefs /= sum;
 			// output color
 			colorImage.at(x, y) = Shader::fragment::shade(
-				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs),
+				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs / sum),
 				uniform_buffer
 			);
 		}

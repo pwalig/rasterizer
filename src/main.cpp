@@ -37,6 +37,7 @@ static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> icosphere;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
+//static thd::thread_pool tp(std::thread::hardware_concurrency());
 static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
 

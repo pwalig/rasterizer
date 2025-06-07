@@ -97,9 +97,9 @@ namespace rast {
 
 							// interpolation coefitients
 							glm::vec3 coefs(
-								(float)Cx.y / area,
-								(float)Cx.z / area,
-								(float)Cx.x / area
+								(float)Cx.y / area / vert[0].rastPos.w,
+								(float)Cx.z / area / vert[1].rastPos.w,
+								(float)Cx.x / area / vert[2].rastPos.w
 							);
 
 							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, coefs);

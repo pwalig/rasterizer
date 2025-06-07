@@ -26,7 +26,7 @@ public:
 	inline sa_vector(const sa_vector& other) : storage(new T[other.siz]), siz(other.siz) {
 		std::copy(other.begin(), other.end(), begin());
 	}
-	inline sa_vector(sa_vector&& other) : storage(other.storage), siz(other.siz) {
+	inline sa_vector(sa_vector&& other) noexcept : storage(other.storage), siz(other.siz) {
 		other.siz = 0;
 		other.storage = nullptr;
 	}
@@ -40,7 +40,7 @@ public:
 		}
 		return *this;
 	}
-	inline sa_vector& operator= (sa_vector&& other) {
+	inline sa_vector& operator= (sa_vector&& other) noexcept {
 		if (this != &other) {
 			if (storage) delete[] storage;
 			storage = other.storage;
