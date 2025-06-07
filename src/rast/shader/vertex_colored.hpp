@@ -28,10 +28,8 @@ namespace rast::shader {
 		};
 
 
-		class vertex {
-		public:
-			class input {
-			public:
+		struct vertex {
+			struct input {
 				glm::vec3 position;
 				glm::vec4 color;
 			};
@@ -47,5 +45,7 @@ namespace rast::shader {
 				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert.position, 1.0f), {vert.color} };
 			}
 		};
+
+		rast_shader_uniform_buffer()
 	};
 }

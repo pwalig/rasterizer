@@ -49,6 +49,21 @@ namespace rast::shader {
 			friend inline position_uv operator+ (const position_uv& rhs, const position_uv& lhs) {
 				return { rhs.position + lhs.position, rhs.uv + lhs.uv };
 			}
+
+			inline static void format(
+				inputs::position* posBegin,
+				inputs::uv* uvBegin,
+				size_t count,
+				position_uv* outBegin
+			) {
+				for (size_t i = 0; i < count; ++i) {
+					outBegin->position = *posBegin;
+					outBegin->uv = *uvBegin;
+					++posBegin;
+					++uvBegin;
+					++outBegin;
+				}
+			}
 		};
 		class position_normal_uv {
 		public:
@@ -60,6 +75,23 @@ namespace rast::shader {
 			}
 			friend inline position_normal_uv operator+ (const position_normal_uv& rhs, const position_normal_uv& lhs) {
 				return { rhs.position + lhs.position, rhs.normal + lhs.normal, rhs.uv + lhs.uv };
+			}
+			inline static void format(
+				inputs::position* posBegin,
+				inputs::normal* normBegin,
+				inputs::uv* uvBegin,
+				size_t count,
+				position_normal_uv* outBegin
+			) {
+				for (size_t i = 0; i < count; ++i) {
+					outBegin->position = *posBegin;
+					outBegin->normal = *normBegin;
+					outBegin->uv = *uvBegin;
+					++posBegin;
+					++normBegin;
+					++uvBegin;
+					++outBegin;
+				}
 			}
 		};
 		class normal_uv {

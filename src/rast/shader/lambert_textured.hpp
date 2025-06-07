@@ -10,15 +10,12 @@
 #include "../texture.hpp"
 
 namespace rast::shader {
-	class lambert_textured {
-	public:
-		class fragment {
-		public:
-
+	struct lambert_textured {
+		struct fragment {
 			using input = inputs::normal_uv;
 			using output = color::rgba8;
 
-			class uniform_buffer {
+			struct uniform_buffer {
 			public:
 				texture<rast::color::rgba8>::sampler texture;
 				glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
@@ -36,13 +33,11 @@ namespace rast::shader {
 		};
 
 
-		class vertex {
-		public:
+		struct vertex {
 			using input = inputs::position_normal_uv;
 			using output = vertex_shader_output<lambert_textured>;
 
-			class uniform_buffer {
-			public:
+			struct uniform_buffer {
 				glm::mat4 M = glm::mat4(1.0f);
 				glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
@@ -50,24 +45,6 @@ namespace rast::shader {
 
 			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
 				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert.position, 1.0f), {vert.normal, vert.uv} };
-			}
-
-			template <typename posIter, typename normIter, typename uvIter, typename outIter>
-			inline static void format(
-				posIter posBegin, posIter posEnd,
-				normIter normBegin, normIter normEnd,
-				uvIter uvBegin, uvIter uvEnd,
-				outIter outBegin
-			) {
-				while (posBegin != posEnd && uvBegin != uvEnd) {
-					outBegin->position = *posBegin;
-					outBegin->normal = *normBegin;
-					outBegin->uv = *uvBegin;
-					++posBegin;
-					++normBegin;
-					++uvBegin;
-					++outBegin;
-				}
 			}
 		};
 

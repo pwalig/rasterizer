@@ -39,21 +39,6 @@ namespace rast::shader {
 			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
 				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert.position, 1.0f), {vert.uv} };
 			}
-
-			template <typename posIter, typename uvIter, typename outIter>
-			inline static void format(
-				posIter posBegin, posIter posEnd,
-				uvIter uvBegin, uvIter uvEnd,
-				outIter outBegin
-			) {
-				while (posBegin != posEnd && uvBegin != uvEnd) {
-					outBegin->position = *posBegin;
-					outBegin->uv = *uvBegin;
-					++posBegin;
-					++uvBegin;
-					++outBegin;
-				}
-			}
 		};
 
 		rast_shader_uniform_buffer()
