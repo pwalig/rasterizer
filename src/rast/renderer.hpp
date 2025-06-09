@@ -26,30 +26,43 @@ namespace rast {
 	};
 	class renderer {
 	private:
-		inline static glm::ivec2 toScreenSpace(const glm::vec4& vertex, const scissor& viewport) {
-			glm::vec2 res(
+		inline static void perspective_divide(glm::vec4& vertex) {
+			vertex.x /= vertex.w;
+			vertex.y /= vertex.w;
+			vertex.z /= vertex.w;
+		}
+		inline static glm::vec4 perspective_divided(const glm::vec4& vertex) {
+			return glm::vec4(
 				vertex.x / vertex.w,
-				vertex.y / vertex.w
+				vertex.y / vertex.w,
+				vertex.z / vertex.w,
+				vertex.w
 			);
+		}
 
+		inline static glm::ivec2 toScreenSpace(const glm::vec4& vertex, const scissor& viewport) {
 			return glm::ivec2(
-				(( res.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
-				(( -res.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
+				(( vertex.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
+				(( -vertex.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
 			);
 		}
 		
 		template <typename Shader, typename Framebuffer>
 		inline static void rasterize(
 			Framebuffer& framebuffer,
-			const typename Shader::vertex::output* vertex_begin,
-			const typename Shader::vertex::output* vertex_end,
+			typename Shader::vertex::output* vertex_begin,
+			typename Shader::vertex::output* vertex_end,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const scissor& viewport,
 			const tile& tile
 		) {
 			using vertex = typename Shader::vertex::output;
 
-			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
+			for (vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
+
+				perspective_divide(vert[0].rastPos);
+				perspective_divide(vert[1].rastPos);
+				perspective_divide(vert[2].rastPos);
 
 				glm::ivec2 a = toScreenSpace(vert[0].rastPos, viewport);
 				glm::ivec2 b = toScreenSpace(vert[1].rastPos, viewport);
@@ -95,14 +108,7 @@ namespace rast {
 
 						if (Cx.x >= 0 && Cx.y >= 0 && Cx.z >= 0) {
 
-							// interpolation coefitients
-							glm::vec3 coefs(
-								(float)Cx.y / area / vert[0].rastPos.w,
-								(float)Cx.z / area / vert[1].rastPos.w,
-								(float)Cx.x / area / vert[2].rastPos.w
-							);
-
-							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, coefs);
+							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, Cx, area);
 						}
 						Cx -= Dy;
 					}
@@ -118,6 +124,35 @@ namespace rast {
 		) {
 			float t = coef0 / (coef0 - coef1);
 			return (v0 * (1.0f - t)) + (v1 * t);
+		}
+
+		template <typename Shader, typename Framebuffer>
+		inline static void sutherland_hodgman_clip_and_draw(
+			Framebuffer& framebuffer,
+			typename Shader::vertex::output* verts,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			const scissor& viewport,
+			const tile& tile
+		) {
+			using vertex = typename Shader::vertex::output;
+
+			glm::vec4 equations[6] = {
+				glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), // near
+				glm::vec4(0.0f, 0.0f, -1.0f, 1.0f), // far
+				glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // X
+				glm::vec4(-1.0f, 0.0f, 0.0f, 1.0f), // -X
+				glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), // Y
+				glm::vec4(0.0f, -1.0f, 0.0f, 1.0f), // -Y
+			};
+
+			uint32_t count;
+			for (uint32_t eq = 0; eq < 6; ++eq) {
+				for (uint32_t i = 0; i < count; ++i) {
+					vertex current = verts[i];
+					vertex prev = verts[(i + count - 1) % count];
+					//vertex intersecting = 
+				}
+			}
 		}
 
 		template <typename Shader, typename Framebuffer>

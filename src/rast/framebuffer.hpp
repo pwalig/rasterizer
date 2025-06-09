@@ -4,23 +4,9 @@
 #include <glm/glm.hpp>
 
 #include "image.hpp"
+#include "interpolation.hpp"
 
 namespace rast::framebuffer {
-	template <typename T>
-	inline T interpolate(const T& a, const T& b, const T& c, const glm::vec3& coefs) {
-		return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
-	}
-
-	template <typename T>
-	inline T interpolate(const glm::vec<3, T>& values, const glm::vec3& coefs) {
-		return (T)(values.x * coefs.x) + (T)(values.y * coefs.y) + (T)(values.z * coefs.z);
-	}
-
-	template <typename T>
-	inline T interpolate2(T a, T b, T c, const glm::vec3& coefs) {
-		return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
-	}
-
 	template<typename ColorFormat, typename DepthFormat>
 	class color_depth {
 	public:
@@ -54,7 +40,7 @@ namespace rast::framebuffer {
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const glm::vec3& coefs
+			const glm::ivec3& results, int area
 		) {
 			// depth test
 			glm::vec3 z(
@@ -63,14 +49,20 @@ namespace rast::framebuffer {
 				triangle[2].rastPos.z
 			);
 			depth_format& oldDepth = depthImage.at(x, y);
-			depth_format newDepth = (depth_format)((interpolate(z, coefs) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max());
+			depth_format newDepth = static_cast<depth_format>(((
+					//area < (1 << 12) ? triangle[0].rastPos.z :
+					interpol::interpolate(z, interpol::linear_coefs(results, area))
+				) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max());
+			//depth_format newDepth = static_cast<depth_format>(interpolate(z, coefs));
 			if (newDepth < oldDepth) {
 				oldDepth = newDepth;
 
 				// output color
-				float sum = coefs.x + coefs.y + coefs.z;
+				//colorImage.at(x, y).r = static_cast<uint8_t>(newDepth * ((double)std::numeric_limits<uint8_t>::max() / std::numeric_limits<depth_format>::max()));
+				//colorImage.at(x, y).g = newDepth / (depth_format(1) << 18) % std::numeric_limits<uint8_t>::max();
+				//float sum = coefs.x + coefs.y + coefs.z;
 				colorImage.at(x, y) = Shader::fragment::shade(
-					interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs / sum),
+					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
 					uniform_buffer
 				);
 			}
@@ -94,12 +86,11 @@ namespace rast::framebuffer {
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const glm::vec3& coefs
+			const glm::ivec3& results, int area
 		) {
-			float sum = coefs.x + coefs.y + coefs.z;
 			// output color
 			colorImage.at(x, y) = Shader::fragment::shade(
-				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs / sum),
+				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
 				uniform_buffer
 			);
 		}
