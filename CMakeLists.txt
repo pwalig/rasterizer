@@ -14,10 +14,13 @@ add_subdirectory(ext/SDL EXCLUDE_FROM_ALL)
 add_executable(rasterizer)
 target_include_directories(rasterizer PRIVATE $ENV{GLM_PATH})
 target_include_directories(rasterizer PRIVATE $ENV{STB_PATH})
+target_compile_definitions(rasterizer PRIVATE GLM_ENABLE_EXPERIMENTAL)
 target_sources(rasterizer PRIVATE src/main.cpp)
 target_sources(rasterizer PRIVATE src/thread_pool.cpp)
 target_sources(rasterizer PRIVATE src/stb_implementation.cpp)
 target_sources(rasterizer PRIVATE src/rast/mesh.cpp)
+
+target_sources(rasterizer PRIVATE src/game/fly_cam.cpp)
 
 # Link to the actual SDL3 library.
 target_link_libraries(rasterizer PRIVATE SDL3::SDL3)

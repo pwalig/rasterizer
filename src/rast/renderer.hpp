@@ -126,6 +126,8 @@ namespace rast {
 			return (v0 * (1.0f - t)) + (v1 * t);
 		}
 
+		inline static constexpr uint32_t maxClipVerts = 12;
+
 		template <typename Shader, typename Framebuffer>
 		inline static void sutherland_hodgman_clip_and_draw(
 			Framebuffer& framebuffer,
@@ -135,8 +137,14 @@ namespace rast {
 			const tile& tile
 		) {
 			using vertex = typename Shader::vertex::output;
+			vertex list[maxClipVerts];
+			uint32_t listIndex = 0; // pointer to one after last element of outputList (aka. count of elements)
 
-			glm::vec4 equations[6] = {
+			vertex* outputList = list;
+			vertex* inputList = verts;
+
+
+			const glm::vec4 equations[6] = {
 				glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), // near
 				glm::vec4(0.0f, 0.0f, -1.0f, 1.0f), // far
 				glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // X
@@ -145,13 +153,62 @@ namespace rast {
 				glm::vec4(0.0f, -1.0f, 0.0f, 1.0f), // -Y
 			};
 
-			uint32_t count;
+			uint32_t count = 3; // count of elements in input list
 			for (uint32_t eq = 0; eq < 6; ++eq) {
 				for (uint32_t i = 0; i < count; ++i) {
-					vertex current = verts[i];
-					vertex prev = verts[(i + count - 1) % count];
-					//vertex intersecting = 
+					vertex current = inputList[i];
+					vertex prev = inputList[(i + count - 1) % count];
+					float current_value = glm::dot(current.rastPos, equations[eq]);
+					float prev_value = glm::dot(prev.rastPos, equations[eq]);
+
+					if (current_value >= 0.0f) { // if current inside
+						if (prev_value < 0.0f) { // if prev outside
+							assert(listIndex < maxClipVerts);
+							//std::cout << listIndex << " curr in prev out clip\n";
+							outputList[listIndex++] = clip_vert(prev, current, prev_value, current_value);
+						}
+						assert(listIndex < maxClipVerts);
+						//std::cout << listIndex << " curr\n";
+						outputList[listIndex++] = current;
+					}
+					else if (prev_value >= 0.0f) { // prev inside
+						assert(listIndex < maxClipVerts);
+						//std::cout << listIndex << " curr out prev in clip\n";
+						outputList[listIndex++] = clip_vert(current, prev, current_value, prev_value);
+					}
 				}
+				//std::cout << "end equation\n";
+				std::swap(inputList, outputList); // "copy" output list to input list
+				count = listIndex;
+				listIndex = 0; // "clear" output list
+			}
+			if (count < 3) return;
+			if (count == 3) {
+				//std::cout << "rasterize\n";
+				rasterize<Shader, Framebuffer>(
+					framebuffer,
+					inputList, inputList + 3,
+					uniform_buffer,
+					viewport,
+					tile
+				);
+			}
+			else {
+				// triangulate
+				for (uint32_t i = 1; i < count - 1; ++i) {
+					outputList[listIndex++] = inputList[0];
+					outputList[listIndex++] = inputList[i];
+					outputList[listIndex++] = inputList[i+1];
+				}
+				assert(listIndex % 3 == 0);
+				//std::cout << "rasterize\n";
+				rasterize<Shader, Framebuffer>(
+					framebuffer,
+					outputList, outputList + listIndex,
+					uniform_buffer,
+					viewport,
+					tile
+				);
 			}
 		}
 
@@ -255,13 +312,14 @@ namespace rast {
 			using output_vertex = typename Shader::vertex::output;
 
 			for (auto vert = vertex_begin; vert != vertex_end;) {
-				output_vertex verts[6];
+				output_vertex verts[maxClipVerts];
 
 				verts[0] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 				verts[1] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 				verts[2] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 
-				clip_and_draw<Shader, Framebuffer>(
+				//clip_and_draw<Shader, Framebuffer>(
+				sutherland_hodgman_clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
 					verts,
 					uniform_buffer.fragment,
@@ -303,13 +361,14 @@ namespace rast {
 			}
 
 			for (auto i = index_begin; i != index_end;) {
-				output_vertex verts[6];
+				output_vertex verts[maxClipVerts];
 
 				verts[0] = vertex_buffer[*(i++)];
 				verts[1] = vertex_buffer[*(i++)];
 				verts[2] = vertex_buffer[*(i++)];
 
-				clip_and_draw<Shader, Framebuffer>(
+				//clip_and_draw<Shader, Framebuffer>(
+				sutherland_hodgman_clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
 					verts,
 					uniform_buffer.fragment,

@@ -12,6 +12,7 @@
 #include <bitset>
 
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
+#define SDL_HINT_MOUSE_RELATIVE_WARP_MOTION  "SDL_MOUSE_RELATIVE_WARP_MOTION"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
@@ -26,6 +27,7 @@
 #include "rast/framebuffer.hpp"
 #include "rast/renderer.hpp"
 #include "thread_pool.hpp"
+#include "game/fly_cam.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -44,6 +46,7 @@ static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
 static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
 static std::bitset<256> pressed;
+static glm::vec2 mouseDelta = glm::vec2(0.0f);
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -96,12 +99,27 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         g_buffer.resize(event->window.data1, event->window.data2);
     }
     if (event->type == SDL_EVENT_KEY_DOWN) {
+        if (event->key.scancode == SDL_SCANCODE_ESCAPE && !SDL_CursorVisible()) {
+            SDL_SetWindowRelativeMouseMode(window, false);
+            SDL_ShowCursor();
+        }
+
         if (event->key.scancode < pressed.size())
 			pressed.set(event->key.scancode);
     }
     if (event->type == SDL_EVENT_KEY_UP) {
         if (event->key.scancode < pressed.size())
             pressed.reset(event->key.scancode);
+    }
+    if (event->type == SDL_EVENT_MOUSE_MOTION) {
+        mouseDelta.x = event->motion.xrel;
+        mouseDelta.y = event->motion.yrel;
+    }
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        if (event->button.button == SDL_BUTTON_LEFT && SDL_CursorVisible()) {
+            SDL_SetWindowRelativeMouseMode(window, true);
+            SDL_HideCursor();
+        }
     }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -134,17 +152,19 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //M = glm::translate(M, -dt * 10.0f * glm::vec3(1.0f, 0.0f, 0.0f));
 
     // move camera
-    static glm::vec3 position = glm::vec3(5.0f, 5.0f, 5.0f);
+    static game::fly_cam flyCam;
     glm::vec3 movement = glm::vec3(0.0f, 0.0f, 0.0f);
-    if (pressed[SDL_SCANCODE_W]) movement.z -= 1.0f;
-    if (pressed[SDL_SCANCODE_S]) movement.z += 1.0f;
-    if (pressed[SDL_SCANCODE_A]) movement.x -= 1.0f;
-    if (pressed[SDL_SCANCODE_D]) movement.x += 1.0f;
-    if (pressed[SDL_SCANCODE_SPACE]) movement.y += 1.0f;
-    if (pressed[SDL_SCANCODE_LSHIFT]) movement.y -= 1.0f;
-    if (pressed[SDL_SCANCODE_0]) movement *= 10.0f;
-    position += movement * dt * 1.0f;
-    V = glm::lookAt(position, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    if (!SDL_CursorVisible()) {
+		if (pressed[SDL_SCANCODE_W]) movement.z += 1.0f;
+		if (pressed[SDL_SCANCODE_S]) movement.z -= 1.0f;
+		if (pressed[SDL_SCANCODE_A]) movement.x += 1.0f;
+		if (pressed[SDL_SCANCODE_D]) movement.x -= 1.0f;
+		if (pressed[SDL_SCANCODE_SPACE]) movement.y += 1.0f;
+		if (pressed[SDL_SCANCODE_LSHIFT]) movement.y -= 1.0f;
+		flyCam.update(movement, glm::vec2(mouseDelta.y, -mouseDelta.x), dt);
+    }
+    V = glm::lookAt(flyCam.position, flyCam.position + (flyCam.rotation * glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
+    mouseDelta = glm::vec2(0.0f);
 
     using shader = rast::shader::lambert_textured;
 	rast::scissor scissor(0, 0, iv.width, iv.height);
