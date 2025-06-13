@@ -117,191 +117,9 @@ namespace rast {
 			}
 		}
 
-		template <typename VertT>
-		inline static VertT clip_vert(
-			const VertT& v0, const VertT& v1,
-			float coef0, float coef1
-		) {
-			float t = coef0 / (coef0 - coef1);
-			return (v0 * (1.0f - t)) + (v1 * t);
-		}
-
-		inline static constexpr uint32_t maxSutherlandHodgmanVerts = 9;
-		inline static constexpr uint32_t maxClipTriangles = maxSutherlandHodgmanVerts - 2;
-		inline static constexpr uint32_t maxClipVerts = maxClipTriangles * 3;
-
-		template <typename Shader, typename Framebuffer>
-		inline static void sutherland_hodgman_clip_and_draw(
-			Framebuffer& framebuffer,
-			typename Shader::vertex::output* verts,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
-			const tile& tile
-		) {
-			using vertex = typename Shader::vertex::output;
-			vertex list[maxClipVerts];
-			uint32_t listIndex = 0; // pointer to one after last element of outputList (aka. count of elements)
-
-			vertex* outputList = list;
-			vertex* inputList = verts;
-
-
-			const glm::vec4 equations[6] = {
-				glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), // near
-				glm::vec4(0.0f, 0.0f, -1.0f, 1.0f), // far
-				glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // X
-				glm::vec4(-1.0f, 0.0f, 0.0f, 1.0f), // -X
-				glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), // Y
-				glm::vec4(0.0f, -1.0f, 0.0f, 1.0f), // -Y
-			};
-
-			uint32_t count = 3; // count of elements in input list
-			for (uint32_t eq = 0; eq < 6; ++eq) {
-				for (uint32_t i = 0; i < count; ++i) {
-					vertex current = inputList[i];
-					vertex prev = inputList[(i + count - 1) % count];
-					float current_value = glm::dot(current.rastPos, equations[eq]);
-					float prev_value = glm::dot(prev.rastPos, equations[eq]);
-
-					if (current_value >= 0.0f) { // if current inside
-						if (prev_value < 0.0f) { // if prev outside
-							assert(listIndex < maxClipVerts);
-							//std::cout << listIndex << " curr in prev out clip\n";
-							outputList[listIndex++] = clip_vert(prev, current, prev_value, current_value);
-						}
-						assert(listIndex < maxClipVerts);
-						//std::cout << listIndex << " curr\n";
-						outputList[listIndex++] = current;
-					}
-					else if (prev_value >= 0.0f) { // prev inside
-						assert(listIndex < maxClipVerts);
-						//std::cout << listIndex << " curr out prev in clip\n";
-						outputList[listIndex++] = clip_vert(current, prev, current_value, prev_value);
-					}
-				}
-				//std::cout << "end equation\n";
-				std::swap(inputList, outputList); // "copy" output list to input list
-				count = listIndex;
-				listIndex = 0; // "clear" output list
-			}
-			if (count < 3) return;
-			if (count == 3) {
-				//std::cout << "rasterize\n";
-				rasterize<Shader, Framebuffer>(
-					framebuffer,
-					inputList, inputList + 3,
-					uniform_buffer,
-					viewport,
-					tile
-				);
-			}
-			else {
-				// triangulate
-				for (uint32_t i = 1; i < count - 1; ++i) {
-					outputList[listIndex++] = inputList[0];
-					outputList[listIndex++] = inputList[i];
-					outputList[listIndex++] = inputList[i+1];
-				}
-				assert(listIndex % 3 == 0);
-				//std::cout << "rasterize\n";
-				rasterize<Shader, Framebuffer>(
-					framebuffer,
-					outputList, outputList + listIndex,
-					uniform_buffer,
-					viewport,
-					tile
-				);
-			}
-		}
-
-		template <typename Shader, typename Framebuffer>
-		inline static void clip_and_draw(
-			Framebuffer& framebuffer,
-			typename Shader::vertex::output* verts,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
-			const tile& tile
-		) {
-			if (
-				verts[0].rastPos.z > verts[0].rastPos.w ||
-				verts[1].rastPos.z > verts[1].rastPos.w ||
-				verts[2].rastPos.z > verts[2].rastPos.w
-			) return;
-
-			glm::vec4 equation = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-			float values[3] = {
-				glm::dot(verts[0].rastPos, equation),
-				glm::dot(verts[1].rastPos, equation),
-				glm::dot(verts[2].rastPos, equation)
-			};
-
-			uint8_t mask =
-				(values[0] < 0.0f ? 1 : 0) |
-				(values[1] < 0.0f ? 2 : 0) |
-				(values[2] < 0.0f ? 4 : 0);
-
-			auto end = verts + 3;
-			switch (mask) {
-			case 0b110:
-				verts[1] = clip_vert(verts[1], verts[0], values[1], values[0]);
-				verts[2] = clip_vert(verts[2], verts[0], values[2], values[0]);
-				break;
-			case 0b101:
-				verts[0] = clip_vert(verts[0], verts[1], values[0], values[1]);
-				verts[2] = clip_vert(verts[2], verts[1], values[2], values[1]);
-				break;
-			case 0b011:
-				verts[0] = clip_vert(verts[0], verts[2], values[0], values[2]);
-				verts[1] = clip_vert(verts[1], verts[2], values[1], values[2]);
-				break;
-			case 0b001:
-				{
-					auto v01 = clip_vert(verts[0], verts[1], values[0], values[1]);
-					auto v02 = clip_vert(verts[0], verts[2], values[0], values[2]);
-					verts[0] = v01;
-					verts[3] = v01;
-					verts[4] = verts[2];
-					verts[5] = v02;
-					end += 3;
-				}
-				break;
-			case 0b010:
-				{
-					auto v10 = clip_vert(verts[1], verts[0], values[1], values[0]);
-					auto v12 = clip_vert(verts[1], verts[2], values[1], values[2]);
-					verts[1] = v10;
-					verts[3] = v10;
-					verts[4] = v12;
-					verts[5] = verts[2];
-					end += 3;
-				}
-				break;
-			case 0b100:
-				{
-					auto v20 = clip_vert(verts[2], verts[0], values[2], values[0]);
-					auto v21 = clip_vert(verts[2], verts[1], values[2], values[1]);
-					verts[2] = v21;
-					verts[3] = v21;
-					verts[4] = v20;
-					verts[5] = verts[0];
-					end += 3;
-				}
-				break;
-			case 0b111:
-				return;
-			}
-
-			rasterize<Shader, Framebuffer>(
-				framebuffer,
-				verts, end,
-				uniform_buffer,
-				viewport,
-				tile
-			);
-		}
 
 	public:
-		template <typename Shader, typename Framebuffer, typename VertIter>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename VertIter>
 		inline static void draw_array(
 			Framebuffer& framebuffer,
 			VertIter vertex_begin,
@@ -314,24 +132,23 @@ namespace rast {
 			using output_vertex = typename Shader::vertex::output;
 
 			for (auto vert = vertex_begin; vert != vertex_end;) {
-				output_vertex verts[maxClipVerts];
+				output_vertex verts[Clipper::maxClipVerts];
 
 				verts[0] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 				verts[1] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 				verts[2] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 
-				//clip_and_draw<Shader, Framebuffer>(
-				sutherland_hodgman_clip_and_draw<Shader, Framebuffer>(
+				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
+				rasterize<Shader, Framebuffer>(
 					framebuffer,
-					verts,
+					verts, verts_end,
 					uniform_buffer.fragment,
-					viewport,
-					tile
+					viewport, tile
 				);
 			}
 		}
 
-		template <typename Shader, typename Framebuffer, typename VertexBuffer>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename VertexBuffer>
 		inline static void draw_array(
 			Framebuffer& framebuffer,
 			const VertexBuffer& vertex_buffer,
@@ -339,10 +156,10 @@ namespace rast {
 			const scissor& viewport,
 			const tile& tile
 		) {
-			draw_array<Shader>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
+			draw_array<Shader, Clipper>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
-		template <typename Shader, typename Framebuffer, typename IndexIter, typename VertIter>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename IndexIter, typename VertIter>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			IndexIter index_begin,
@@ -363,24 +180,23 @@ namespace rast {
 			}
 
 			for (auto i = index_begin; i != index_end;) {
-				output_vertex verts[maxClipVerts];
+				output_vertex verts[Clipper::maxClipVerts];
 
 				verts[0] = vertex_buffer[*(i++)];
 				verts[1] = vertex_buffer[*(i++)];
 				verts[2] = vertex_buffer[*(i++)];
 
-				//clip_and_draw<Shader, Framebuffer>(
-				sutherland_hodgman_clip_and_draw<Shader, Framebuffer>(
+				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
+				rasterize<Shader, Framebuffer>(
 					framebuffer,
-					verts,
+					verts, verts_end,
 					uniform_buffer.fragment,
-					viewport,
-					tile
+					viewport, tile
 				);
 			}
 		}
 
-		template <typename Shader, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const IndexBuffer& index_buffer,
@@ -389,10 +205,10 @@ namespace rast {
 			const scissor& viewport,
 			const tile& tile
 		) {
-			draw_indexed<Shader>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
+			draw_indexed<Shader, Clipper>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
-		template <typename Shader, typename Framebuffer, typename VertexT>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename VertexT>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const mesh::indexed<VertexT>& mesh,
@@ -400,7 +216,7 @@ namespace rast {
 			const scissor& viewport,
 			const tile& tile
 		) {
-			draw_indexed<Shader>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, viewport, tile);
+			draw_indexed<Shader, Clipper>(framebuffer, mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
 		template <typename FragmentShader, typename ImageView>
