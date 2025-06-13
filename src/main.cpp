@@ -9,8 +9,10 @@
 #include <algorithm>
 #include <vector>
 #include <chrono>
+#include <bitset>
 
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
+#define SDL_HINT_MOUSE_RELATIVE_WARP_MOTION  "SDL_MOUSE_RELATIVE_WARP_MOTION"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
@@ -25,21 +27,26 @@
 #include "rast/framebuffer.hpp"
 #include "rast/renderer.hpp"
 #include "thread_pool.hpp"
+#include "game/fly_cam.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
 static SDL_Surface* surface = nullptr;
 static glm::mat4 V;
 static glm::mat4 P;
-static rast::image<uint32_t> depth_buffer;
+using depth_format = uint32_t;
+static rast::image<depth_format> depth_buffer;
 using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
 static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> icosphere;
+static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> cube;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
 //static thd::thread_pool tp(std::thread::hardware_concurrency());
 static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
+static std::bitset<256> pressed;
+static glm::vec2 mouseDelta = glm::vec2(0.0f);
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -65,10 +72,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
-    depth_buffer = rast::image<uint32_t>(width, height);
+    depth_buffer = rast::image<depth_format>(width, height);
     g_buffer = GBuffer(width, height);
     
     icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/SuzanneSmooth.mesh");
+    cube = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/cube.mesh");
     plane = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/plane.mesh");
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
@@ -90,6 +98,29 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 		depth_buffer.resize(event->window.data1, event->window.data2);
         g_buffer.resize(event->window.data1, event->window.data2);
     }
+    if (event->type == SDL_EVENT_KEY_DOWN) {
+        if (event->key.scancode == SDL_SCANCODE_ESCAPE && !SDL_CursorVisible()) {
+            SDL_SetWindowRelativeMouseMode(window, false);
+            SDL_ShowCursor();
+        }
+
+        if (event->key.scancode < pressed.size())
+			pressed.set(event->key.scancode);
+    }
+    if (event->type == SDL_EVENT_KEY_UP) {
+        if (event->key.scancode < pressed.size())
+            pressed.reset(event->key.scancode);
+    }
+    if (event->type == SDL_EVENT_MOUSE_MOTION) {
+        mouseDelta.x = event->motion.xrel;
+        mouseDelta.y = event->motion.yrel;
+    }
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        if (event->button.button == SDL_BUTTON_LEFT && SDL_CursorVisible()) {
+            SDL_SetWindowRelativeMouseMode(window, true);
+            SDL_HideCursor();
+        }
+    }
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
 
@@ -108,7 +139,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     rast::image<rast::color::rgba8>::view iv((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
     GBuffer::view gv(g_buffer);
     //rast::framebuffer::color_depth<GBuffer::color, rast::uint32_t> framebuf(gv, depth_buffer);
-    rast::framebuffer::color_depth<rast::color::rgba8, uint32_t> framebuf(iv, depth_buffer);
+    rast::framebuffer::color_depth<rast::color::rgba8, depth_format> framebuf(iv, depth_buffer);
     framebuf.clear_depth_buffer();
     //rast::framebuffer::rgba8 noDepthFramebuffer(iv);
     //framebuf.clear_color({glm::vec3(0.0f), glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
@@ -117,7 +148,23 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     // model matrix
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
-    M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+    //M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+    //M = glm::translate(M, -dt * 10.0f * glm::vec3(1.0f, 0.0f, 0.0f));
+
+    // move camera
+    static game::fly_cam flyCam;
+    glm::vec3 movement = glm::vec3(0.0f, 0.0f, 0.0f);
+    if (!SDL_CursorVisible()) {
+		if (pressed[SDL_SCANCODE_W]) movement.z += 1.0f;
+		if (pressed[SDL_SCANCODE_S]) movement.z -= 1.0f;
+		if (pressed[SDL_SCANCODE_A]) movement.x += 1.0f;
+		if (pressed[SDL_SCANCODE_D]) movement.x -= 1.0f;
+		if (pressed[SDL_SCANCODE_SPACE]) movement.y += 1.0f;
+		if (pressed[SDL_SCANCODE_LSHIFT]) movement.y -= 1.0f;
+		flyCam.update(movement, glm::vec2(mouseDelta.y, -mouseDelta.x), dt);
+    }
+    V = glm::lookAt(flyCam.position, flyCam.position + (flyCam.rotation * glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
+    mouseDelta = glm::vec2(0.0f);
 
     using shader = rast::shader::lambert_textured;
 	rast::scissor scissor(0, 0, iv.width, iv.height);
@@ -148,7 +195,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 			ubo.vertex.M = glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
 			ubo.vertex.M = glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
-			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
+			rast::renderer::draw_indexed<shader>(framebuf, cube, ubo, scissor, tile);
+			ubo.vertex.M = glm::translate(M, glm::vec3(-4.0f, 1.0f, 4.0f));
+			rast::renderer::draw_indexed<shader>(framebuf, cube, ubo, scissor, tile);
 			ubo.vertex.M = glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, plane, ubo, scissor, tile);
             });

@@ -26,30 +26,43 @@ namespace rast {
 	};
 	class renderer {
 	private:
-		inline static glm::ivec2 toScreenSpace(const glm::vec4& vertex, const scissor& viewport) {
-			glm::vec2 res(
+		inline static void perspective_divide(glm::vec4& vertex) {
+			vertex.x /= vertex.w;
+			vertex.y /= vertex.w;
+			vertex.z /= vertex.w;
+		}
+		inline static glm::vec4 perspective_divided(const glm::vec4& vertex) {
+			return glm::vec4(
 				vertex.x / vertex.w,
-				vertex.y / vertex.w
+				vertex.y / vertex.w,
+				vertex.z / vertex.w,
+				vertex.w
 			);
+		}
 
+		inline static glm::ivec2 toScreenSpace(const glm::vec4& vertex, const scissor& viewport) {
 			return glm::ivec2(
-				(( res.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
-				(( -res.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
+				(( vertex.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
+				(( -vertex.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
 			);
 		}
 		
 		template <typename Shader, typename Framebuffer>
 		inline static void rasterize(
 			Framebuffer& framebuffer,
-			const typename Shader::vertex::output* vertex_begin,
-			const typename Shader::vertex::output* vertex_end,
+			typename Shader::vertex::output* vertex_begin,
+			typename Shader::vertex::output* vertex_end,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const scissor& viewport,
 			const tile& tile
 		) {
 			using vertex = typename Shader::vertex::output;
 
-			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
+			for (vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
+
+				perspective_divide(vert[0].rastPos);
+				perspective_divide(vert[1].rastPos);
+				perspective_divide(vert[2].rastPos);
 
 				glm::ivec2 a = toScreenSpace(vert[0].rastPos, viewport);
 				glm::ivec2 b = toScreenSpace(vert[1].rastPos, viewport);
@@ -95,14 +108,7 @@ namespace rast {
 
 						if (Cx.x >= 0 && Cx.y >= 0 && Cx.z >= 0) {
 
-							// interpolation coefitients
-							glm::vec3 coefs(
-								(float)Cx.y / area / vert[0].rastPos.w,
-								(float)Cx.z / area / vert[1].rastPos.w,
-								(float)Cx.x / area / vert[2].rastPos.w
-							);
-
-							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, coefs);
+							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, Cx, area);
 						}
 						Cx -= Dy;
 					}
@@ -118,6 +124,94 @@ namespace rast {
 		) {
 			float t = coef0 / (coef0 - coef1);
 			return (v0 * (1.0f - t)) + (v1 * t);
+		}
+
+		inline static constexpr uint32_t maxSutherlandHodgmanVerts = 9;
+		inline static constexpr uint32_t maxClipTriangles = maxSutherlandHodgmanVerts - 2;
+		inline static constexpr uint32_t maxClipVerts = maxClipTriangles * 3;
+
+		template <typename Shader, typename Framebuffer>
+		inline static void sutherland_hodgman_clip_and_draw(
+			Framebuffer& framebuffer,
+			typename Shader::vertex::output* verts,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			const scissor& viewport,
+			const tile& tile
+		) {
+			using vertex = typename Shader::vertex::output;
+			vertex list[maxClipVerts];
+			uint32_t listIndex = 0; // pointer to one after last element of outputList (aka. count of elements)
+
+			vertex* outputList = list;
+			vertex* inputList = verts;
+
+
+			const glm::vec4 equations[6] = {
+				glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), // near
+				glm::vec4(0.0f, 0.0f, -1.0f, 1.0f), // far
+				glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // X
+				glm::vec4(-1.0f, 0.0f, 0.0f, 1.0f), // -X
+				glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), // Y
+				glm::vec4(0.0f, -1.0f, 0.0f, 1.0f), // -Y
+			};
+
+			uint32_t count = 3; // count of elements in input list
+			for (uint32_t eq = 0; eq < 6; ++eq) {
+				for (uint32_t i = 0; i < count; ++i) {
+					vertex current = inputList[i];
+					vertex prev = inputList[(i + count - 1) % count];
+					float current_value = glm::dot(current.rastPos, equations[eq]);
+					float prev_value = glm::dot(prev.rastPos, equations[eq]);
+
+					if (current_value >= 0.0f) { // if current inside
+						if (prev_value < 0.0f) { // if prev outside
+							assert(listIndex < maxClipVerts);
+							//std::cout << listIndex << " curr in prev out clip\n";
+							outputList[listIndex++] = clip_vert(prev, current, prev_value, current_value);
+						}
+						assert(listIndex < maxClipVerts);
+						//std::cout << listIndex << " curr\n";
+						outputList[listIndex++] = current;
+					}
+					else if (prev_value >= 0.0f) { // prev inside
+						assert(listIndex < maxClipVerts);
+						//std::cout << listIndex << " curr out prev in clip\n";
+						outputList[listIndex++] = clip_vert(current, prev, current_value, prev_value);
+					}
+				}
+				//std::cout << "end equation\n";
+				std::swap(inputList, outputList); // "copy" output list to input list
+				count = listIndex;
+				listIndex = 0; // "clear" output list
+			}
+			if (count < 3) return;
+			if (count == 3) {
+				//std::cout << "rasterize\n";
+				rasterize<Shader, Framebuffer>(
+					framebuffer,
+					inputList, inputList + 3,
+					uniform_buffer,
+					viewport,
+					tile
+				);
+			}
+			else {
+				// triangulate
+				for (uint32_t i = 1; i < count - 1; ++i) {
+					outputList[listIndex++] = inputList[0];
+					outputList[listIndex++] = inputList[i];
+					outputList[listIndex++] = inputList[i+1];
+				}
+				assert(listIndex % 3 == 0);
+				//std::cout << "rasterize\n";
+				rasterize<Shader, Framebuffer>(
+					framebuffer,
+					outputList, outputList + listIndex,
+					uniform_buffer,
+					viewport,
+					tile
+				);
+			}
 		}
 
 		template <typename Shader, typename Framebuffer>
@@ -220,13 +314,14 @@ namespace rast {
 			using output_vertex = typename Shader::vertex::output;
 
 			for (auto vert = vertex_begin; vert != vertex_end;) {
-				output_vertex verts[6];
+				output_vertex verts[maxClipVerts];
 
 				verts[0] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 				verts[1] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 				verts[2] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 
-				clip_and_draw<Shader, Framebuffer>(
+				//clip_and_draw<Shader, Framebuffer>(
+				sutherland_hodgman_clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
 					verts,
 					uniform_buffer.fragment,
@@ -268,13 +363,14 @@ namespace rast {
 			}
 
 			for (auto i = index_begin; i != index_end;) {
-				output_vertex verts[6];
+				output_vertex verts[maxClipVerts];
 
 				verts[0] = vertex_buffer[*(i++)];
 				verts[1] = vertex_buffer[*(i++)];
 				verts[2] = vertex_buffer[*(i++)];
 
-				clip_and_draw<Shader, Framebuffer>(
+				//clip_and_draw<Shader, Framebuffer>(
+				sutherland_hodgman_clip_and_draw<Shader, Framebuffer>(
 					framebuffer,
 					verts,
 					uniform_buffer.fragment,
