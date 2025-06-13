@@ -30,13 +30,12 @@ namespace rast::shader {
 			using input = inputs::position_uv;
 			using output = vertex_shader_output<textured>;
 
-			struct uniform_buffer {
-				glm::mat4 M = glm::mat4(1.0f);
-				glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-				glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
-			};
+			using uniform_buffer = uniforms::PVM_struct;
 
 			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
+				return { uniforms.PVM * glm::vec4(vert.position, 1.0f), {vert.uv} };
+			}
+			inline static output shade(const input& vert, const uniforms::MVP& uniforms) {
 				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert.position, 1.0f), {vert.uv} };
 			}
 		};

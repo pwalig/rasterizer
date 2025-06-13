@@ -172,33 +172,31 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // render
     float stride = (float)iv.width / tp.thread_count();
     for (int i = 0; i < tp.thread_count(); ++i) {
-        tp.enque([&framebuf, &scissor, i, stride, height = iv.height]() {
+        tp.enque([&framebuf, &scissor, i, stride, height = iv.height, PV = P * V]() {
 			shader::uniform_buffer ubo;
 			ubo.fragment.texture = texture;
-			ubo.vertex.M = M;
-			ubo.vertex.P = P;
-			ubo.vertex.V = V;
+			ubo.vertex.PVM = PV * M;
             rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), height);
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(0.0f, 0.0f, 3.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, 3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(-3.0f, 0.0f, 0.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 0.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(3.0f, 0.0f, 3.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(-3.0f, 0.0f, -3.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, -3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, cube, ubo, scissor, tile);
-			ubo.vertex.M = glm::translate(M, glm::vec3(-4.0f, 1.0f, 4.0f));
+			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-4.0f, 1.0f, 4.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, cube, ubo, scissor, tile);
-			ubo.vertex.M = glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
+			ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
 			rast::renderer::draw_indexed<shader>(framebuf, plane, ubo, scissor, tile);
             });
     }

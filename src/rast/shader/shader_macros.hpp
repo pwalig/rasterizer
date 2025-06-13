@@ -2,8 +2,7 @@
 #include <glm/glm.hpp>
 
 #define rast_shader_uniform_buffer() \
-class uniform_buffer { \
-public: \
+struct uniform_buffer { \
 	fragment::uniform_buffer fragment; \
 	vertex::uniform_buffer vertex; \
 };
@@ -22,6 +21,24 @@ namespace rast::shader {
 		}
 	};
 
+	template <typename Shader>
+	struct shader_uniform_buffer {
+		typename Shader::fragment::uniform_buffer fragment;
+		typename Shader::vertex::uniform_buffer vertex;
+	};
+
+	namespace uniforms {
+		struct PVM_struct {
+			glm::mat4 PVM;
+		};
+		using PVM_matrix = glm::vec4;
+
+		struct MVP {
+			glm::mat4 M = glm::mat4(1.0f);
+			glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::mat4 P = glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+		};
+	}
 	namespace inputs {
 		using position = glm::vec3;
 		using normal = glm::vec3;
