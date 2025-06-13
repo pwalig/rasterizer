@@ -54,6 +54,7 @@ namespace rast {
 			);
 		}
 		
+	public:
 		template <typename Shader, typename Framebuffer>
 		inline static void rasterize(
 			Framebuffer& framebuffer,
@@ -120,8 +121,6 @@ namespace rast {
 			}
 		}
 
-
-	public:
 		template <typename Shader, typename Framebuffer, typename RangesIterator>
 		inline static void rasterize_ranges(
 			Framebuffer& framebuffer,
@@ -297,10 +296,10 @@ namespace rast {
 			draw_indexed<Shader, Clipper>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
-		template <typename Shader, typename Clipper, typename Framebuffer, typename VertexT>
+		template <typename Shader, typename Clipper, typename Framebuffer>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
-			const mesh::indexed<VertexT>& mesh,
+			const mesh::indexed<typename Shader::vertex::input>& mesh,
 			const typename Shader::uniform_buffer uniform_buffer,
 			const scissor& viewport,
 			const tile& tile

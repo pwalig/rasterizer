@@ -23,7 +23,7 @@ namespace rast::shader {
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
 				glm::vec3 N = glm::normalize(frag.normal);
-				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);
+				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 0.9843f);
 				color::rgba8 color;
 				if (uniforms.texture) color = uniforms.texture.sample(frag.uv);
 				else color = color::rgba8(255, 0, 255, 255);

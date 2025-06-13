@@ -59,8 +59,8 @@ namespace rast {
 				count = listIndex;
 				listIndex = 0; // "clear" output list
 			}
-			assert(inputList == verts);
-			assert(outputList == list);
+			assert(outputList == verts);
+			assert(inputList == list);
 			if (count < 3) return verts;
 			else {
 				// triangulate
