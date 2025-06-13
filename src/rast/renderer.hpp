@@ -126,7 +126,9 @@ namespace rast {
 			return (v0 * (1.0f - t)) + (v1 * t);
 		}
 
-		inline static constexpr uint32_t maxClipVerts = 12;
+		inline static constexpr uint32_t maxSutherlandHodgmanVerts = 9;
+		inline static constexpr uint32_t maxClipTriangles = maxSutherlandHodgmanVerts - 2;
+		inline static constexpr uint32_t maxClipVerts = maxClipTriangles * 3;
 
 		template <typename Shader, typename Framebuffer>
 		inline static void sutherland_hodgman_clip_and_draw(
