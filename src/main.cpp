@@ -26,6 +26,7 @@
 #include "rast/shader/deferred.hpp"
 #include "rast/framebuffer.hpp"
 #include "rast/renderer.hpp"
+#include "rast/command_buffer.hpp"
 #include "rast/clip/sutherland_hodgman.hpp"
 #include "rast/clip/near_clip_far_discard.hpp"
 #include "thread_pool.hpp"
@@ -41,6 +42,7 @@ static rast::image<depth_format> depth_buffer;
 using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
 static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
+static rast::image<rast::color::rgba8> texture2;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> icosphere;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> cube;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
@@ -74,6 +76,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
+    texture2 = rast::image<rast::color::rgba8>::load("assets/textures/neutral_normal.png");
     depth_buffer = rast::image<depth_format>(width, height);
     g_buffer = GBuffer(width, height);
     
@@ -150,8 +153,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     // model matrix
     static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
-    //M = glm::rotate(M, dt * 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    //M = glm::translate(M, -dt * 10.0f * glm::vec3(1.0f, 0.0f, 0.0f));
 
     // move camera
     static game::fly_cam flyCam;
@@ -172,39 +173,35 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     using clipper = rast::sutherland_hodgman;
 	rast::scissor scissor(0, 0, iv.width, iv.height);
 
-    // render
-    float stride = (float)iv.width / tp.thread_count();
-    for (int i = 0; i < tp.thread_count(); ++i) {
-        tp.enque([&framebuf, &scissor, i, stride, height = iv.height, PV = P * V]() {
-			shader::uniform_buffer ubo;
-			ubo.fragment.texture = texture;
-			ubo.vertex.PVM = PV * M;
-            rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), height);
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, 3.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 0.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 3.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, -3.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, icosphere, ubo, scissor, tile);
-			//ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-4.0f, 1.0f, 4.0f));
-			//rast::renderer::draw_indexed<shader, clipper>(framebuf, cube, ubo, scissor, tile);
-			ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
-			rast::renderer::draw_indexed<shader, clipper>(framebuf, plane, ubo, scissor, tile);
-            });
-    }
-    tp.wait();
+    static rast::command_buffer<shader> cmd_buffer;
+    cmd_buffer.reset();
+	glm::mat4 PV = P * V;
+	shader::uniform_buffer ubo;
+	ubo.fragment.texture = texture;
+	ubo.vertex.PVM = PV * M;
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 0.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, 3.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.fragment.texture = texture2;
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 3.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, -3.0f));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
+	cmd_buffer.draw_indexed(plane, ubo, scissor);
+	cmd_buffer.submit<clipper>(framebuf, tp);
 
+	tp.wait();
     SDL_Rect rect;
     rect.x = 0;
     rect.y = 0;

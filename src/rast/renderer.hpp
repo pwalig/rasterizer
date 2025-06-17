@@ -24,6 +24,13 @@ namespace rast {
 		inline tile(int minx, int miny, int maxx, int maxy) :
 			min(minx << 4, miny << 4), max(maxx << 4, maxy << 4) {}
 	};
+
+	template <typename VertexT>
+	struct range {
+		const VertexT* begin;
+		const VertexT* end;
+	};
+
 	class renderer {
 	private:
 		inline static void perspective_divide(glm::vec4& vertex) {
@@ -47,22 +54,19 @@ namespace rast {
 			);
 		}
 		
+	public:
 		template <typename Shader, typename Framebuffer>
 		inline static void rasterize(
 			Framebuffer& framebuffer,
-			typename Shader::vertex::output* vertex_begin,
-			typename Shader::vertex::output* vertex_end,
+			const typename Shader::vertex::output* vertex_begin,
+			const typename Shader::vertex::output* vertex_end,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const scissor& viewport,
 			const tile& tile
 		) {
 			using vertex = typename Shader::vertex::output;
 
-			for (vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
-
-				perspective_divide(vert[0].rastPos);
-				perspective_divide(vert[1].rastPos);
-				perspective_divide(vert[2].rastPos);
+			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
 
 				glm::ivec2 a = toScreenSpace(vert[0].rastPos, viewport);
 				glm::ivec2 b = toScreenSpace(vert[1].rastPos, viewport);
@@ -117,8 +121,52 @@ namespace rast {
 			}
 		}
 
+		template <typename Shader, typename Framebuffer, typename RangesIterator>
+		inline static void rasterize_ranges(
+			Framebuffer& framebuffer,
+			RangesIterator begin,
+			RangesIterator end,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			const scissor& viewport,
+			const tile& tile
+		) {
+			for (RangesIterator it = begin; it != end; ++it) {
+				rasterize<Shader, Framebuffer>(framebuffer, it->begin, it->end, uniform_buffer, viewport, tile);
+			}
+		}
 
-	public:
+		template <typename VertexIter>
+		inline static void perspective_divide(
+			typename VertexIter begin,
+			typename VertexIter end
+		) {
+			for (VertexIter it = begin; it != end; ++it) {
+				perspective_divide(it->rastPos);
+			}
+		}
+
+		template <typename VertexShader, typename Clipper>
+		inline static void run_vertex_shader_array(
+			const typename VertexShader::input* vertex_begin,
+			const typename VertexShader::input* vertex_end,
+			const typename VertexShader::uniform_buffer& uniform_buffer,
+			typename VertexShader::output* output
+		) {
+			using input_vertex = typename VertexShader::input;
+			using output_vertex = typename VertexShader::output;
+
+			output_vertex* end = output;
+			for (const input_vertex* vert = vertex_begin; vert != vertex_end;) {
+				end[0] = VertexShader::shade(*(vert++), uniform_buffer);
+				end[1] = VertexShader::shade(*(vert++), uniform_buffer);
+				end[2] = VertexShader::shade(*(vert++), uniform_buffer);
+
+				end = Clipper::template clip<output_vertex>(end);
+			}
+			perspective_divide(output, end);
+			return end;
+		}
+
 		template <typename Shader, typename Clipper, typename Framebuffer, typename VertIter>
 		inline static void draw_array(
 			Framebuffer& framebuffer,
@@ -139,6 +187,7 @@ namespace rast {
 				verts[2] = Shader::vertex::shade(*(vert++), uniform_buffer.vertex);
 
 				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
+				perspective_divide(verts, verts_end);
 				rasterize<Shader, Framebuffer>(
 					framebuffer,
 					verts, verts_end,
@@ -157,6 +206,56 @@ namespace rast {
 			const tile& tile
 		) {
 			draw_array<Shader, Clipper>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
+		}
+
+		template <typename VertexShader, typename Clipper, typename IndexIter, typename VertexIter>
+		inline static typename VertexShader::output* run_vertex_shader_indexed(
+			IndexIter index_begin,
+			IndexIter index_end,
+			VertexIter vertex_begin,
+			VertexIter vertex_end,
+			const typename VertexShader::uniform_buffer& uniform_buffer,
+			typename VertexShader::output* output
+		) {
+			using input_vertex = typename VertexShader::input;
+			using output_vertex = typename VertexShader::output;
+
+			std::vector<output_vertex> vertex_buffer;
+			vertex_buffer.reserve(std::distance(vertex_begin, vertex_end));
+			for (VertexIter vert = vertex_begin; vert != vertex_end; ++vert) {
+				vertex_buffer.push_back(VertexShader::shade(*vert, uniform_buffer));
+			}
+			output_vertex* end = output;
+			for (IndexIter i = index_begin; i != index_end;) {
+				end[0] = vertex_buffer[*(i++)];
+				end[1] = vertex_buffer[*(i++)];
+				end[2] = vertex_buffer[*(i++)];
+
+				end = Clipper::template clip<output_vertex>(end);
+			}
+			perspective_divide(output, end);
+			return end;
+		}
+
+		template <typename VertexShader, typename Clipper, typename IndexBuffer, typename VertexBuffer>
+		inline static typename VertexShader::output* run_vertex_shader_indexed(
+			const IndexBuffer& index_buffer,
+			const VertexBuffer& vertex_buffer,
+			const typename VertexShader::uniform_buffer& uniform_buffer,
+			typename VertexShader::output* output
+		) {
+			static_assert(std::is_same_v<typename IndexBuffer::value_type, uint32_t>);
+			static_assert(std::is_same_v<typename VertexBuffer::value_type, typename VertexShader::input>);
+			return run_vertex_shader_indexed<VertexShader, Clipper>(index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, output);
+		}
+
+		template <typename VertexShader, typename Clipper>
+		inline static typename VertexShader::output* run_vertex_shader_indexed(
+			const mesh::indexed<typename VertexShader::input>& mesh,
+			const typename VertexShader::uniform_buffer& uniform_buffer,
+			typename VertexShader::output* output
+		) {
+			return run_vertex_shader_indexed<VertexShader, Clipper>(mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, output);
 		}
 
 		template <typename Shader, typename Clipper, typename Framebuffer, typename IndexIter, typename VertIter>
@@ -187,6 +286,7 @@ namespace rast {
 				verts[2] = vertex_buffer[*(i++)];
 
 				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
+				perspective_divide(verts, verts_end);
 				rasterize<Shader, Framebuffer>(
 					framebuffer,
 					verts, verts_end,
@@ -205,13 +305,15 @@ namespace rast {
 			const scissor& viewport,
 			const tile& tile
 		) {
+			static_assert(std::is_same_v<typename IndexBuffer::value_type, uint32_t>);
+			static_assert(std::is_same_v<typename VertexBuffer::value_type, typename Shader::vertex::input>);
 			draw_indexed<Shader, Clipper>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
-		template <typename Shader, typename Clipper, typename Framebuffer, typename VertexT>
+		template <typename Shader, typename Clipper, typename Framebuffer>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
-			const mesh::indexed<VertexT>& mesh,
+			const mesh::indexed<typename Shader::vertex::input>& mesh,
 			const typename Shader::uniform_buffer uniform_buffer,
 			const scissor& viewport,
 			const tile& tile

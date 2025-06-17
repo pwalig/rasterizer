@@ -35,6 +35,13 @@ namespace rast::framebuffer {
 			depthImage.clear(clear_value);
 		}
 
+		inline uint32_t width() const {
+			return colorImage.width;
+		}
+		inline uint32_t height() const {
+			return colorImage.height;
+		}
+
 		template <typename Shader>
 		void draw(
 			uint32_t x, uint32_t y,
@@ -79,6 +86,13 @@ namespace rast::framebuffer {
 
 		void clear(color clear_value) {
 			std::fill_n(colorImage.data, colorImage.width * colorImage.height, clear_value);
+		}
+
+		inline uint32_t width() const {
+			return colorImage.width;
+		}
+		inline uint32_t height() const {
+			return colorImage.height;
 		}
 
 		template <typename Shader>

@@ -149,6 +149,7 @@
     <ClInclude Include="src\game\fly_cam.hpp" />
     <ClInclude Include="src\rast\clip\clip_vert.hpp" />
     <ClInclude Include="src\rast\clip\near_clip_far_discard.hpp" />
+    <ClInclude Include="src\rast\command_buffer.hpp" />
     <ClInclude Include="src\rast\interpolation.hpp" />
     <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp" />
     <ClInclude Include="src\thread_pool.hpp" />
