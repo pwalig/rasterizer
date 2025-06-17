@@ -237,6 +237,18 @@ namespace rast {
 			return end;
 		}
 
+		template <typename VertexShader, typename Clipper, typename IndexBuffer, typename VertexBuffer>
+		inline static typename VertexShader::output* run_vertex_shader_indexed(
+			const IndexBuffer& index_buffer,
+			const VertexBuffer& vertex_buffer,
+			const typename VertexShader::uniform_buffer& uniform_buffer,
+			typename VertexShader::output* output
+		) {
+			static_assert(std::is_same_v<typename IndexBuffer::value_type, uint32_t>);
+			static_assert(std::is_same_v<typename VertexBuffer::value_type, typename VertexShader::input>);
+			return run_vertex_shader_indexed<VertexShader, Clipper>(index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, output);
+		}
+
 		template <typename VertexShader, typename Clipper>
 		inline static typename VertexShader::output* run_vertex_shader_indexed(
 			const mesh::indexed<typename VertexShader::input>& mesh,
@@ -293,6 +305,8 @@ namespace rast {
 			const scissor& viewport,
 			const tile& tile
 		) {
+			static_assert(std::is_same_v<typename IndexBuffer::value_type, uint32_t>);
+			static_assert(std::is_same_v<typename VertexBuffer::value_type, typename Shader::vertex::input>);
 			draw_indexed<Shader, Clipper>(framebuffer, index_buffer.begin(), index_buffer.end(), vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 

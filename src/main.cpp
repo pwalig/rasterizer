@@ -49,7 +49,6 @@ static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> plane;
 //static thd::thread_pool tp(std::thread::hardware_concurrency());
 static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
-static std::vector<rast::shader::lambert_textured::vertex::output> intermediate_buffer;
 static size_t intermediate_buffer_per_thread_memory = 0;
 static std::bitset<256> pressed;
 static glm::vec2 mouseDelta = glm::vec2(0.0f);
@@ -85,8 +84,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/SuzanneSmooth.mesh");
     cube = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/cube.mesh");
     plane = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/plane.mesh");
-    intermediate_buffer.resize(18 * icosphere.index_buffer.size());
-    intermediate_buffer_per_thread_memory = intermediate_buffer.size() / tp.thread_count();
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -183,26 +180,26 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 	shader::uniform_buffer ubo;
 	ubo.fragment.texture = texture;
 	ubo.vertex.PVM = PV * M;
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data());
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 0.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (1 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 0.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (2 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, 3.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (3 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (4 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.fragment.texture = texture2;
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 3.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (5 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (6 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (7 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, -3.0f));
-	cmd_buffer.draw_indexed(icosphere, ubo, scissor, intermediate_buffer.data() + (8 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
-	cmd_buffer.draw_indexed(plane, ubo, scissor, intermediate_buffer.data() + (9 * intermediate_buffer_per_thread_memory));
+	cmd_buffer.draw_indexed(plane, ubo, scissor);
 	cmd_buffer.submit<clipper>(framebuf, tp);
 
 	tp.wait();
