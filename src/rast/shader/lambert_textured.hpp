@@ -6,6 +6,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 
 #include "shader_macros.hpp"
+#include "../convert.hpp"
 #include "../color.hpp"
 #include "../texture.hpp"
 
@@ -18,16 +19,17 @@ namespace rast::shader {
 			struct uniform_buffer {
 				texture<rast::color::rgba8>::sampler texture;
 				glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
-				color::rgb8 ambient = color::rgb8(5, 5, 5);
+				glm::vec3 light_color = glm::vec3(1.0f);
+				glm::vec3 ambient = glm::vec3(0.1f);
 			};
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
 				glm::vec3 N = glm::normalize(frag.normal);
-				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 0.9843f);
-				color::rgba8 color;
-				if (uniforms.texture) color = uniforms.texture.sample(frag.uv);
-				else color = color::rgba8(255, 0, 255, 255);
-				return color::rgba8(color.r * nl + uniforms.ambient.r, color.g * nl + uniforms.ambient.g, color.b * nl + uniforms.ambient.b, color.a);
+				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);
+				glm::vec4 color;
+				if (uniforms.texture) color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample(frag.uv));
+				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+				return convert::f01_to_uint<float, uint8_t>(glm::vec4(color.r * (nl + uniforms.ambient.r), color.g * (nl + uniforms.ambient.g), color.b * (nl + uniforms.ambient.b), color.a));
 			}
 		};
 

@@ -51,6 +51,16 @@ namespace rast::mesh {
 			vertex_buffer.resize(count);
 			file.read((char*)(vertex_buffer.data()), count * sizeof(vertex));
 		}
+
+		template <void (*Func)(vertex&)>
+		inline void process() {
+			for (vertex& v : vertex_buffer) Func(v); 
+		}
+
+		template <typename Func>
+		inline void process(Func f) {
+			for (vertex& v : vertex_buffer) f(v); 
+		}
 	};
 
 }

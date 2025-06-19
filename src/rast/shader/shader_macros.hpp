@@ -93,6 +93,7 @@ namespace rast::shader {
 			friend inline position_normal_uv operator+ (const position_normal_uv& rhs, const position_normal_uv& lhs) {
 				return { rhs.position + lhs.position, rhs.normal + lhs.normal, rhs.uv + lhs.uv };
 			}
+			inline static void flip_uv(position_normal_uv& v) { v.uv.y = -v.uv.y; }
 			inline static void format(
 				inputs::position* posBegin,
 				inputs::normal* normBegin,

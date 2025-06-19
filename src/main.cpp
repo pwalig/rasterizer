@@ -8,6 +8,7 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include <chrono>
 #include <bitset>
 
@@ -52,11 +53,44 @@ static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 static std::bitset<256> pressed;
 static glm::vec2 mouseDelta = glm::vec2(0.0f);
 
+struct sponza {
+    static std::vector<rast::mesh::indexed<rast::shader::inputs::position_normal_uv>> meshes;
+	static std::vector<rast::image<rast::color::rgba8>> textures;
+    inline const static std::vector<int> mesh_to_texture = {
+		0, 1, 2, 3, 4, 5, 6, 7, 5, 8,
+		6, 5, 9, 4, 6, 4, 5, 6, 5, 6,
+		5, 6, 5, 6, 5, 6, 5, 6, 5, 6,
+		5, 6, 5, 6, 5, 4, 5, 4, 10, 4,
+		10, 4, 10, 4, 9, 4, 8, 7, 5, 11,
+		12, 4, 13, 0, 14, 15, 16, 14, 15, 14,
+		16, 15, 13, 17, 18, 19, 18, 19, 18, 17,
+		19, 18, 17, 20, 21, 20, 21, 20, 21, 20,
+		21, 1, 2, 1, 2, 1, 2, 1, 2, 1,
+		2, 1, 2, 1, 2, 22, 23, 3, 23, 3, 4, 24, 4
+	};
+
+    static void load() {
+        assert(meshes.capacity() == 0);
+		meshes.reserve(103);
+		for (int i = 0; i < 103; ++i) {
+			meshes.emplace_back(rast::mesh::indexed<rast::shader::inputs::position_normal_uv>(("assets/models/sponza/Object_" + std::to_string(i) + ".mesh").c_str()));
+            meshes.back().process<rast::shader::inputs::position_normal_uv::flip_uv>();
+		}
+        textures.reserve(25);
+        for (int i = 0; i < 25; ++i) {
+            textures.emplace_back(rast::image<rast::color::rgba8>::load(("C:/Models/sponza-sketchfab/gltf/sponza_palace/textures/material_" + std::to_string(i) + "_baseColor.png").c_str()));
+        }
+    }
+};
+
+std::vector<rast::mesh::indexed<rast::shader::inputs::position_normal_uv>> sponza::meshes;
+std::vector<rast::image<rast::color::rgba8>> sponza::textures;
+
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
-    int width = 1920;
-    int height = 1080;
+    int width = 1280;
+    int height = 720;
 
     SDL_SetAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
 
@@ -72,7 +106,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     }
 	surface = SDL_CreateSurface(width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
-    P = glm::perspective(glm::radians(70.0f), (float)width / height, 0.1f, 100.0f);
+    P = glm::perspective(glm::radians(70.0f), (float)width / height, 0.1f, 1000.0f);
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
@@ -81,8 +115,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     g_buffer = GBuffer(width, height);
     
     icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/SuzanneSmooth.mesh");
+    icosphere.process(rast::shader::inputs::position_normal_uv::flip_uv);
     cube = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/cube.mesh");
+    cube.process(rast::shader::inputs::position_normal_uv::flip_uv);
     plane = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/plane.mesh");
+    plane.process(rast::shader::inputs::position_normal_uv::flip_uv);
+    sponza::load();
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -98,7 +136,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 
-		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 100.0f);
+		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f);
 
 		depth_buffer.resize(event->window.data1, event->window.data2);
         g_buffer.resize(event->window.data1, event->window.data2);
@@ -148,11 +186,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     framebuf.clear_depth_buffer();
     //rast::framebuffer::rgba8 noDepthFramebuffer(iv);
     //framebuf.clear_color({glm::vec3(0.0f), glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
-    iv.clear(rast::color::rgba8(0, 0, 0, 255));
+    iv.clear(rast::color::rgba8(25, 25, 50, 255));
 
 
     // model matrix
-    static glm::mat4 M = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
+    static glm::mat4 M = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f)), glm::vec3(2.0f));
 
     // move camera
     static game::fly_cam flyCam;
@@ -177,6 +215,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     cmd_buffer.reset();
 	glm::mat4 PV = P * V;
 	shader::uniform_buffer ubo;
+    ubo.vertex.PVM = PV * glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
+	for (int i = 0; i < sponza::meshes.size(); ++i) {
+        ubo.fragment.texture = sponza::textures[sponza::mesh_to_texture[i]];
+        cmd_buffer.draw_indexed(sponza::meshes[i], ubo, scissor);
+    }
 	ubo.fragment.texture = texture;
 	ubo.vertex.PVM = PV * M;
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
@@ -188,17 +231,17 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
-	ubo.fragment.texture = texture2;
+	ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
+	cmd_buffer.draw_indexed(plane, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.fragment.texture = texture2;
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, -3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
-	ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
-	cmd_buffer.draw_indexed(plane, ubo, scissor);
 	cmd_buffer.submit<clipper>(framebuf, tp);
 
 	tp.wait();
