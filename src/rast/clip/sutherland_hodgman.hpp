@@ -8,7 +8,7 @@
 
 namespace rast {
 	struct sutherland_hodgman {
-		inline static constexpr uint32_t maxSutherlandHodgmanVerts = 9;
+		inline static constexpr uint32_t maxSutherlandHodgmanVerts = 12;
 		inline static constexpr uint32_t maxClipTriangles = maxSutherlandHodgmanVerts - 2;
 		inline static constexpr uint32_t maxClipVerts = maxClipTriangles * 3;
 

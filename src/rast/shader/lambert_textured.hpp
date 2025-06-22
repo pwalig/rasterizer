@@ -29,7 +29,12 @@ namespace rast::shader {
 				glm::vec4 color;
 				if (uniforms.texture) color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample(frag.uv));
 				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
-				return convert::f01_to_uint<float, uint8_t>(glm::vec4(color.r * (nl + uniforms.ambient.r), color.g * (nl + uniforms.ambient.g), color.b * (nl + uniforms.ambient.b), color.a));
+				return convert::f01_to_uint<float, uint8_t>(glm::vec4(
+					color.r * (nl * uniforms.light_color.r + uniforms.ambient.r),
+					color.g * (nl * uniforms.light_color.g + uniforms.ambient.g),
+					color.b * (nl * uniforms.light_color.b + uniforms.ambient.b),
+					color.a
+				));
 			}
 		};
 
@@ -49,5 +54,24 @@ namespace rast::shader {
 		};
 
 		using uniform_buffer = shader_uniform_buffer<lambert_textured>;
+
+		struct material {
+			glm::mat4 M = glm::mat4(1.0f);
+			texture<rast::color::rgba8>::sampler texture;
+		};
+
+		struct environment {
+			glm::mat4 PV;
+			glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
+			glm::vec3 light_color = glm::vec3(1.0f);
+			glm::vec3 ambient = glm::vec3(0.1f);
+		};
+
+		static uniform_buffer get_ubo(const material& mat, const environment& env) {
+			return {
+				{ mat.texture, env.light_direction, env.light_color, env.ambient },
+				{ env.PV * mat.M }
+			};
+		}
 	};
 }

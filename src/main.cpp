@@ -11,11 +11,15 @@
 #include <string>
 #include <chrono>
 #include <bitset>
+#include <filesystem>
 
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
 #define SDL_HINT_MOUSE_RELATIVE_WARP_MOTION  "SDL_MOUSE_RELATIVE_WARP_MOTION"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
 
 #include "rast/color.hpp"
 #include "rast/mesh.hpp"
@@ -53,9 +57,82 @@ static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 static std::bitset<256> pressed;
 static glm::vec2 mouseDelta = glm::vec2(0.0f);
 
+template <typename Shader>
+struct model {
+    rast::mesh::indexed<typename Shader::vertex::input> mesh;
+    typename Shader::material material;
+};
+
+struct scene {
+    inline static std::vector<rast::image<rast::color::rgba8>> textures = {};
+    inline static std::vector<model<rast::shader::lambert_textured>> models = {};
+
+    static void load(const char* filename) {
+        std::filesystem::path scene_file_path = filename;
+        scene_file_path.remove_filename();
+		std::ifstream ifs(filename);
+		rapidjson::IStreamWrapper isw(ifs);
+
+		rapidjson::Document document;
+		document.ParseStream(isw);
+		assert(document.IsObject());
+
+        // textures
+        std::unordered_map<std::string, uint32_t> texture_pack_map;
+        rapidjson::Value& texture_packs = document["resources"]["texture_packs"];
+        for (rapidjson::Value::ConstMemberIterator texture_pack_iter = texture_packs.MemberBegin(); texture_pack_iter != texture_packs.MemberEnd(); ++texture_pack_iter) {
+            texture_pack_map.insert({ texture_pack_iter->name.GetString(), static_cast<uint32_t>(textures.size())});
+
+			std::filesystem::path texture_pack_path = texture_pack_iter->value["path"].GetString();
+			if (texture_pack_path.is_relative()) {
+				texture_pack_path = scene_file_path;
+				texture_pack_path.append(texture_pack_iter->value["path"].GetString());
+			}
+
+			//textures.reserve(texture_pack["textures"].Size());
+			for (rapidjson::SizeType i = 0; i < texture_pack_iter->value["textures"].Size(); i++) {
+				std::filesystem::path tmp = texture_pack_path;
+				tmp.append(texture_pack_iter->value["textures"][i].GetString());
+				textures.push_back(rast::image<rast::color::rgba8>::load(
+					tmp.string().c_str()
+				));
+			}
+
+        }
+
+        // meshes
+        rapidjson::Value& objects = document["objects"];
+        for (rapidjson::SizeType i = 0; i < objects.Size(); ++i) {
+			std::filesystem::path meshes_path = objects[i]["meshes"].GetString();
+			if (meshes_path.is_relative()) {
+				meshes_path = scene_file_path;
+				meshes_path.append(objects[i]["meshes"].GetString());
+			}
+
+			auto meshes = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>::load_multiple(
+				meshes_path.string().c_str()
+			);
+			for (auto& mesh : meshes) {
+				mesh.process<rast::shader::inputs::position_normal_uv::flip_uv>();
+			}
+
+			typename rast::shader::lambert_textured::material shader_mat;
+            shader_mat.M = glm::mat4(1.0f);
+            rapidjson::Value& material = objects[i]["material"];
+            uint32_t albedo_id = texture_pack_map.at(material["albedo"]["pack"].GetString());
+            for (rapidjson::SizeType i = 0; i < material["albedo"]["index"].Size(); ++i) {
+                uint32_t index = material["albedo"]["index"][i].GetUint();
+                shader_mat.texture = rast::texture<rast::color::rgba8>::sampler(textures[albedo_id + index]);
+                shader_mat.M = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
+                models.push_back({ meshes[i], shader_mat});
+            }
+        }
+    }
+};
+
 struct sponza {
-    static std::vector<rast::mesh::indexed<rast::shader::inputs::position_normal_uv>> meshes;
-	static std::vector<rast::image<rast::color::rgba8>> textures;
+    inline static std::vector<rast::mesh::indexed<rast::shader::inputs::position_normal_uv>> meshes = {};
+    inline static std::vector<rast::image<rast::color::rgba8>> textures = {};
     inline const static std::vector<int> mesh_to_texture = {
 		0, 1, 2, 3, 4, 5, 6, 7, 5, 8,
 		6, 5, 9, 4, 6, 4, 5, 6, 5, 6,
@@ -69,22 +146,49 @@ struct sponza {
 		2, 1, 2, 1, 2, 22, 23, 3, 23, 3, 4, 24, 4
 	};
 
-    static void load() {
-        assert(meshes.capacity() == 0);
-		meshes.reserve(103);
-		for (int i = 0; i < 103; ++i) {
-			meshes.emplace_back(rast::mesh::indexed<rast::shader::inputs::position_normal_uv>(("assets/models/sponza/Object_" + std::to_string(i) + ".mesh").c_str()));
-            meshes.back().process<rast::shader::inputs::position_normal_uv::flip_uv>();
-		}
-        textures.reserve(25);
-        for (int i = 0; i < 25; ++i) {
-            textures.emplace_back(rast::image<rast::color::rgba8>::load(("C:/Models/sponza-sketchfab/gltf/sponza_palace/textures/material_" + std::to_string(i) + "_baseColor.png").c_str()));
+    static void load(const char* filename) {
+        std::filesystem::path scene_file_path = filename;
+        scene_file_path.remove_filename();
+		std::ifstream ifs(filename);
+		rapidjson::IStreamWrapper isw(ifs);
+
+		rapidjson::Document document;
+		document.ParseStream(isw);
+		assert(document.IsObject());
+
+        // textures
+        rapidjson::Value& texture_pack = document["resources"]["texture_packs"]["sponza"];
+        std::filesystem::path texture_pack_path = texture_pack["path"].GetString();
+        if (texture_pack_path.is_relative()) {
+            texture_pack_path = scene_file_path;
+            texture_pack_path.append(texture_pack["path"].GetString());
         }
+
+        textures.reserve(texture_pack["textures"].Size());
+        for (rapidjson::SizeType i = 0; i < texture_pack["textures"].Size(); i++) {
+            std::filesystem::path tmp = texture_pack_path;
+            tmp.append(texture_pack["textures"][i].GetString());
+            textures.push_back(rast::image<rast::color::rgba8>::load(
+                tmp.string().c_str()
+            ));
+        }
+
+        // meshes
+        rapidjson::Value& object = document["objects"][0];
+        std::filesystem::path meshes_path = object["meshes"].GetString();
+        if (meshes_path.is_relative()) {
+            meshes_path = scene_file_path;
+            meshes_path.append(object["meshes"].GetString());
+        }
+
+        meshes = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>::load_multiple(
+            meshes_path.string().c_str()
+        );
+		for (auto& mesh : meshes) {
+            mesh.process<rast::shader::inputs::position_normal_uv::flip_uv>();
+		}
     }
 };
-
-std::vector<rast::mesh::indexed<rast::shader::inputs::position_normal_uv>> sponza::meshes;
-std::vector<rast::image<rast::color::rgba8>> sponza::textures;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -114,13 +218,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     depth_buffer = rast::image<depth_format>(width, height);
     g_buffer = GBuffer(width, height);
     
-    icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/SuzanneSmooth.mesh");
+    icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>::load("assets/models/SuzanneSmooth.mesh");
     icosphere.process(rast::shader::inputs::position_normal_uv::flip_uv);
-    cube = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/cube.mesh");
+    cube = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>::load("assets/models/cube.mesh");
     cube.process(rast::shader::inputs::position_normal_uv::flip_uv);
-    plane = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>("assets/models/plane.mesh");
+    plane = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>::load("assets/models/plane.mesh");
     plane.process(rast::shader::inputs::position_normal_uv::flip_uv);
-    sponza::load();
+    sponza::load("private/assets/scenes/sponza.json");
+    scene::load("private/assets/scenes/sponza.json");
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -214,12 +319,20 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     static rast::command_buffer<shader> cmd_buffer;
     cmd_buffer.reset();
 	glm::mat4 PV = P * V;
-	shader::uniform_buffer ubo;
-    ubo.vertex.PVM = PV * glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
-	for (int i = 0; i < sponza::meshes.size(); ++i) {
-        ubo.fragment.texture = sponza::textures[sponza::mesh_to_texture[i]];
-        cmd_buffer.draw_indexed(sponza::meshes[i], ubo, scissor);
+
+    shader::environment env;
+    env.PV = PV;
+    for (auto& model : scene::models) {
+        cmd_buffer.draw_indexed(model.mesh, shader::get_ubo(model.material, env), scissor);
     }
+
+
+	shader::uniform_buffer ubo;
+ //   ubo.vertex.PVM = PV * glm::scale(glm::mat4(1.0f), glm::vec3(0.05f));
+	//for (int i = 0; i < sponza::meshes.size(); ++i) {
+ //       ubo.fragment.texture = sponza::textures[sponza::mesh_to_texture[i]];
+ //       cmd_buffer.draw_indexed(sponza::meshes[i], ubo, scissor);
+ //   }
 	ubo.fragment.texture = texture;
 	ubo.vertex.PVM = PV * M;
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
@@ -231,17 +344,16 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(0.0f, 0.0f, -3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
-	ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
-	cmd_buffer.draw_indexed(plane, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, 3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(3.0f, 0.0f, -3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
-	ubo.fragment.texture = texture2;
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, 3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
 	ubo.vertex.PVM = PV * glm::translate(M, glm::vec3(-3.0f, 0.0f, -3.0f));
 	cmd_buffer.draw_indexed(icosphere, ubo, scissor);
+	ubo.vertex.PVM = PV * glm::scale(glm::translate(M, glm::vec3(0.0f, -1.0f, 0.0f)), glm::vec3(3.0f));
+	cmd_buffer.draw_indexed(plane, ubo, scissor);
 	cmd_buffer.submit<clipper>(framebuf, tp);
 
 	tp.wait();
