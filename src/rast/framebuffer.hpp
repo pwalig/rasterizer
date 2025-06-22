@@ -64,11 +64,15 @@ namespace rast::framebuffer {
 				triangle[2].rastPos.z
 			);
 			depth_format& oldDepth = depth(x, y);
-			depth_format newDepth = static_cast<depth_format>(((
-					//area < (1 << 12) ? triangle[0].rastPos.z :
-					interpol::interpolate(z, interpol::linear_coefs(results, area))
-				) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max());
-			//depth_format newDepth = static_cast<depth_format>(interpolate(z, coefs));
+			depth_format newDepth;
+			if constexpr (std::is_floating_point_v<depth_format>) {
+				newDepth = static_cast<depth_format>(interpol::interpolate(z, interpol::linear_coefs(results, area)));
+			}
+			else {
+				newDepth = static_cast<depth_format>(
+					(interpol::interpolate(z, interpol::linear_coefs(results, area))  * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
+				);
+			}
 			if (newDepth < oldDepth) {
 				oldDepth = newDepth;
 
@@ -85,6 +89,11 @@ namespace rast::framebuffer {
 	using rgba8_u16 = color_depth<rast::color::rgba8, uint16_t>;
 	using rgba8_u32 = color_depth<rast::color::rgba8, uint32_t>;
 	using rgba8_u64 = color_depth<rast::color::rgba8, uint64_t>;
+
+	using rgb8_u8 = color_depth<rast::color::rgb8, uint8_t>;
+	using rgb8_u16 = color_depth<rast::color::rgb8, uint16_t>;
+	using rgb8_u32 = color_depth<rast::color::rgb8, uint32_t>;
+	using rgb8_u64 = color_depth<rast::color::rgb8, uint64_t>;
 
 	template <typename ColorFormat>
 	class color {
@@ -143,14 +152,20 @@ namespace rast::framebuffer {
 		float far_clip = 1.0f;
 
 		inline depth_view(
-			color_format* ColorData, depth_format* DepthData, uint32_t Width, uint32_t Height, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f) :
-			parent(ColorData, DepthData, Width, Height), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) { }
-		inline depth_view(image<color_format>& ColorImage, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f) :
-			parent(ColorImage, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
-		inline depth_view(color_format* ColorData, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f) :
-			parent(ColorData, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
-		inline depth_view(image<color_format>& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f) :
-			parent(ColorImage, DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+			color_format* ColorData, depth_format* DepthData, uint32_t Width, uint32_t Height, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorData, DepthData, Width, Height), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) { }
+		
+		inline depth_view(
+			image<color_format>& ColorImage, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorImage, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+
+		inline depth_view(
+			color_format* ColorData, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorData, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+
+		inline depth_view(
+			image<color_format>& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorImage, DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
 
 		template <typename Shader>
 		void draw(
@@ -166,16 +181,19 @@ namespace rast::framebuffer {
 				triangle[2].rastPos.z
 			);
 			depth_format& oldDepth = this->depth(x, y);
-			depth_format newDepth = static_cast<depth_format>(
-				(interpol::interpolate(z, interpol::linear_coefs(results, area)) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
-			);
+			depth_format newDepth;
+			if constexpr (std::is_floating_point_v<depth_format>) {
+				newDepth = static_cast<depth_format>(interpol::interpolate(z, interpol::linear_coefs(results, area)));
+			}
+			else {
+				newDepth = static_cast<depth_format>(
+					(interpol::interpolate(z, interpol::linear_coefs(results, area)) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
+				);
+			}
 			if (newDepth < oldDepth) {
 				oldDepth = newDepth;
 
 				// output color
-				//this->color(x, y).r = static_cast<uint8_t>(newDepth * (static_cast<double>(std::numeric_limits<uint8_t>::max()) / std::numeric_limits<depth_format>::max()));
-				//this->color(x, y).g = newDepth / (depth_format(1) << 18) % std::numeric_limits<uint8_t>::max();
-
 				float depth = interpol::interpolate(z, interpol::linear_coefs(results, area));
 				depth = near / (far + depth * (near - far));
 				this->color(x, y) = convert::f01_to_uint<float, uint8_t>(glm::vec4(glm::vec3((depth - near_clip) / far_clip), 1.0f));

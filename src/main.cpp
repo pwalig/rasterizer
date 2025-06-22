@@ -38,14 +38,8 @@
 #include "game/fly_cam.hpp"
 
 /* We will use this renderer to draw into this window every frame. */
-static SDL_Window *window = NULL;
-static SDL_Surface* surface = nullptr;
-static glm::mat4 V;
-static glm::mat4 P;
-using depth_format = uint32_t;
-static rast::image<depth_format> depth_buffer;
-using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
-static GBuffer g_buffer;
+//using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
+//static GBuffer g_buffer;
 static rast::image<rast::color::rgba8> texture;
 static rast::image<rast::color::rgba8> texture2;
 static rast::mesh::indexed<rast::shader::inputs::position_normal_uv> icosphere;
@@ -58,8 +52,18 @@ static std::bitset<256> pressed;
 static glm::vec2 mouseDelta = glm::vec2(0.0f);
 
 struct application {
+    using depth_format = uint32_t;
+
+	SDL_Window *window = NULL;
+	SDL_Surface* surface = nullptr;
+
     float near = 0.1f;
     float far = 1000.0f;
+
+	glm::mat4 V;
+	glm::mat4 P;
+
+    rast::image<depth_format> depth_buffer;
 };
 
 static application app;
@@ -179,20 +183,20 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
-    window = SDL_CreateWindow("rasterizer", width, height, SDL_WINDOW_RESIZABLE);
-	if (!window) {
+    app.window = SDL_CreateWindow("rasterizer", width, height, SDL_WINDOW_RESIZABLE);
+	if (!app.window) {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-	surface = SDL_CreateSurface(width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
+	app.surface = SDL_CreateSurface(width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
-    P = glm::perspective(glm::radians(70.0f), (float)width / height, app.near, app.far);
-    V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    app.P = glm::perspective(glm::radians(70.0f), (float)width / height, app.near, app.far);
+    app.V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
     texture2 = rast::image<rast::color::rgba8>::load("assets/textures/neutral_normal.png");
-    depth_buffer = rast::image<depth_format>(width, height);
-    g_buffer = GBuffer(width, height);
+    app.depth_buffer = rast::image<application::depth_format>(width, height);
+    //g_buffer = GBuffer(width, height);
     
     icosphere = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>::load("assets/models/SuzanneSmooth.mesh");
     icosphere.process(rast::shader::inputs::position_normal_uv::flip_uv);
@@ -212,18 +216,18 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         return SDL_APP_SUCCESS;  /* end the program, reporting success to the OS. */
     }
     if (event->type == SDL_EVENT_WINDOW_RESIZED) {
-        SDL_DestroySurface(surface);
-        surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
-        SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
+        SDL_DestroySurface(app.surface);
+        app.surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
+        SDL_SetSurfaceBlendMode(app.surface, SDL_BLENDMODE_NONE);
 
-		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
+		app.P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
 
-		depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
-        g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
+		app.depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
+        //g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
     }
     if (event->type == SDL_EVENT_KEY_DOWN) {
         if (event->key.scancode == SDL_SCANCODE_ESCAPE && !SDL_CursorVisible()) {
-            SDL_SetWindowRelativeMouseMode(window, false);
+            SDL_SetWindowRelativeMouseMode(app.window, false);
             SDL_ShowCursor();
         }
 
@@ -240,7 +244,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     }
     if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
         if (event->button.button == SDL_BUTTON_LEFT && SDL_CursorVisible()) {
-            SDL_SetWindowRelativeMouseMode(window, true);
+            SDL_SetWindowRelativeMouseMode(app.window, true);
             SDL_HideCursor();
         }
     }
@@ -261,11 +265,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // prepare framebuffers
     //GBuffer::view gv(g_buffer);
     //rast::framebuffer::color_depth<GBuffer::color, rast::uint32_t> framebuf(gv, depth_buffer);
-    //rast::framebuffer::depth_view<rast::color::rgba8, depth_format> framebuf(
-    //    (rast::color::rgba8*)surface->pixels, depth_buffer,
+    //rast::framebuffer::depth_view<rast::color::rgba8, application::depth_format> framebuf(
+    //    (rast::color::rgba8*)app.surface->pixels, app.depth_buffer,
     //    app.near, app.far, 0.0f, 0.1f
     //);
-    rast::framebuffer::rgba8_u32 framebuf((rast::color::rgba8*)surface->pixels, depth_buffer);
+    rast::framebuffer::rgba8_u32 framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
     framebuf.clear_depth_buffer();
     framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
     //rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
@@ -287,7 +291,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 		if (pressed[SDL_SCANCODE_LSHIFT]) movement.y -= 1.0f;
 		flyCam.update(movement, glm::vec2(mouseDelta.y, -mouseDelta.x), dt);
     }
-    V = glm::lookAt(flyCam.position, flyCam.position + (flyCam.rotation * glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
+    app.V = glm::lookAt(flyCam.position, flyCam.position + (flyCam.rotation * glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
     mouseDelta = glm::vec2(0.0f);
 
     using shader = rast::shader::lambert_textured;
@@ -296,7 +300,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     static rast::command_buffer<shader> cmd_buffer;
     cmd_buffer.reset();
-	glm::mat4 PV = P * V;
+	glm::mat4 PV = app.P * app.V;
 
     //shader::environment env;
     //env.PV = PV;
@@ -338,10 +342,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_Rect rect;
     rect.x = 0;
     rect.y = 0;
-    rect.w = surface->w;
-    rect.h = surface->h;
-    SDL_BlitSurface(surface, &rect, SDL_GetWindowSurface(window), &rect);
-    SDL_UpdateWindowSurface(window);
+    rect.w = app.surface->w;
+    rect.h = app.surface->h;
+    SDL_BlitSurface(app.surface, &rect, SDL_GetWindowSurface(app.window), &rect);
+    SDL_UpdateWindowSurface(app.window);
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -350,5 +354,5 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
     /* SDL will clean up the window/renderer for us. */
-	SDL_DestroySurface(surface);
+	SDL_DestroySurface(app.surface);
 }

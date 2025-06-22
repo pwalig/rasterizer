@@ -17,7 +17,7 @@ namespace rast::interpol {
 		return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
 	}
 
-	inline constexpr glm::vec3 dummy_coefs() {
+	inline constexpr glm::vec3 average_coefs() {
 		return glm::vec3(
 			1.0f / 3.0f,
 			1.0f / 3.0f,
