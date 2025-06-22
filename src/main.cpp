@@ -57,6 +57,13 @@ static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 static std::bitset<256> pressed;
 static glm::vec2 mouseDelta = glm::vec2(0.0f);
 
+struct application {
+    float near = 0.1f;
+    float far = 1000.0f;
+};
+
+static application app;
+
 template <typename Shader>
 struct model {
     rast::mesh::indexed<typename Shader::vertex::input> mesh;
@@ -179,7 +186,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     }
 	surface = SDL_CreateSurface(width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
-    P = glm::perspective(glm::radians(70.0f), (float)width / height, 0.1f, 1000.0f);
+    P = glm::perspective(glm::radians(70.0f), (float)width / height, app.near, app.far);
     V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     texture = rast::image<rast::color::rgba8>::load("assets/textures/uvChecker1.png");
@@ -209,7 +216,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 
-		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f);
+		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
 
 		depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
         g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
@@ -254,7 +261,11 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // prepare framebuffers
     //GBuffer::view gv(g_buffer);
     //rast::framebuffer::color_depth<GBuffer::color, rast::uint32_t> framebuf(gv, depth_buffer);
-    rast::framebuffer::color_depth<rast::color::rgba8, depth_format> framebuf((rast::color::rgba8*)surface->pixels, depth_buffer);
+    //rast::framebuffer::depth_view<rast::color::rgba8, depth_format> framebuf(
+    //    (rast::color::rgba8*)surface->pixels, depth_buffer,
+    //    app.near, app.far, 0.0f, 0.1f
+    //);
+    rast::framebuffer::rgba8_u32 framebuf((rast::color::rgba8*)surface->pixels, depth_buffer);
     framebuf.clear_depth_buffer();
     framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
     //rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
