@@ -243,8 +243,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
 		P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, 0.1f, 1000.0f);
 
-		depth_buffer.resize(event->window.data1, event->window.data2);
-        g_buffer.resize(event->window.data1, event->window.data2);
+		depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
+        g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
     }
     if (event->type == SDL_EVENT_KEY_DOWN) {
         if (event->key.scancode == SDL_SCANCODE_ESCAPE && !SDL_CursorVisible()) {
