@@ -1,0 +1,114 @@
+{
+    "textures": [
+        "../textures/uvChecker1.png"
+    ],
+    "materials": [
+        { "texture": { "index": 0 } }
+    ],
+    "meshes": [
+        "../models/SuzanneSmooth.mesh",
+        "../models/plane.mesh"
+    ],
+    "objects": [
+        {
+            "M": {
+                "position": [ 0.0, 0.0, 0.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ 6.0, 0.0, 0.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ -6.0, 0.0, 0.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ 0.0, 0.0, 6.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ 0.0, 0.0, -6.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ 6.0, 0.0, 6.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ 6.0, 0.0, -6.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ -6.0, 0.0, 6.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ -6.0, 0.0, -6.0 ],
+                "scale": [ 2.0, 2.0, 2.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 0 }, "material": { "index": 0 }}
+            ]
+        },
+        {
+            "M": {
+                "position": [ 0.0, -2.0, 0.0 ],
+                "scale": [ 6.0, 6.0, 6.0 ]
+
+            },
+            "models": [
+                { "mesh": {"index": 1 }, "material": { "index": 0 }}
+            ]
+        }
+    ]
+
+}
