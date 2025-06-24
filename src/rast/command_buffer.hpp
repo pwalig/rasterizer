@@ -21,7 +21,7 @@ namespace rast {
 
 		template <typename Clipper>
 		static inline constexpr size_t over_provision(size_t memory_size) {
-			return memory_size * 2 + Clipper::maxClipVerts;
+			return memory_size * 2 + Clipper::maxClipVerts * 4;
 		}
 
 		template <typename Clipper>

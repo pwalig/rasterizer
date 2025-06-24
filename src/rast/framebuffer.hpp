@@ -5,6 +5,7 @@
 
 #include "image.hpp"
 #include "interpolation.hpp"
+#include "convert.hpp"
 
 namespace rast::framebuffer {
 	template<typename ColorFormat, typename DepthFormat>
@@ -12,35 +13,172 @@ namespace rast::framebuffer {
 	public:
 		using depth_format = DepthFormat;
 		using color_format = ColorFormat;
-		typename image<color_format>::view colorImage;
-		typename image<depth_format>::view depthImage;
 
-		inline color_depth(const typename image<color_format>::view& ColorImage, const typename image<depth_format>::view& DepthImage) :
-			colorImage(ColorImage), depthImage(DepthImage) { }
+	private:
+		color_format* colorImage;
+		depth_format* depthImage;
+		uint32_t _width;
+		uint32_t _height;
 
-		inline color_depth(typename image<color_format>& ColorImage, typename image<depth_format>& DepthImage) :
-			colorImage(ColorImage), depthImage(DepthImage) { }
+	protected:
+		inline color_format& color(uint32_t x, uint32_t y) {
+			return colorImage[y * _width + x];
+		}
+		inline depth_format& depth(uint32_t x, uint32_t y) {
+			return depthImage[y * _width + x];
+		}
 
-		inline color_depth(typename image<color_format>& ColorImage, const typename image<depth_format>::view& DepthImage) :
-			colorImage(ColorImage), depthImage(DepthImage) { }
+	public:
+		inline color_depth(color_format* ColorData, depth_format* DepthData, uint32_t Width, uint32_t Height) :
+			colorImage(ColorData), depthImage(DepthData), _width(Width), _height(Height) { }
+		inline color_depth(image<color_format>& ColorImage, image<depth_format>& DepthImage) :
+			colorImage(ColorImage.data()), depthImage(DepthImage.data()), _width(ColorImage.width()), _height(ColorImage.height()) {}
+		inline color_depth(color_format* ColorData, image<depth_format>& DepthImage) :
+			colorImage(ColorData), depthImage(DepthImage.data()), _width(DepthImage.width()), _height(DepthImage.height()) {}
+		inline color_depth(image<color_format>& ColorImage, depth_format* DepthData) :
+			colorImage(ColorImage.data()), depthImage(DepthData.data()), _width(ColorImage.width()), _height(ColorImage.height()) {}
 
-		inline color_depth(const typename image<color_format>::view& ColorImage, typename image<depth_format>& DepthImage) :
-			colorImage(ColorImage), depthImage(DepthImage) { }
+		inline uint32_t width() const { return _width; }
+		inline uint32_t height() const { return _height; }
+		inline const uint32_t area() const { return _width * _height; }
 
 		void clear_color(color_format clear_value) {
-			colorImage.clear(clear_value);
+			std::fill_n(colorImage, area(), clear_value);
 		}
 
 		void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
-			depthImage.clear(clear_value);
+			std::fill_n(depthImage, area(), clear_value);
 		}
 
-		inline uint32_t width() const {
-			return colorImage.width;
+		template <typename Shader>
+		void draw(
+			uint32_t x, uint32_t y,
+			const typename Shader::vertex::output* triangle,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			const glm::ivec3& results, int area
+		) {
+			static_assert(std::is_same_v<color_format, typename Shader::fragment::output>);
+
+			// depth test
+			glm::vec3 z(
+				triangle[0].rastPos.z,
+				triangle[1].rastPos.z,
+				triangle[2].rastPos.z
+			);
+			depth_format& oldDepth = depth(x, y);
+			depth_format newDepth;
+			if constexpr (std::is_floating_point_v<depth_format>) {
+				newDepth = static_cast<depth_format>(interpol::interpolate(z, interpol::linear_coefs(results, area)));
+			}
+			else {
+				newDepth = static_cast<depth_format>(
+					(interpol::interpolate(z, interpol::linear_coefs(results, area))  * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
+				);
+			}
+			if (newDepth < oldDepth) {
+				// output color
+				color_format pix = Shader::fragment::shade(
+					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
+					uniform_buffer
+				);
+				if (pix.a > 0) {
+					pix.a = 255;
+					oldDepth = newDepth;
+					color(x, y) = pix;
+				}
+			}
 		}
-		inline uint32_t height() const {
-			return colorImage.height;
+	};
+
+	using rgba8_u8 = color_depth<rast::color::rgba8, uint8_t>;
+	using rgba8_u16 = color_depth<rast::color::rgba8, uint16_t>;
+	using rgba8_u32 = color_depth<rast::color::rgba8, uint32_t>;
+	using rgba8_u64 = color_depth<rast::color::rgba8, uint64_t>;
+
+	using rgb8_u8 = color_depth<rast::color::rgb8, uint8_t>;
+	using rgb8_u16 = color_depth<rast::color::rgb8, uint16_t>;
+	using rgb8_u32 = color_depth<rast::color::rgb8, uint32_t>;
+	using rgb8_u64 = color_depth<rast::color::rgb8, uint64_t>;
+
+	using rgba8_f = color_depth<rast::color::rgb8, float>;
+	using rgba8_d = color_depth<rast::color::rgb8, double>;
+
+	using rgb8_f = color_depth<rast::color::rgb8, float>;
+	using rgb8_d = color_depth<rast::color::rgb8, double>;
+
+	template <typename ColorFormat>
+	class color {
+	public:
+		using color_format = ColorFormat;
+
+	private:
+		color_format* colorImage;
+		uint32_t _width;
+		uint32_t _height;
+
+		inline color_format& at(uint32_t x, uint32_t y) { return colorImage[y * _width + x]; }
+
+	public:
+		inline color(color_format* ColorData, uint32_t Width, uint32_t Height) :
+			colorImage(ColorData), _width(Width), _height(Height) { }
+		inline color(image<color_format>& ColorImage) :
+			colorImage(ColorImage), _width(ColorImage.width()), _height(ColorImage.height()) { }
+
+		inline uint32_t width() const { return _width; }
+		inline uint32_t height() const { return _height; }
+		inline const uint32_t area() const { return _width * _height; }
+
+		void clear(color clear_value) {
+			std::fill_n(colorImage, area(), clear_value);
 		}
+
+		template <typename Shader>
+		void draw(
+			uint32_t x, uint32_t y,
+			const typename Shader::vertex::output* triangle,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			const glm::ivec3& results, int area
+		) {
+			static_assert(std::is_same_v<color_format, typename Shader::fragment::output>);
+
+			// output color
+			at(x, y) = Shader::fragment::shade(
+				interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
+				uniform_buffer
+			);
+		}
+	};
+
+	using rgb8 = color<rast::color::rgb8>;
+	using rgba8 = color<rast::color::rgba8>;
+
+	template <typename ColorFormat, typename DepthFormat>
+	class depth_view : public color_depth<ColorFormat, DepthFormat> {
+		using parent = color_depth<ColorFormat, DepthFormat>;
+		using color_format = ColorFormat;
+		using depth_format = DepthFormat;
+	public:
+		float near = 0.1f;
+		float far = 100.0f;
+
+		float near_clip = 0.0f;
+		float far_clip = 1.0f;
+
+		inline depth_view(
+			color_format* ColorData, depth_format* DepthData, uint32_t Width, uint32_t Height, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorData, DepthData, Width, Height), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) { }
+		
+		inline depth_view(
+			image<color_format>& ColorImage, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorImage, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+
+		inline depth_view(
+			color_format* ColorData, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorData, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+
+		inline depth_view(
+			image<color_format>& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : parent(ColorImage, DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
 
 		template <typename Shader>
 		void draw(
@@ -55,58 +193,24 @@ namespace rast::framebuffer {
 				triangle[1].rastPos.z,
 				triangle[2].rastPos.z
 			);
-			depth_format& oldDepth = depthImage.at(x, y);
-			depth_format newDepth = static_cast<depth_format>(((
-					//area < (1 << 12) ? triangle[0].rastPos.z :
-					interpol::interpolate(z, interpol::linear_coefs(results, area))
-				) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max());
-			//depth_format newDepth = static_cast<depth_format>(interpolate(z, coefs));
+			depth_format& oldDepth = this->depth(x, y);
+			float depth = interpol::interpolate(z, interpol::linear_coefs(results, area));
+			depth_format newDepth;
+			if constexpr (std::is_floating_point_v<depth_format>) {
+				newDepth = static_cast<depth_format>(depth);
+			}
+			else {
+				newDepth = static_cast<depth_format>(
+					(depth * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
+				);
+			}
 			if (newDepth < oldDepth) {
 				oldDepth = newDepth;
 
 				// output color
-				//colorImage.at(x, y).r = static_cast<uint8_t>(newDepth * ((double)std::numeric_limits<uint8_t>::max() / std::numeric_limits<depth_format>::max()));
-				//colorImage.at(x, y).g = newDepth / (depth_format(1) << 18) % std::numeric_limits<uint8_t>::max();
-				//float sum = coefs.x + coefs.y + coefs.z;
-				colorImage.at(x, y) = Shader::fragment::shade(
-					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-					uniform_buffer
-				);
+				depth = near / (far + depth * (near - far));
+				this->color(x, y) = convert::f01_to_uint<float, uint8_t>(glm::vec4(glm::vec3((depth - near_clip) / far_clip), 1.0f));
 			}
-		}
-	};
-
-	class rgba8 {
-	public:
-		using color = color::rgba8;
-		image<color>::view colorImage;
-
-		inline rgba8(const image<color>::view& ColorImage) :
-			colorImage(ColorImage) { }
-
-		void clear(color clear_value) {
-			std::fill_n(colorImage.data, colorImage.width * colorImage.height, clear_value);
-		}
-
-		inline uint32_t width() const {
-			return colorImage.width;
-		}
-		inline uint32_t height() const {
-			return colorImage.height;
-		}
-
-		template <typename Shader>
-		void draw(
-			uint32_t x, uint32_t y,
-			const typename Shader::vertex::output* triangle,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const glm::ivec3& results, int area
-		) {
-			// output color
-			colorImage.at(x, y) = Shader::fragment::shade(
-				interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-				uniform_buffer
-			);
 		}
 	};
 }
