@@ -57,6 +57,8 @@ namespace rast::framebuffer {
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const glm::ivec3& results, int area
 		) {
+			static_assert(std::is_same_v<color_format, typename Shader::fragment::output>);
+
 			// depth test
 			glm::vec3 z(
 				triangle[0].rastPos.z,
@@ -74,13 +76,16 @@ namespace rast::framebuffer {
 				);
 			}
 			if (newDepth < oldDepth) {
-				oldDepth = newDepth;
-
 				// output color
-				color(x, y) = Shader::fragment::shade(
+				color_format pix = Shader::fragment::shade(
 					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
 					uniform_buffer
 				);
+				if (pix.a > 0) {
+					pix.a = 255;
+					oldDepth = newDepth;
+					color(x, y) = pix;
+				}
 			}
 		}
 	};
@@ -94,6 +99,12 @@ namespace rast::framebuffer {
 	using rgb8_u16 = color_depth<rast::color::rgb8, uint16_t>;
 	using rgb8_u32 = color_depth<rast::color::rgb8, uint32_t>;
 	using rgb8_u64 = color_depth<rast::color::rgb8, uint64_t>;
+
+	using rgba8_f = color_depth<rast::color::rgb8, float>;
+	using rgba8_d = color_depth<rast::color::rgb8, double>;
+
+	using rgb8_f = color_depth<rast::color::rgb8, float>;
+	using rgb8_d = color_depth<rast::color::rgb8, double>;
 
 	template <typename ColorFormat>
 	class color {
@@ -128,6 +139,8 @@ namespace rast::framebuffer {
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const glm::ivec3& results, int area
 		) {
+			static_assert(std::is_same_v<color_format, typename Shader::fragment::output>);
+
 			// output color
 			at(x, y) = Shader::fragment::shade(
 				interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
@@ -181,20 +194,20 @@ namespace rast::framebuffer {
 				triangle[2].rastPos.z
 			);
 			depth_format& oldDepth = this->depth(x, y);
+			float depth = interpol::interpolate(z, interpol::linear_coefs(results, area));
 			depth_format newDepth;
 			if constexpr (std::is_floating_point_v<depth_format>) {
-				newDepth = static_cast<depth_format>(interpol::interpolate(z, interpol::linear_coefs(results, area)));
+				newDepth = static_cast<depth_format>(depth);
 			}
 			else {
 				newDepth = static_cast<depth_format>(
-					(interpol::interpolate(z, interpol::linear_coefs(results, area)) * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
+					(depth * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
 				);
 			}
 			if (newDepth < oldDepth) {
 				oldDepth = newDepth;
 
 				// output color
-				float depth = interpol::interpolate(z, interpol::linear_coefs(results, area));
 				depth = near / (far + depth * (near - far));
 				this->color(x, y) = convert::f01_to_uint<float, uint8_t>(glm::vec4(glm::vec3((depth - near_clip) / far_clip), 1.0f));
 			}

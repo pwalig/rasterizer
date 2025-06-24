@@ -53,6 +53,9 @@ static glm::vec2 mouseDelta = glm::vec2(0.0f);
 
 struct application {
     using depth_format = uint32_t;
+    using DepthBuffer = rast::image<depth_format>;
+    using color_format = rast::color::rgba8;
+    using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format>;
 
 	SDL_Window *window = NULL;
 	SDL_Surface* surface = nullptr;
@@ -60,8 +63,8 @@ struct application {
     float near = 0.1f;
     float far = 1000.0f;
 
-	glm::mat4 V;
-	glm::mat4 P;
+    glm::mat4 V = glm::lookAt(glm::vec3(5.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 P = glm::perspective(70.0f, 16.0f / 9.0f, near, far);
 
     rast::image<depth_format> depth_buffer;
 };
@@ -269,7 +272,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     //    (rast::color::rgba8*)app.surface->pixels, app.depth_buffer,
     //    app.near, app.far, 0.0f, 0.1f
     //);
-    rast::framebuffer::rgba8_u32 framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
+    application::Framebuffer framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
     framebuf.clear_depth_buffer();
     framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
     //rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
