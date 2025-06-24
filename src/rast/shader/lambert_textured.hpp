@@ -15,7 +15,7 @@ namespace rast::shader {
 		struct fragment {
 			using input = inputs::normal_uv;
 			using output = outputs::discardable<color::rgba8>;
-			inline static float alpha_clip_threshold = 0.1f;
+			inline static float alpha_clip_threshold = 0.25f;
 
 			struct uniform_buffer {
 				texture<rast::color::rgba8>::sampler texture;

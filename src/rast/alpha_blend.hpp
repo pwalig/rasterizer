@@ -15,43 +15,73 @@ namespace rast::alpha_blend {
 		dst_alpha, one_minus_dst_alpha,
 	};
 
-	template <factor f, typename Color>
+	template <factor, typename Color>
 	Color mul_by_factor(const Color& color, const Color& src, const Color& dst);
+
+	inline rast::color::rgba8 mul_by_factor_helper(const rast::color::rgba8& color, float factor) {
+		return rast::color::rgba8(
+			static_cast<uint8_t>(color.r * factor),
+			static_cast<uint8_t>(color.g * factor),
+			static_cast<uint8_t>(color.b * factor),
+			static_cast<uint8_t>(color.a * factor)
+		);
+	}
+
 	template <>
 	inline rast::color::rgba8 mul_by_factor<factor::zero, rast::color::rgba8>(
 		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
-	) {
-		return rast::color::rgba8(0);
-	}
+	) { return rast::color::rgba8(0); }
 	template <>
 	inline rast::color::rgba8 mul_by_factor<factor::one, rast::color::rgba8>(
 		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
+	) { return src; }
+	template <>
+	inline rast::color::rgba8 mul_by_factor<factor::src_color, rast::color::rgba8>(
+		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
+	) { return color * src / rast::color::rgba8(255); }
+	template <>
+	inline rast::color::rgba8 mul_by_factor<factor::one_minus_src_color, rast::color::rgba8>(
+		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
 	) {
-		return src;
+		return color * rast::color::rgba8(255 - src.r, 255 - src.g, 255 - src.b, 255 - src.a) / rast::color::rgba8(255);
+	}
+	template <>
+	inline rast::color::rgba8 mul_by_factor<factor::dst_color, rast::color::rgba8>(
+		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
+	) { return color * dst / rast::color::rgba8(255); }
+	template <>
+	inline rast::color::rgba8 mul_by_factor<factor::one_minus_dst_color, rast::color::rgba8>(
+		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
+	) {
+		return color * rast::color::rgba8(255 - dst.r, 255 - dst.g, 255 - dst.b, 255 - dst.a) / rast::color::rgba8(255);
 	}
 	template <>
 	inline rast::color::rgba8 mul_by_factor<factor::src_alpha, rast::color::rgba8>(
 		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
 	) {
 		float factor = static_cast<float>(src.a) / 255.0f;
-		return rast::color::rgba8(
-			static_cast<uint8_t>(color.r * factor),
-			static_cast<uint8_t>(color.g * factor),
-			static_cast<uint8_t>(color.b * factor),
-			static_cast<uint8_t>(color.a * factor)
-		);
+		return mul_by_factor_helper(color, factor);
 	}
 	template <>
 	inline rast::color::rgba8 mul_by_factor<factor::one_minus_src_alpha, rast::color::rgba8>(
 		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
 	) {
 		float factor = static_cast<float>(255 - src.a) / 255.0f;
-		return rast::color::rgba8(
-			static_cast<uint8_t>(color.r * factor),
-			static_cast<uint8_t>(color.g * factor),
-			static_cast<uint8_t>(color.b * factor),
-			static_cast<uint8_t>(color.a * factor)
-		);
+		return mul_by_factor_helper(color, factor);
+	}
+	template <>
+	inline rast::color::rgba8 mul_by_factor<factor::dst_alpha, rast::color::rgba8>(
+		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
+	) {
+		float factor = static_cast<float>(dst.a) / 255.0f;
+		return mul_by_factor_helper(color, factor);
+	}
+	template <>
+	inline rast::color::rgba8 mul_by_factor<factor::one_minus_dst_alpha, rast::color::rgba8>(
+		const rast::color::rgba8& color, const rast::color::rgba8& src, const rast::color::rgba8& dst
+	) {
+		float factor = static_cast<float>(255 - dst.a) / 255.0f;
+		return mul_by_factor_helper(color, factor);
 	}
 
 	enum class equation {

@@ -97,7 +97,7 @@ struct scene {
 		assert(document.IsObject());
 
         // textures
-        {
+        if (document.HasMember("textures")) {
 			const rapidjson::Value& textures_node = document["textures"];
             textures.reserve(textures_node.Size());
             for (rapidjson::SizeType i = 0; i < textures_node.Size(); ++i) {
@@ -110,7 +110,7 @@ struct scene {
         }
         // texture packs
         std::unordered_map<std::string, uint32_t> texture_pack_map;
-        {
+        if (document.HasMember("texture_packs")) {
 			const rapidjson::Value& texture_packs_node = document["texture_packs"];
 			for (rapidjson::Value::ConstMemberIterator texture_pack_iter = texture_packs_node.MemberBegin(); texture_pack_iter != texture_packs_node.MemberEnd(); ++texture_pack_iter) {
 				texture_pack_map.insert({ texture_pack_iter->name.GetString(), static_cast<uint32_t>(textures.size())});

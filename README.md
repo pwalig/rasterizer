@@ -17,6 +17,7 @@ Above scene (~35k triangles) renders in 60fps at 1920 x 1080 resolution on AMD R
 * ability to specify viewport dimensions and offset (to render to only part of the image)
 * loading meshes and textures
 * sutherland-hodgman and front triangle clipping
+* configurable alpha blending
 * deffered rendering is possible and accelerated with specialized method for screen quad rendering
 * rendering to screen or texture
 
