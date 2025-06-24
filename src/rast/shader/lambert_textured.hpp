@@ -54,24 +54,5 @@ namespace rast::shader {
 		};
 
 		using uniform_buffer = shader_uniform_buffer<lambert_textured>;
-
-		struct material {
-			glm::mat4 M = glm::mat4(1.0f);
-			texture<rast::color::rgba8>::sampler texture;
-		};
-
-		struct environment {
-			glm::mat4 PV;
-			glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
-			glm::vec3 light_color = glm::vec3(1.0f);
-			glm::vec3 ambient = glm::vec3(0.1f);
-		};
-
-		static uniform_buffer get_ubo(const material& mat, const environment& env) {
-			return {
-				{ mat.texture, env.light_direction, env.light_color, env.ambient },
-				{ env.PV * mat.M }
-			};
-		}
 	};
 }

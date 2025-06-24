@@ -239,11 +239,12 @@ struct application {
 	SDL_Window *window = NULL;
 	SDL_Surface* surface = nullptr;
 
+    float fov = 70.0f;
     float near = 0.1f;
     float far = 1000.0f;
 
     glm::mat4 V = glm::lookAt(glm::vec3(5.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	glm::mat4 P = glm::perspective(70.0f, 16.0f / 9.0f, near, far);
+	glm::mat4 P = glm::perspective(fov, 16.0f / 9.0f, near, far);
     scene scene;
 
     rast::image<depth_format> depth_buffer;
@@ -272,7 +273,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     }
 	app.surface = SDL_CreateSurface(width, height, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
-    app.P = glm::perspective(glm::radians(70.0f), (float)width / height, app.near, app.far);
+    app.P = glm::perspective(glm::radians(app.fov), (float)width / height, app.near, app.far);
     app.V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     app.depth_buffer = rast::image<application::depth_format>(width, height);
@@ -295,7 +296,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         app.surface = SDL_CreateSurface(event->window.data1, event->window.data2, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
         SDL_SetSurfaceBlendMode(app.surface, SDL_BLENDMODE_NONE);
 
-		app.P = glm::perspective(glm::radians(70.0f), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
+		app.P = glm::perspective(glm::radians(app.fov), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
 
 		app.depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
         //g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
