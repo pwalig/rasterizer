@@ -16,7 +16,7 @@ Above scene (~35k triangles) renders in 60fps at 1920 x 1080 resolution on AMD R
 * multithreaded (each thread renders one vertical slice of the image)
 * ability to specify viewport dimensions and offset (to render to only part of the image)
 * loading meshes and textures
-* triangle clipping (against z-near only)
+* sutherland-hodgman and front triangle clipping
 * deffered rendering is possible and accelerated with specialized method for screen quad rendering
 * rendering to screen or texture
 
@@ -31,7 +31,7 @@ cd rasterizer
 
 ## Dependencies
 
-### SDL
+### SDL and Rapidjson
 
 ```
 git submodule init
