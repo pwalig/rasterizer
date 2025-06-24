@@ -8,9 +8,18 @@
 #include "convert.hpp"
 #include "alpha_blend.hpp"
 #include "discard_fragment.hpp"
+#include "depth_test.hpp"
+
+#define rast_framebuffer_shader_output_assert \
+using fragment_output = typename Shader::fragment::output; \
+if constexpr (is_discardable_v<fragment_output>) { \
+	static_assert(std::is_same_v<color_format, typename fragment_output::value_type>); \
+} else { \
+	static_assert(std::is_same_v<color_format, fragment_output>); \
+}
 
 namespace rast::framebuffer {
-	template<typename ColorFormat, typename DepthFormat>
+	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>
 	class color_depth {
 	public:
 		using depth_format = DepthFormat;
@@ -52,20 +61,14 @@ namespace rast::framebuffer {
 			std::fill_n(depthImage, area(), clear_value);
 		}
 
-		template <typename Shader, typename BlendFunc>
+		template <typename Shader, typename AlphaBlend>
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const glm::ivec3& results, int area
 		) {
-			using fragment_output = typename Shader::fragment::output;
-			if constexpr (is_discardable_v<fragment_output>) {
-				static_assert(std::is_same_v<color_format, typename fragment_output::value_type>);
-			}
-			else {
-				static_assert(std::is_same_v<color_format, fragment_output>);
-			}
+			rast_framebuffer_shader_output_assert
 
 			// depth test
 			glm::vec3 z(
@@ -83,7 +86,7 @@ namespace rast::framebuffer {
 					(interpol::interpolate(z, interpol::linear_coefs(results, area))  * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
 				);
 			}
-			if (newDepth < oldDepth) {
+			if (DepthTest(newDepth, oldDepth)) {
 
 				if constexpr (is_discardable_v<fragment_output>) {
 					fragment_output frag = Shader::fragment::shade(
@@ -92,14 +95,14 @@ namespace rast::framebuffer {
 					);
 					if (should_discard(frag)) return;
 
-					color(x, y) = BlendFunc::blend(
+					color(x, y) = AlphaBlend::blend(
 						get_frag_from_discardable(frag),
 						color(x, y)
 					);
 					oldDepth = newDepth;
 				}
 				else {
-					color(x, y) = BlendFunc::blend(
+					color(x, y) = AlphaBlend::blend(
 						Shader::fragment::shade(
 							interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
 							uniform_buffer
@@ -154,14 +157,36 @@ namespace rast::framebuffer {
 			std::fill_n(colorImage, area(), clear_value);
 		}
 
-		template <typename Shader>
+		template <typename Shader, typename AlphaBlend>
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const glm::ivec3& results, int area
 		) {
-			static_assert(std::is_same_v<color_format, typename Shader::fragment::output>);
+			rast_framebuffer_shader_output_assert
+
+			if constexpr (is_discardable_v<fragment_output>) {
+				fragment_output frag = Shader::fragment::shade(
+					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
+					uniform_buffer
+				);
+				if (should_discard(frag)) return;
+
+				at(x, y) = AlphaBlend::blend(
+					get_frag_from_discardable(frag),
+					at(x, y)
+				);
+			}
+			else {
+				at(x, y) = AlphaBlend::blend(
+					Shader::fragment::shade(
+						interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
+						uniform_buffer
+					),
+					at(x, y)
+				);
+			}
 
 			// output color
 			at(x, y) = Shader::fragment::shade(
@@ -174,8 +199,8 @@ namespace rast::framebuffer {
 	using rgb8 = color<rast::color::rgb8>;
 	using rgba8 = color<rast::color::rgba8>;
 
-	template <typename ColorFormat, typename DepthFormat>
-	class depth_view : public color_depth<ColorFormat, DepthFormat> {
+	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>
+	class depth_view : public color_depth<ColorFormat, DepthFormat, DepthTest> {
 		using parent = color_depth<ColorFormat, DepthFormat>;
 		using color_format = ColorFormat;
 		using depth_format = DepthFormat;
@@ -202,7 +227,7 @@ namespace rast::framebuffer {
 			image<color_format>& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
 		) : parent(ColorImage, DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
 
-		template <typename Shader>
+		template <typename Shader, typename AlphaBlend>
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
@@ -226,7 +251,7 @@ namespace rast::framebuffer {
 					(depth * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
 				);
 			}
-			if (newDepth < oldDepth) {
+			if (DepthTest(newDepth, oldDepth)) {
 				oldDepth = newDepth;
 
 				// output color

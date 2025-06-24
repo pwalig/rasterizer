@@ -152,6 +152,7 @@
     <ClInclude Include="src\rast\clip\near_clip_far_discard.hpp" />
     <ClInclude Include="src\rast\command_buffer.hpp" />
     <ClInclude Include="src\rast\convert.hpp" />
+    <ClInclude Include="src\rast\depth_test.hpp" />
     <ClInclude Include="src\rast\discard_fragment.hpp" />
     <ClInclude Include="src\rast\interpolation.hpp" />
     <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp" />

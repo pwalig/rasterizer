@@ -234,7 +234,7 @@ struct application {
     using depth_format = uint32_t;
     using DepthBuffer = rast::image<depth_format>;
     using color_format = rast::color::rgba8;
-    using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format>;
+    using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, rast::depth_test::less>;
 
 	SDL_Window *window = NULL;
 	SDL_Surface* surface = nullptr;

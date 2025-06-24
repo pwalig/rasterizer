@@ -18,6 +18,7 @@ Above scene (~35k triangles) renders in 60fps at 1920 x 1080 resolution on AMD R
 * loading meshes and textures
 * sutherland-hodgman and front triangle clipping
 * configurable alpha blending
+* configurable depth test
 * deffered rendering is possible and accelerated with specialized method for screen quad rendering
 * rendering to screen or texture
 
