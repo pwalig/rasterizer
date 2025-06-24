@@ -6,6 +6,8 @@
 #include "image.hpp"
 #include "interpolation.hpp"
 #include "convert.hpp"
+#include "alpha_blend.hpp"
+#include "discard_fragment.hpp"
 
 namespace rast::framebuffer {
 	template<typename ColorFormat, typename DepthFormat>
@@ -50,14 +52,20 @@ namespace rast::framebuffer {
 			std::fill_n(depthImage, area(), clear_value);
 		}
 
-		template <typename Shader>
+		template <typename Shader, typename BlendFunc>
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const glm::ivec3& results, int area
 		) {
-			static_assert(std::is_same_v<color_format, typename Shader::fragment::output>);
+			using fragment_output = typename Shader::fragment::output;
+			if constexpr (is_discardable_v<fragment_output>) {
+				static_assert(std::is_same_v<color_format, typename fragment_output::value_type>);
+			}
+			else {
+				static_assert(std::is_same_v<color_format, fragment_output>);
+			}
 
 			// depth test
 			glm::vec3 z(
@@ -76,15 +84,29 @@ namespace rast::framebuffer {
 				);
 			}
 			if (newDepth < oldDepth) {
-				// output color
-				color_format pix = Shader::fragment::shade(
-					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-					uniform_buffer
-				);
-				if (pix.a > 0) {
-					pix.a = 255;
+
+				if constexpr (is_discardable_v<fragment_output>) {
+					fragment_output frag = Shader::fragment::shade(
+						interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
+						uniform_buffer
+					);
+					if (should_discard(frag)) return;
+
+					color(x, y) = BlendFunc::blend(
+						get_frag_from_discardable(frag),
+						color(x, y)
+					);
 					oldDepth = newDepth;
-					color(x, y) = pix;
+				}
+				else {
+					color(x, y) = BlendFunc::blend(
+						Shader::fragment::shade(
+							interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
+							uniform_buffer
+						),
+						color(x, y)
+					);
+					oldDepth = newDepth;
 				}
 			}
 		}

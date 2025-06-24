@@ -40,7 +40,7 @@ namespace rast {
 			commands.push_back({ mesh, {}, uniform_buffer, viewport });
 		}
 
-		template <typename Clipper, typename Framebuffer, typename ThreadPool>
+		template <typename Clipper, typename AlphaBlend, typename Framebuffer, typename ThreadPool>
 		void submit(
 			Framebuffer& framebuffer,
 			ThreadPool& tp
@@ -65,7 +65,7 @@ namespace rast {
 				tp.enque([&framebuffer, &cmds = (this->commands), i, stride]() {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 					for (const command& cmd : cmds) {
-						rast::renderer::rasterize<Shader>(framebuffer, cmd.raster_range.begin, cmd.raster_range.end, cmd.ubo.fragment, cmd.viewport, tile);
+						rast::renderer::rasterize<Shader, AlphaBlend>(framebuffer, cmd.raster_range.begin, cmd.raster_range.end, cmd.ubo.fragment, cmd.viewport, tile);
 					}
 				});
 			}

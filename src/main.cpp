@@ -372,6 +372,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     using shader = rast::shader::lambert_textured;
     using clipper = rast::sutherland_hodgman;
+    using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 
     // record command buffer
     static rast::command_buffer<shader> cmd_buffer;
@@ -382,7 +383,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         (const scene::mesh_type& mesh, const shader::uniform_buffer& ubo)
         { cmd_buffer.draw_indexed(mesh, ubo, viewport); }
     );
-	cmd_buffer.submit<clipper>(framebuf, tp);
+	cmd_buffer.submit<clipper, blending>(framebuf, tp);
 
     // present to screen
 	tp.wait();

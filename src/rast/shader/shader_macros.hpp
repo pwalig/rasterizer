@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "../discard_fragment.hpp"
 
 #define rast_shader_uniform_buffer() \
 struct uniform_buffer { \
@@ -123,5 +124,33 @@ namespace rast::shader {
 				return { rhs.normal + lhs.normal, rhs.uv + lhs.uv };
 			}
 		};
+	}
+
+	namespace outputs {
+		template <typename output>
+		struct discardable {
+			using value_type = output;
+			value_type value;
+			bool is_discarded;
+
+			inline discardable(output&& v) : value(std::forward<output>(v)), is_discarded(false) {}
+			static discardable discard() { return discardable(); }
+
+		private:
+			inline discardable() : value(), is_discarded(true) {}
+		};
+	}
+}
+
+namespace rast {
+	template <>
+	inline constexpr bool is_discardable_v<shader::outputs::discardable<color::rgba8>> = true;
+	template <>
+	inline constexpr bool should_discard<shader::outputs::discardable<color::rgba8>>(const shader::outputs::discardable<color::rgba8>& dsc) {
+		return dsc.is_discarded;
+	}
+	template <>
+	inline color::rgba8 get_frag_from_discardable<shader::outputs::discardable<color::rgba8>>(const shader::outputs::discardable<color::rgba8>& dsc) {
+		return dsc.value;
 	}
 }
