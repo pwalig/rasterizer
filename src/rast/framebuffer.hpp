@@ -19,6 +19,33 @@ if constexpr (is_discardable_v<fragment_output>) { \
 }
 
 namespace rast::framebuffer {
+	template <typename DepthFormat>
+	inline DepthFormat float_depth_to_depth_format(float depth) {
+		if constexpr (std::is_floating_point_v<DepthFormat>) {
+			return static_cast<DepthFormat>(depth);
+		}
+		else {
+			return static_cast<DepthFormat>(
+				(depth * 0.5f + 0.5f) * std::numeric_limits<DepthFormat>::max()
+			);
+		}
+	}
+	template <typename vertex_output>
+	inline float get_float_depth(const vertex_output* triangle, const glm::ivec3& results, int area) {
+		return interpol::interpolate(
+			glm::vec3(
+				triangle[0].rastPos.z,
+				triangle[1].rastPos.z,
+				triangle[2].rastPos.z
+			),
+			interpol::linear_coefs(results, area)
+		);
+	}
+	template <typename depth_format, typename vertex_output>
+	inline depth_format get_depth(const vertex_output* triangle, const glm::ivec3& results, int area) {
+		return float_depth_to_depth_format<depth_format>(get_float_depth(triangle, results, area));
+	}
+
 	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>
 	class color_depth {
 	public:
@@ -71,21 +98,8 @@ namespace rast::framebuffer {
 			rast_framebuffer_shader_output_assert
 
 			// depth test
-			glm::vec3 z(
-				triangle[0].rastPos.z,
-				triangle[1].rastPos.z,
-				triangle[2].rastPos.z
-			);
 			depth_format& oldDepth = depth(x, y);
-			depth_format newDepth;
-			if constexpr (std::is_floating_point_v<depth_format>) {
-				newDepth = static_cast<depth_format>(interpol::interpolate(z, interpol::linear_coefs(results, area)));
-			}
-			else {
-				newDepth = static_cast<depth_format>(
-					(interpol::interpolate(z, interpol::linear_coefs(results, area))  * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
-				);
-			}
+			depth_format newDepth = get_depth<depth_format>(triangle, results, area);
 			if (DepthTest(newDepth, oldDepth)) {
 
 				if constexpr (is_discardable_v<fragment_output>) {
@@ -231,26 +245,13 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			const typename Shader::fragment::uniform_buffer&,
 			const glm::ivec3& results, int area
 		) {
 			// depth test
-			glm::vec3 z(
-				triangle[0].rastPos.z,
-				triangle[1].rastPos.z,
-				triangle[2].rastPos.z
-			);
 			depth_format& oldDepth = this->depth(x, y);
-			float depth = interpol::interpolate(z, interpol::linear_coefs(results, area));
-			depth_format newDepth;
-			if constexpr (std::is_floating_point_v<depth_format>) {
-				newDepth = static_cast<depth_format>(depth);
-			}
-			else {
-				newDepth = static_cast<depth_format>(
-					(depth * 0.5f + 0.5f) * std::numeric_limits<depth_format>::max()
-				);
-			}
+			float depth = get_float_depth(triangle, results, area);
+			depth_format newDepth = float_depth_to_depth_format<depth_format>(depth);
 			if (DepthTest(newDepth, oldDepth)) {
 				oldDepth = newDepth;
 

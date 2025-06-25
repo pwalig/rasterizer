@@ -12,6 +12,14 @@ add_subdirectory(ext/SDL EXCLUDE_FROM_ALL)
 
 # Create your game executable target as usual
 add_executable(rasterizer)
+
+if (MSVC)
+    target_compile_options(rasterizer PRIVATE /W4 /WX)
+else()
+    target_compile_options(rasterizer PRIVATE -Wall -Werror)
+    # target_compile_options(rasterizer PRIVATE -Wall -Wextra -pedantic -Werror)
+endif()
+
 target_include_directories(rasterizer PRIVATE $ENV{GLM_PATH})
 target_include_directories(rasterizer PRIVATE $ENV{STB_PATH})
 target_include_directories(rasterizer PRIVATE ext/rapidjson/include/)

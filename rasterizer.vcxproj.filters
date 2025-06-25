@@ -1,111 +1,111 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Pliki źródłowe">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Pliki nagłówkowe">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="Pliki zasobów">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="sources">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="headers">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="src\rast\mesh.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="src\stb_implementation.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="src\thread_pool.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="src\game\fly_cam.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\rast\color.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\image.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\mesh.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\renderer.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\constant.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\vertex_colored.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\texture.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\textured.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\sa_vector.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\trivial_iterator.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\lambert_textured.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\shader_macros.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\framebuffer.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\deferred.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\thread_pool.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\interpolation.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\game\fly_cam.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\clip\clip_vert.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\clip\near_clip_far_discard.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\command_buffer.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\convert.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\alpha_blend.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\discard_fragment.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\depth_test.hpp">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

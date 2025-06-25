@@ -128,16 +128,19 @@ namespace rast::shader {
 
 	namespace outputs {
 		template <typename output>
-		struct discardable {
+		class discardable {
+			output value;
+			bool discarded;
+			inline discardable() : value(), discarded(true) {}
+		public:
 			using value_type = output;
-			value_type value;
-			bool is_discarded;
 
-			inline discardable(output&& v) : value(std::forward<output>(v)), is_discarded(false) {}
+			inline discardable(output&& v) : value(std::forward<output>(v)), discarded(false) {}
 			static discardable discard() { return discardable(); }
 
-		private:
-			inline discardable() : value(), is_discarded(true) {}
+			inline value_type& get_value() { return value; }
+			inline const value_type& get_value() const { return value; }
+			inline bool is_discarded() const { return discarded; }
 		};
 	}
 }
@@ -146,11 +149,11 @@ namespace rast {
 	template <>
 	inline constexpr bool is_discardable_v<shader::outputs::discardable<color::rgba8>> = true;
 	template <>
-	inline constexpr bool should_discard<shader::outputs::discardable<color::rgba8>>(const shader::outputs::discardable<color::rgba8>& dsc) {
-		return dsc.is_discarded;
+	inline bool should_discard<shader::outputs::discardable<color::rgba8>>(const shader::outputs::discardable<color::rgba8>& dsc) {
+		return dsc.is_discarded();
 	}
 	template <>
 	inline color::rgba8 get_frag_from_discardable<shader::outputs::discardable<color::rgba8>>(const shader::outputs::discardable<color::rgba8>& dsc) {
-		return dsc.value;
+		return dsc.get_value();
 	}
 }

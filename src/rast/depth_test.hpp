@@ -5,7 +5,6 @@ namespace rast::depth_test {
 		always, never, less, equal, less_or_equal, greater, not_equal, greater_or_equal
 	};
 
-
 	template <typename depth_format>
 	inline bool always(depth_format newDepth, depth_format oldDepth) {
 		return true;
@@ -42,12 +41,31 @@ namespace rast::depth_test {
 	namespace function {
 		template <typename depth_format>
 		using type = bool (*)(depth_format, depth_format);
+	}
 
-		template <option>
+	template <typename depth_format>
+	inline const std::vector<function::type<depth_format>> functions = {
+		always, never, less, equal, less_or_equal, greater, not_equal, greater_or_equal
+	};
+
+	namespace type {
+		template <option Option>
 		struct wrapper {
-			template <typename depth_format>
-			inline constexpr static function::type<depth_format> function = nullptr;
+			inline constexpr static option value = Option;
 		};
+		using always = wrapper<option::always>;
+		using never = wrapper<option::never>;
+		using less = wrapper<option::less>;
+		using equal = wrapper<option::equal>;
+		using less_or_equal = wrapper<option::less_or_equal>;
+		using greater = wrapper<option::greater>;
+		using not_equal = wrapper<option::not_equal>;
+		using greater_or_equal = wrapper<option::greater_or_equal>;
+	}
+
+	namespace function {
+		template <option>
+		struct wrapper { };
 
 		template<>
 		struct wrapper<option::always> {
@@ -60,14 +78,14 @@ namespace rast::depth_test {
 			inline constexpr static function::type<depth_format> function = never<depth_format>;
 		};
 		template<>
-		struct wrapper<option::equal> {
-			template <typename depth_format>
-			inline constexpr static function::type<depth_format> function = equal<depth_format>;
-		};
-		template<>
 		struct wrapper<option::less> {
 			template <typename depth_format>
 			inline constexpr static function::type<depth_format> function = less<depth_format>;
+		};
+		template<>
+		struct wrapper<option::equal> {
+			template <typename depth_format>
+			inline constexpr static function::type<depth_format> function = equal<depth_format>;
 		};
 		template<>
 		struct wrapper<option::less_or_equal> {
@@ -89,25 +107,13 @@ namespace rast::depth_test {
 			template <typename depth_format>
 			inline constexpr static function::type<depth_format> function = greater_or_equal<depth_format>;
 		};
+
+		template <typename T>
+		using wrapper2 = wrapper<T::value>;
 	}
 
-	namespace type {
-		template <option Option>
-		struct wrapper {
-			inline constexpr static option value = Option;
-			using function_wrapper = function::wrapper<Option>;
-
-			// following code does not compile with Visual Studio (i get C3878), but does compile with CMake (with MVSC)
-			//template <typename depth_format>
-			//inline constexpr static function::type<depth_format> function = function_wrapper::function<depth_format>;
-		};
-		using always = wrapper<option::always>;
-		using never = wrapper<option::never>;
-		using less = wrapper<option::less>;
-		using equal = wrapper<option::equal>;
-		using less_or_equal = wrapper<option::less_or_equal>;
-		using greater = wrapper<option::greater>;
-		using not_equal = wrapper<option::not_equal>;
-		using greater_or_equal = wrapper<option::greater_or_equal>;
+	namespace runtime {
+		template <typename depth_format>
+		void get_function(option Option) { return functions[static_cast<uint8_t>(Option)]; }
 	}
 }

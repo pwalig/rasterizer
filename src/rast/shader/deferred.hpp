@@ -86,7 +86,7 @@ namespace rast::shader::deferred {
 
 			struct uniform_buffer { };
 
-			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
+			inline static output shade(const input& vert, const uniform_buffer&) {
 				return { glm::vec4(vert.position, 1.0f), {vert.uv} };
 			}
 		};

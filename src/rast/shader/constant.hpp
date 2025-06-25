@@ -18,7 +18,7 @@ namespace rast::shader {
 				color::rgba8 color;
 			};
 
-			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
+			inline static output shade(const input&, const uniform_buffer& uniforms) {
 				return uniforms.color;
 			}
 		};

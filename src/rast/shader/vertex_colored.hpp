@@ -17,7 +17,7 @@ namespace rast::shader {
 			using input = glm::vec4;
 			using output = color::rgba8;
 
-			inline static color::rgba8 shade(const input& frag, const uniform_buffer& uniforms) {
+			inline static color::rgba8 shade(const input& frag, const uniform_buffer&) {
 				return color::rgba8(
 					std::clamp(frag.x, 0.0f, 1.0f) * 255,
 					std::clamp(frag.y, 0.0f, 1.0f) * 255,
