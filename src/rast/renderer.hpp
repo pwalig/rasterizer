@@ -55,7 +55,7 @@ namespace rast {
 		}
 		
 	public:
-		template <typename Shader, typename AlphaBlend, typename Framebuffer>
+		template <typename Shader, typename Framebuffer>
 		inline static void rasterize(
 			Framebuffer& framebuffer,
 			const typename Shader::vertex::output* vertex_begin,
@@ -112,7 +112,7 @@ namespace rast {
 
 						if (Cx.x >= 0 && Cx.y >= 0 && Cx.z >= 0) {
 
-							framebuffer.template draw<Shader, AlphaBlend>(x, y, vert, uniform_buffer, Cx, area);
+							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, Cx, area);
 						}
 						Cx -= Dy;
 					}
@@ -121,7 +121,7 @@ namespace rast {
 			}
 		}
 
-		template <typename Shader, typename AlphaBlend, typename Framebuffer, typename RangesIterator>
+		template <typename Shader, typename Framebuffer, typename RangesIterator>
 		inline static void rasterize_ranges(
 			Framebuffer& framebuffer,
 			RangesIterator begin,
@@ -131,7 +131,7 @@ namespace rast {
 			const tile& tile
 		) {
 			for (RangesIterator it = begin; it != end; ++it) {
-				rasterize<Shader, AlphaBlend, Framebuffer>(framebuffer, it->begin, it->end, uniform_buffer, viewport, tile);
+				rasterize<Shader, Framebuffer>(framebuffer, it->begin, it->end, uniform_buffer, viewport, tile);
 			}
 		}
 
@@ -167,7 +167,7 @@ namespace rast {
 			return end;
 		}
 
-		template <typename Shader, typename Clipper, typename AlphaBlend, typename Framebuffer, typename VertIter>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename VertIter>
 		inline static void draw_array(
 			Framebuffer& framebuffer,
 			VertIter vertex_begin,
@@ -188,7 +188,7 @@ namespace rast {
 
 				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
 				perspective_divide(verts, verts_end);
-				rasterize<Shader, AlphaBlend, Framebuffer>(
+				rasterize<Shader, Framebuffer>(
 					framebuffer,
 					verts, verts_end,
 					uniform_buffer.fragment,
@@ -197,7 +197,7 @@ namespace rast {
 			}
 		}
 
-		template <typename Shader, typename Clipper, typename AlphaBlend, typename Framebuffer, typename VertexBuffer>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename VertexBuffer>
 		inline static void draw_array(
 			Framebuffer& framebuffer,
 			const VertexBuffer& vertex_buffer,
@@ -205,7 +205,7 @@ namespace rast {
 			const scissor& viewport,
 			const tile& tile
 		) {
-			draw_array<Shader, Clipper, AlphaBlend>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
+			draw_array<Shader, Clipper>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
 		template <typename VertexShader, typename Clipper, typename IndexIter, typename VertexIter>
@@ -258,7 +258,7 @@ namespace rast {
 			return run_vertex_shader_indexed<VertexShader, Clipper>(mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, output);
 		}
 
-		template <typename Shader, typename Clipper, typename AlphaBlend, typename Framebuffer, typename IndexIter, typename VertIter>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename IndexIter, typename VertIter>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			IndexIter index_begin,
@@ -287,7 +287,7 @@ namespace rast {
 
 				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
 				perspective_divide(verts, verts_end);
-				rasterize<Shader, AlphaBlend, Framebuffer>(
+				rasterize<Shader, Framebuffer>(
 					framebuffer,
 					verts, verts_end,
 					uniform_buffer.fragment,
@@ -296,7 +296,7 @@ namespace rast {
 			}
 		}
 
-		template <typename Shader, typename Clipper, typename AlphaBlend, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
+		template <typename Shader, typename Clipper, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const IndexBuffer& index_buffer,
@@ -307,7 +307,7 @@ namespace rast {
 		) {
 			static_assert(std::is_same_v<typename IndexBuffer::value_type, uint32_t>);
 			static_assert(std::is_same_v<typename VertexBuffer::value_type, typename Shader::vertex::input>);
-			draw_indexed<Shader, Clipper, AlphaBlend>(
+			draw_indexed<Shader, Clipper>(
 				framebuffer,
 				index_buffer.begin(), index_buffer.end(),
 				vertex_buffer.begin(), vertex_buffer.end(),
@@ -315,7 +315,7 @@ namespace rast {
 			);
 		}
 
-		template <typename Shader, typename Clipper, typename AlphaBlend, typename Framebuffer>
+		template <typename Shader, typename Clipper, typename Framebuffer>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const mesh::indexed<typename Shader::vertex::input>& mesh,
@@ -323,7 +323,7 @@ namespace rast {
 			const scissor& viewport,
 			const tile& tile
 		) {
-			draw_indexed<Shader, Clipper, AlphaBlend>(
+			draw_indexed<Shader, Clipper>(
 				framebuffer,
 				mesh.index_buffer.begin(), mesh.index_buffer.end(),
 				mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(),

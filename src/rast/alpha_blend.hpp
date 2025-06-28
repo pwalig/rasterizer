@@ -2,11 +2,6 @@
 #include "color.hpp"
 
 namespace rast::alpha_blend {
-	struct func_params {
-		float src_factor;
-		float dest_factor;
-	};
-
 	enum class factor : uint8_t {
 		zero, one,
 		src_color, one_minus_src_color,
@@ -88,6 +83,11 @@ namespace rast::alpha_blend {
 		add, subtract, reverse_subtract,
 		min, max
 	};
+
+	namespace function {
+		template <typename Color>
+		using type = Color(*)(const Color&, const Color&);
+	}
 
 	template <factor, factor, equation>
 	struct func {

@@ -46,7 +46,9 @@ namespace rast::framebuffer {
 		return float_depth_to_depth_format<depth_format>(get_float_depth(triangle, results, area));
 	}
 
-	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>
+	using default_alpha_blend = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
+
+	template<typename ColorFormat, typename DepthFormat, alpha_blend::function::type<ColorFormat> AlphaBlend = default_alpha_blend::blend, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>
 	class color_depth {
 	public:
 		using depth_format = DepthFormat;
@@ -88,7 +90,7 @@ namespace rast::framebuffer {
 			std::fill_n(depthImage, area(), clear_value);
 		}
 
-		template <typename Shader, typename AlphaBlend>
+		template <typename Shader>
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
@@ -109,14 +111,14 @@ namespace rast::framebuffer {
 					);
 					if (should_discard(frag)) return;
 
-					color(x, y) = AlphaBlend::blend(
+					color(x, y) = AlphaBlend(
 						get_frag_from_discardable(frag),
 						color(x, y)
 					);
 					oldDepth = newDepth;
 				}
 				else {
-					color(x, y) = AlphaBlend::blend(
+					color(x, y) = AlphaBlend(
 						Shader::fragment::shade(
 							interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
 							uniform_buffer
@@ -145,7 +147,7 @@ namespace rast::framebuffer {
 	using rgb8_f = color_depth<rast::color::rgb8, float>;
 	using rgb8_d = color_depth<rast::color::rgb8, double>;
 
-	template <typename ColorFormat>
+	template <typename ColorFormat, alpha_blend::function::type<ColorFormat> AlphaBlend = default_alpha_blend::blend>
 	class color {
 	public:
 		using color_format = ColorFormat;
@@ -171,7 +173,7 @@ namespace rast::framebuffer {
 			std::fill_n(colorImage, area(), clear_value);
 		}
 
-		template <typename Shader, typename AlphaBlend>
+		template <typename Shader>
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
@@ -187,13 +189,13 @@ namespace rast::framebuffer {
 				);
 				if (should_discard(frag)) return;
 
-				at(x, y) = AlphaBlend::blend(
+				at(x, y) = AlphaBlend(
 					get_frag_from_discardable(frag),
 					at(x, y)
 				);
 			}
 			else {
-				at(x, y) = AlphaBlend::blend(
+				at(x, y) = AlphaBlend(
 					Shader::fragment::shade(
 						interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
 						uniform_buffer
@@ -241,7 +243,7 @@ namespace rast::framebuffer {
 			image<color_format>& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
 		) : parent(ColorImage, DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
 
-		template <typename Shader, typename AlphaBlend>
+		template <typename Shader>
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
