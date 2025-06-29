@@ -102,21 +102,98 @@ namespace rast {
 
 				// Dx * Y - fill_convention
 				glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention;
-				glm::ivec3 CCx = Dy * (glm::ivec3(min.x << 4) - x012);
+				glm::ivec3 Cx = Dy * (glm::ivec3(min.x << 4) - x012);
 				Dx *= 16;
 				Dy *= 16;
 
-				for (int y = min.y; y < max.y; ++y) {
-					glm::ivec3 Cx = Cy - CCx;
-					for (int x = min.x; x < max.x; ++x) {
-
-						if (Cx.x >= 0 && Cx.y >= 0 && Cx.z >= 0) {
-
-							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, Cx, area);
+				for (int y = min.y; y < max.y; ++y, Cy += Dx) {
+					glm::ivec3 E = Cy - Cx;
+					for (int x = min.x; x < max.x; ++x, E -= Dy) {
+						if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
+							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, E, area);
 						}
-						Cx -= Dy;
 					}
-					Cy += Dx;
+				}
+			}
+		}
+
+		template <typename Shader, typename Framebuffer>
+		inline static void rasterize_pineda(
+			Framebuffer& framebuffer,
+			const typename Shader::vertex::output* vertex_begin,
+			const typename Shader::vertex::output* vertex_end,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer,
+			const scissor& viewport,
+			const tile& tile
+		) {
+			using vertex = typename Shader::vertex::output;
+
+			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
+
+				glm::ivec2 a = toScreenSpace(vert[0].rastPos, viewport);
+				glm::ivec2 b = toScreenSpace(vert[1].rastPos, viewport);
+				glm::ivec2 c = toScreenSpace(vert[2].rastPos, viewport);
+
+				glm::ivec2 min = glm::ivec2(
+					std::max((int)std::min({ a.x, b.x, c.x }), std::max(tile.min.x, viewport.offset.x)),
+					std::max((int)std::min({ a.y, b.y, c.y }), std::max(tile.min.y, viewport.offset.y))
+				) / 16;
+				glm::ivec2 max = glm::ivec2(
+					std::min<int>({ std::max({ a.x, b.x, c.x }) + 16, tile.max.x, viewport.offset.x + viewport.extent.x }),
+					std::min<int>({ std::max({ a.y, b.y, c.y }) + 16, tile.max.y, viewport.offset.y + viewport.extent.y })
+				) / 16;
+
+				if (min.x >= max.x || min.y >= max.y) continue;
+
+				glm::ivec3 x012 = glm::ivec3(a.x, b.x, c.x);
+				glm::ivec3 x120 = glm::ivec3(b.x, c.x, a.x);
+
+				glm::ivec3 y012 = glm::ivec3(a.y, b.y, c.y);
+				glm::ivec3 y120 = glm::ivec3(b.y, c.y, a.y);
+
+				glm::ivec3 Dx = x120 - x012;
+				glm::ivec3 Dy = y120 - y012;
+
+				glm::ivec3 fill_convention = glm::ivec3(
+					(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
+					(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
+					(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
+				);
+
+				int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
+
+				// Dx * Y - fill_convention
+				glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention;
+				glm::ivec3 CCx = Dy * (glm::ivec3(min.x << 4) - x012);
+				glm::ivec3 Cx = CCx;
+				int X = min.x;
+				Dx *= 16;
+				Dy *= 16;
+
+				for (int y = min.y; y < max.y; ++y, Cy += Dx) {
+					glm::ivec3 E = Cy - Cx;
+					if (E.x < 0 || E.y < 0 || E.z < 0) {
+						for (; X < max.x; ++X, E -= Dy) {
+							if (E.x >= 0 && E.y >= 0 && E.z >= 0) break;
+						}
+						if (X == max.x) {
+							X = min.x;
+							Cx = CCx;
+							continue;
+						}
+					}
+					else {
+						for (; X >= min.x; --X, E += Dy) {
+							if (E.x < 0 || E.y < 0 || E.z < 0) break;
+						}
+						++X;
+						E -= Dy;
+					}
+					Cx = Cy - E;
+					for (int x = X; x < max.x; ++x, E -= Dy) {
+						framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, E, area);
+						if (E.x < 0 || E.y < 0 || E.z < 0) break;
+					}
 				}
 			}
 		}
