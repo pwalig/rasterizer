@@ -2,29 +2,16 @@
 #include <algorithm>
 #include <iostream>
 
+#include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 
 #include "mesh.hpp"
 #include "image.hpp"
+#include "viewport.hpp"
+#include "tile.hpp"
 
 namespace rast {
-	class scissor {
-	public:
-		glm::ivec2 offset;
-		glm::ivec2 extent;
-		inline scissor(int xoffset, int yoffset, int width, int height) :
-			offset(xoffset << 4, yoffset << 4), extent(width << 4, height << 4) {}
-	};
-
-	class tile {
-	public:
-		glm::ivec2 min;
-		glm::ivec2 max;
-		inline tile(int minx, int miny, int maxx, int maxy) :
-			min(minx << 4, miny << 4), max(maxx << 4, maxy << 4) {}
-	};
-
 	template <typename VertexT>
 	struct range {
 		const VertexT* begin;
@@ -47,171 +34,7 @@ namespace rast {
 			);
 		}
 
-		inline static glm::ivec2 toScreenSpace(const glm::vec4& vertex, const scissor& viewport) {
-			return glm::ivec2(
-				(( vertex.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
-				(( -vertex.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
-			);
-		}
-		
 	public:
-		template <typename Shader, typename Framebuffer>
-		inline static void rasterize(
-			Framebuffer& framebuffer,
-			const typename Shader::vertex::output* vertex_begin,
-			const typename Shader::vertex::output* vertex_end,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
-			const tile& tile
-		) {
-			using vertex = typename Shader::vertex::output;
-
-			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
-
-				glm::ivec2 a = toScreenSpace(vert[0].rastPos, viewport);
-				glm::ivec2 b = toScreenSpace(vert[1].rastPos, viewport);
-				glm::ivec2 c = toScreenSpace(vert[2].rastPos, viewport);
-
-				glm::ivec2 min = glm::ivec2(
-					std::max((int)std::min({ a.x, b.x, c.x }), std::max(tile.min.x, viewport.offset.x)),
-					std::max((int)std::min({ a.y, b.y, c.y }), std::max(tile.min.y, viewport.offset.y))
-				) / 16;
-				glm::ivec2 max = glm::ivec2(
-					std::min<int>({ std::max({ a.x, b.x, c.x }) + 16, tile.max.x, viewport.offset.x + viewport.extent.x }),
-					std::min<int>({ std::max({ a.y, b.y, c.y }) + 16, tile.max.y, viewport.offset.y + viewport.extent.y })
-				) / 16;
-
-				if (min.x >= max.x || min.y >= max.y) continue;
-
-				glm::ivec3 x012 = glm::ivec3(a.x, b.x, c.x);
-				glm::ivec3 x120 = glm::ivec3(b.x, c.x, a.x);
-
-				glm::ivec3 y012 = glm::ivec3(a.y, b.y, c.y);
-				glm::ivec3 y120 = glm::ivec3(b.y, c.y, a.y);
-
-				glm::ivec3 Dx = x120 - x012;
-				glm::ivec3 Dy = y120 - y012;
-
-				glm::ivec3 fill_convention = glm::ivec3(
-					(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
-					(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
-					(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
-				);
-
-				int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
-
-				// Dx * Y - fill_convention
-				glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention;
-				glm::ivec3 Cx = Dy * (glm::ivec3(min.x << 4) - x012);
-				Dx *= 16;
-				Dy *= 16;
-
-				for (int y = min.y; y < max.y; ++y, Cy += Dx) {
-					glm::ivec3 E = Cy - Cx;
-					for (int x = min.x; x < max.x; ++x, E -= Dy) {
-						if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
-							framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, E, area);
-						}
-					}
-				}
-			}
-		}
-
-		template <typename Shader, typename Framebuffer>
-		inline static void rasterize_pineda(
-			Framebuffer& framebuffer,
-			const typename Shader::vertex::output* vertex_begin,
-			const typename Shader::vertex::output* vertex_end,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
-			const tile& tile
-		) {
-			using vertex = typename Shader::vertex::output;
-
-			for (const vertex* vert = vertex_begin; vert != vertex_end; vert += 3) {
-
-				glm::ivec2 a = toScreenSpace(vert[0].rastPos, viewport);
-				glm::ivec2 b = toScreenSpace(vert[1].rastPos, viewport);
-				glm::ivec2 c = toScreenSpace(vert[2].rastPos, viewport);
-
-				glm::ivec2 min = glm::ivec2(
-					std::max((int)std::min({ a.x, b.x, c.x }), std::max(tile.min.x, viewport.offset.x)),
-					std::max((int)std::min({ a.y, b.y, c.y }), std::max(tile.min.y, viewport.offset.y))
-				) / 16;
-				glm::ivec2 max = glm::ivec2(
-					std::min<int>({ std::max({ a.x, b.x, c.x }) + 16, tile.max.x, viewport.offset.x + viewport.extent.x }),
-					std::min<int>({ std::max({ a.y, b.y, c.y }) + 16, tile.max.y, viewport.offset.y + viewport.extent.y })
-				) / 16;
-
-				if (min.x >= max.x || min.y >= max.y) continue;
-
-				glm::ivec3 x012 = glm::ivec3(a.x, b.x, c.x);
-				glm::ivec3 x120 = glm::ivec3(b.x, c.x, a.x);
-
-				glm::ivec3 y012 = glm::ivec3(a.y, b.y, c.y);
-				glm::ivec3 y120 = glm::ivec3(b.y, c.y, a.y);
-
-				glm::ivec3 Dx = x120 - x012;
-				glm::ivec3 Dy = y120 - y012;
-
-				glm::ivec3 fill_convention = glm::ivec3(
-					(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
-					(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
-					(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
-				);
-
-				int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
-
-				// Dx * Y - fill_convention
-				glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention;
-				glm::ivec3 CCx = Dy * (glm::ivec3(min.x << 4) - x012);
-				glm::ivec3 Cx = CCx;
-				int X = min.x;
-				Dx *= 16;
-				Dy *= 16;
-
-				for (int y = min.y; y < max.y; ++y, Cy += Dx) {
-					glm::ivec3 E = Cy - Cx;
-					if (E.x < 0 || E.y < 0 || E.z < 0) {
-						for (; X < max.x; ++X, E -= Dy) {
-							if (E.x >= 0 && E.y >= 0 && E.z >= 0) break;
-						}
-						if (X == max.x) {
-							X = min.x;
-							Cx = CCx;
-							continue;
-						}
-					}
-					else {
-						for (; X >= min.x; --X, E += Dy) {
-							if (E.x < 0 || E.y < 0 || E.z < 0) break;
-						}
-						++X;
-						E -= Dy;
-					}
-					Cx = Cy - E;
-					for (int x = X; x < max.x; ++x, E -= Dy) {
-						framebuffer.template draw<Shader>(x, y, vert, uniform_buffer, E, area);
-						if (E.x < 0 || E.y < 0 || E.z < 0) break;
-					}
-				}
-			}
-		}
-
-		template <typename Shader, typename Framebuffer, typename RangesIterator>
-		inline static void rasterize_ranges(
-			Framebuffer& framebuffer,
-			RangesIterator begin,
-			RangesIterator end,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
-			const tile& tile
-		) {
-			for (RangesIterator it = begin; it != end; ++it) {
-				rasterize<Shader, Framebuffer>(framebuffer, it->begin, it->end, uniform_buffer, viewport, tile);
-			}
-		}
-
 		template <typename VertexIter>
 		inline static void perspective_divide(
 			typename VertexIter begin,
@@ -244,13 +67,13 @@ namespace rast {
 			return end;
 		}
 
-		template <typename Shader, typename Clipper, typename Framebuffer, typename VertIter>
+		template <typename Shader, typename Rasterizer, typename Clipper, typename Framebuffer, typename VertIter>
 		inline static void draw_array(
 			Framebuffer& framebuffer,
 			VertIter vertex_begin,
 			VertIter vertex_end,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
+			const viewport& viewport,
 			const tile& tile
 		) {
 			using input_vertex = typename Shader::vertex::input;
@@ -265,7 +88,7 @@ namespace rast {
 
 				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
 				perspective_divide(verts, verts_end);
-				rasterize<Shader, Framebuffer>(
+				Rasterizer::template rasterize<Shader, Framebuffer>(
 					framebuffer,
 					verts, verts_end,
 					uniform_buffer.fragment,
@@ -274,15 +97,15 @@ namespace rast {
 			}
 		}
 
-		template <typename Shader, typename Clipper, typename Framebuffer, typename VertexBuffer>
+		template <typename Shader, typename Rasterizer, typename Clipper, typename Framebuffer, typename VertexBuffer>
 		inline static void draw_array(
 			Framebuffer& framebuffer,
 			const VertexBuffer& vertex_buffer,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
+			const viewport& viewport,
 			const tile& tile
 		) {
-			draw_array<Shader, Clipper>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
+			draw_array<Shader, Rasterizer, Clipper>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
 		template <typename VertexShader, typename Clipper, typename IndexIter, typename VertexIter>
@@ -335,7 +158,7 @@ namespace rast {
 			return run_vertex_shader_indexed<VertexShader, Clipper>(mesh.index_buffer.begin(), mesh.index_buffer.end(), mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(), uniform_buffer, output);
 		}
 
-		template <typename Shader, typename Clipper, typename Framebuffer, typename IndexIter, typename VertIter>
+		template <typename Shader, typename Rasterizer, typename Clipper, typename Framebuffer, typename IndexIter, typename VertIter>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			IndexIter index_begin,
@@ -343,7 +166,7 @@ namespace rast {
 			VertIter vertex_begin,
 			VertIter vertex_end,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
+			const viewport& viewport,
 			const tile& tile
 		) {
 			using input_vertex = typename Shader::vertex::input;
@@ -364,7 +187,7 @@ namespace rast {
 
 				output_vertex* verts_end = Clipper::template clip<output_vertex>(verts);
 				perspective_divide(verts, verts_end);
-				rasterize<Shader, Framebuffer>(
+				Rasterizer::template rasterize<Shader, Framebuffer>(
 					framebuffer,
 					verts, verts_end,
 					uniform_buffer.fragment,
@@ -373,18 +196,18 @@ namespace rast {
 			}
 		}
 
-		template <typename Shader, typename Clipper, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
+		template <typename Shader, typename Rasterizer, typename Clipper, typename Framebuffer, typename IndexBuffer, typename VertexBuffer>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const IndexBuffer& index_buffer,
 			const VertexBuffer& vertex_buffer,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
+			const viewport& viewport,
 			const tile& tile
 		) {
 			static_assert(std::is_same_v<typename IndexBuffer::value_type, uint32_t>);
 			static_assert(std::is_same_v<typename VertexBuffer::value_type, typename Shader::vertex::input>);
-			draw_indexed<Shader, Clipper>(
+			draw_indexed<Shader, Rasterizer, Clipper>(
 				framebuffer,
 				index_buffer.begin(), index_buffer.end(),
 				vertex_buffer.begin(), vertex_buffer.end(),
@@ -392,15 +215,15 @@ namespace rast {
 			);
 		}
 
-		template <typename Shader, typename Clipper, typename Framebuffer>
+		template <typename Shader, typename Rasterizer, typename Clipper, typename Framebuffer>
 		inline static void draw_indexed(
 			Framebuffer& framebuffer,
 			const mesh::indexed<typename Shader::vertex::input>& mesh,
 			const typename Shader::uniform_buffer uniform_buffer,
-			const scissor& viewport,
+			const viewport& viewport,
 			const tile& tile
 		) {
-			draw_indexed<Shader, Clipper>(
+			draw_indexed<Shader, Rasterizer, Clipper>(
 				framebuffer,
 				mesh.index_buffer.begin(), mesh.index_buffer.end(),
 				mesh.vertex_buffer.begin(), mesh.vertex_buffer.end(),
@@ -412,7 +235,7 @@ namespace rast {
 		inline static void draw_screen_quad(
 			ImageView& imageView,
 			const typename FragmentShader::uniform_buffer& uniform_buffer,
-			const scissor& viewport,
+			const viewport& viewport,
 			const tile& tile
 		) {
 			glm::ivec2 max = viewport.extent / 16;

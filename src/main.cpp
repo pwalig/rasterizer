@@ -36,6 +36,8 @@
 #include "rast/clip/near_clip_far_discard.hpp"
 #include "thread_pool.hpp"
 #include "game/fly_cam.hpp"
+#include "rast/raster/bbox_scan.hpp"
+#include "rast/raster/left_edge.hpp"
 
 //using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
 //static GBuffer g_buffer;
@@ -373,17 +375,18 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 
 	using shader = rast::shader::lambert_textured;
 	using clipper = rast::sutherland_hodgman;
+	using rasterizer = rast::raster::bbox_scan;
 
 	// record command buffer
 	static rast::command_buffer<shader> cmd_buffer;
 	cmd_buffer.reset();
 	glm::mat4 PV = app.P * app.V;
 	app.scene.draw(PV,
-		[viewport = rast::scissor(0, 0, framebuf.width(), framebuf.height())]
+		[viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
 		(const scene::mesh_type& mesh, const shader::uniform_buffer& ubo)
 		{ cmd_buffer.draw_indexed(mesh, ubo, viewport); }
 	);
-	cmd_buffer.submit<clipper>(framebuf, tp);
+	cmd_buffer.submit<rasterizer, clipper>(framebuf, tp);
 
 	// present to screen
 	tp.wait();

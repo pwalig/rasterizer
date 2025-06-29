@@ -13,7 +13,7 @@ namespace rast {
 			const mesh::indexed<typename Shader::vertex::input>& mesh;
 			range<vertex_output> raster_range;
 			const typename Shader::uniform_buffer ubo;
-			const scissor viewport;
+			const viewport viewport;
 		};
 
 		std::vector<command> commands;
@@ -35,12 +35,12 @@ namespace rast {
 		void draw_indexed(
 			const mesh::indexed<typename Shader::vertex::input>& mesh,
 			const typename Shader::uniform_buffer& uniform_buffer,
-			const scissor& viewport
+			const viewport& viewport
 		) {
 			commands.push_back({ mesh, {}, uniform_buffer, viewport });
 		}
 
-		template <typename Clipper, typename Framebuffer, typename ThreadPool>
+		template <typename Rasterizer, typename Clipper, typename Framebuffer, typename ThreadPool>
 		void submit(
 			Framebuffer& framebuffer,
 			ThreadPool& tp
@@ -65,7 +65,7 @@ namespace rast {
 				tp.enque([&framebuffer, &cmds = (this->commands), i, stride]() {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 					for (const command& cmd : cmds) {
-						rast::renderer::rasterize<Shader>(framebuffer, cmd.raster_range.begin, cmd.raster_range.end, cmd.ubo.fragment, cmd.viewport, tile);
+						Rasterizer::template rasterize<Shader, Framebuffer>(framebuffer, cmd.raster_range.begin, cmd.raster_range.end, cmd.ubo.fragment, cmd.viewport, tile);
 					}
 				});
 			}

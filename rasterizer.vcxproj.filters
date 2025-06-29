@@ -107,5 +107,20 @@
     <ClInclude Include="src\rast\depth_test.hpp">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\raster\bbox_scan.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\raster\raster_utils.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\viewport.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\tile.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\raster\left_edge.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
