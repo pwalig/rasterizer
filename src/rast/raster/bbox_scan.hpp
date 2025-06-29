@@ -35,12 +35,6 @@ namespace rast::raster {
 			glm::ivec3 Dx = x120 - x012;
 			glm::ivec3 Dy = y120 - y012;
 
-			//glm::ivec3 fill_convention = glm::ivec3(
-			//	(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
-			//	(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
-			//	(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
-			//);
-
 			int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
 
 			// Dx * Y - fill_convention

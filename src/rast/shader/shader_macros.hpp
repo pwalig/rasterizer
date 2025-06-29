@@ -2,12 +2,6 @@
 #include <glm/glm.hpp>
 #include "../discard_fragment.hpp"
 
-#define rast_shader_uniform_buffer() \
-struct uniform_buffer { \
-	fragment::uniform_buffer fragment; \
-	vertex::uniform_buffer vertex; \
-};
-
 namespace rast::shader {
 	template <typename Shader>
 	class vertex_shader_output {
@@ -89,7 +83,7 @@ namespace rast::shader {
 			normal normal;
 			uv uv;
 			friend inline position_normal_uv operator* (const position_normal_uv& rhs, float lhs) {
-				return { rhs.position * lhs, rhs.normal * lhs };
+				return { rhs.position * lhs, rhs.normal * lhs, rhs.uv * lhs };
 			}
 			friend inline position_normal_uv operator+ (const position_normal_uv& rhs, const position_normal_uv& lhs) {
 				return { rhs.position + lhs.position, rhs.normal + lhs.normal, rhs.uv + lhs.uv };

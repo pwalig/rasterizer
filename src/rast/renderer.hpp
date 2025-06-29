@@ -240,8 +240,8 @@ namespace rast {
 		) {
 			glm::ivec2 max = viewport.extent / 16;
 			glm::ivec2 off = viewport.offset / 16;
-			for (int y = tile.min.y; y < tile.max.y; ++y) {
-				for (int x = tile.min.x; x < tile.max.x; ++x) {
+			for (int y = tile.min.y / 16; y < tile.max.y / 16; ++y) {
+				for (int x = tile.min.x / 16; x < tile.max.x / 16; ++x) {
 					glm::vec2 frag = glm::vec2((float)x / max.x, (float)y / max.y);
 					imageView.at(x + off.x, y + off.y) = FragmentShader::shade(frag, uniform_buffer);
 				}

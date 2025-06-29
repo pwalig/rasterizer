@@ -41,10 +41,10 @@ namespace rast {
 			return *this;
 		}
 
-		image(image&& rhs) : _data(rhs._data), _width(rhs._width), _height(rhs._height) {
+		image(image&& rhs) noexcept : _data(rhs._data), _width(rhs._width), _height(rhs._height) {
 			rhs._data = nullptr;
 		}
-		image& operator=(image&& rhs) {
+		image& operator=(image&& rhs) noexcept {
 			if (this != &rhs) {
 				std::swap(_data, rhs._data);
 				_width = rhs._width;

@@ -40,6 +40,6 @@ namespace rast::shader {
 			}
 		};
 
-		rast_shader_uniform_buffer()
+		using uniform_buffer = shader_uniform_buffer<textured>;
 	};
 }

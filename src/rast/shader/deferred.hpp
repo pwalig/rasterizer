@@ -14,7 +14,6 @@ namespace rast::shader::deferred {
 		struct fragment {
 			using input = inputs::position_normal_uv;
 			struct output {
-				glm::vec3 position;
 				glm::vec3 normal;
 				color::rgba8 albedo;
 			};
@@ -25,7 +24,6 @@ namespace rast::shader::deferred {
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
 				return {
-					frag.position,
 					frag.normal,
 					uniforms.texture.sample(frag.uv)
 				};
@@ -52,7 +50,7 @@ namespace rast::shader::deferred {
 			}
 		};
 
-		rast_shader_uniform_buffer()
+		using uniform_buffer = shader_uniform_buffer<first_pass>;
 	};
 
 	struct second_pass {
@@ -63,19 +61,23 @@ namespace rast::shader::deferred {
 			struct uniform_buffer {
 				texture<first_pass::fragment::output>::sampler texture;
 				glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
-				color::rgb8 ambient = color::rgb8(5, 5, 5);
+				glm::vec3 light_color = glm::vec3(1.0f);
+				glm::vec3 ambient = glm::vec3(0.1f);
 			};
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
 				first_pass::fragment::output F = uniforms.texture.sample(frag);
+				//return F.albedo;
+				//return convert::f01_to_uint<float, uint8_t>(glm::vec4((F.normal + 1.0f) / 2.0f, 1.0f));
 				glm::vec3 N = glm::normalize(F.normal);
 				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);
-				return color::rgba8(
-					F.albedo.r * nl + uniforms.ambient.r,
-					F.albedo.g * nl + uniforms.ambient.g,
-					F.albedo.b * nl + uniforms.ambient.b,
-					F.albedo.a
-				);
+				glm::vec4 color = convert::uint_to_f01<uint8_t, float>(F.albedo);
+				return convert::f01_to_uint<float, uint8_t>(glm::vec4(
+					color.r * (nl * uniforms.light_color.r + uniforms.ambient.r),
+					color.g * (nl * uniforms.light_color.g + uniforms.ambient.g),
+					color.b * (nl * uniforms.light_color.b + uniforms.ambient.b),
+					color.a
+				));
 			}
 		};
 
@@ -91,6 +93,6 @@ namespace rast::shader::deferred {
 			}
 		};
 
-		rast_shader_uniform_buffer()
+		using uniform_buffer = shader_uniform_buffer<second_pass>;
 	};
 }

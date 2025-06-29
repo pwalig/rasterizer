@@ -39,8 +39,6 @@
 #include "rast/raster/bbox_scan.hpp"
 #include "rast/raster/left_edge.hpp"
 
-//using GBuffer = rast::image<rast::shader::deferred::first_pass::fragment::output>;
-//static GBuffer g_buffer;
 //static thd::thread_pool tp(std::thread::hardware_concurrency());
 static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
@@ -219,9 +217,9 @@ struct scene {
 		}
 	}
 
-	template <typename Callable>
+	template <typename Shader = shader, typename Callable>
 	void draw(const glm::mat4& PV, Callable&& draw_call) const {
-		shader::uniform_buffer ubo;
+		typename Shader::uniform_buffer ubo;
 		for (const auto& object : objects) {
 			ubo.vertex.PVM = PV * object.M;
 			for (const auto model : object.models) {
@@ -238,6 +236,11 @@ struct application {
 	using color_format = rast::color::rgba8;
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 	using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, blending::blend, rast::depth_test::less>;
+
+	using g_format = rast::shader::deferred::first_pass::fragment::output;
+	using GBuffer = rast::image<g_format>;
+	using GFramebuffer = rast::framebuffer::color_depth<g_format, depth_format, rast::alpha_blend::replace<g_format>, rast::depth_test::less>;
+	GBuffer g_buffer;
 
 	SDL_Window *window = NULL;
 	SDL_Surface* surface = nullptr;
@@ -280,7 +283,7 @@ SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int, char **)
 	app.V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	app.depth_buffer = rast::image<application::depth_format>(width, height);
-	//g_buffer = GBuffer(width, height);
+	app.g_buffer = application::GBuffer(width, height);
 	
 	app.scene.load("private/assets/scenes/sponza.json");
 	//app.scene.load("assets/scenes/scene.json");
@@ -302,7 +305,7 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 		app.P = glm::perspective(glm::radians(app.fov), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
 
 		app.depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
-		//g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
+		app.g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
 	}
 	if (event->type == SDL_EVENT_KEY_DOWN) {
 		if (event->key.scancode == SDL_SCANCODE_ESCAPE && !SDL_CursorVisible()) {
@@ -342,17 +345,20 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	std::cout << dt << "\r";
 
 	// prepare framebuffers
-	//GBuffer::view gv(g_buffer);
-	//rast::framebuffer::color_depth<GBuffer::color, rast::uint32_t> framebuf(gv, depth_buffer);
+	application::GFramebuffer gframebuf(app.g_buffer, app.depth_buffer);
+	gframebuf.clear_depth_buffer();
+	gframebuf.clear_color({glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
+
 	//rast::framebuffer::depth_view<rast::color::rgba8, application::depth_format> framebuf(
 	//    (rast::color::rgba8*)app.surface->pixels, app.depth_buffer,
 	//    app.near, app.far, 0.0f, 0.1f
 	//);
-	application::Framebuffer framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
-	framebuf.clear_depth_buffer();
-	framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
-	//rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)surface->pixels, surface->w, surface->h);
-	//framebuf.clear_color({glm::vec3(0.0f), glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
+	//application::Framebuffer framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
+	//framebuf.clear_depth_buffer();
+	//framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
+
+	//rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
+	rast::image<rast::color::rgba8>::view framebuf((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
 
 
 	// model matrix
@@ -373,7 +379,8 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	app.V = glm::lookAt(flyCam.position, flyCam.position + (flyCam.rotation * glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
 	mouseDelta = glm::vec2(0.0f);
 
-	using shader = rast::shader::lambert_textured;
+	//using shader = rast::shader::lambert_textured;
+	using shader = rast::shader::deferred::first_pass;
 	using clipper = rast::sutherland_hodgman;
 	using rasterizer = rast::raster::bbox_scan;
 
@@ -381,12 +388,28 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	static rast::command_buffer<shader> cmd_buffer;
 	cmd_buffer.reset();
 	glm::mat4 PV = app.P * app.V;
-	app.scene.draw(PV,
-		[viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
+	app.scene.draw<shader>(PV,
+		[viewport = rast::viewport(0, 0, gframebuf.width(), gframebuf.height())]
 		(const scene::mesh_type& mesh, const shader::uniform_buffer& ubo)
 		{ cmd_buffer.draw_indexed(mesh, ubo, viewport); }
 	);
-	cmd_buffer.submit<rasterizer, clipper>(framebuf, tp);
+	cmd_buffer.submit<rasterizer, clipper>(gframebuf, tp);
+
+	tp.wait();
+	rast::shader::deferred::second_pass::uniform_buffer ubo;
+	ubo.fragment.texture = rast::texture<application::g_format>::sampler(app.g_buffer);
+	float stride = (float)framebuf.width / tp.thread_count();
+	for (int i = 0; i < tp.thread_count(); ++i) {
+		tp.enque([&framebuffer = framebuf, &ubo, i, stride]() {
+			rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height);
+			rast::renderer::draw_screen_quad<rast::shader::deferred::second_pass::fragment>(
+				framebuffer,
+				ubo.fragment,
+				rast::viewport(0, 0, framebuffer.width, framebuffer.height),
+				tile
+			);
+		});
+	}
 
 	// present to screen
 	tp.wait();

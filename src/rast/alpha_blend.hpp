@@ -116,4 +116,15 @@ namespace rast::alpha_blend {
 			return mul_by_factor<sfactor, Color>(dst, src, dst) - mul_by_factor<dfactor, Color>(src, src, dst);
 		}
 	};
+
+	template <>
+	struct func<factor::one, factor::zero, equation::add> {
+		template<typename Color>
+		inline static Color blend(const Color& src, const Color&) {
+			return src;
+		}
+	};
+
+	template<typename Color>
+	inline constexpr function::type<Color> replace = func<factor::one, factor::zero, equation::add>::blend;
 }
