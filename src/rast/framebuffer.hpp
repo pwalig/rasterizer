@@ -203,12 +203,6 @@ namespace rast::framebuffer {
 					at(x, y)
 				);
 			}
-
-			// output color
-			at(x, y) = Shader::fragment::shade(
-				interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-				uniform_buffer
-			);
 		}
 	};
 

@@ -254,6 +254,26 @@ struct application {
 	scene scene;
 
 	rast::image<depth_format> depth_buffer;
+
+	inline const static bool is_deffered = false;
+
+	template <typename Shader, typename Framebuffer, typename ThreadPool>
+	inline void draw(
+		Framebuffer& framebuf,
+		ThreadPool& tp
+	) {
+		using clipper = rast::sutherland_hodgman;
+		using rasterizer = rast::raster::bbox_scan;
+		static rast::command_buffer<Shader> cmd_buffer;
+		cmd_buffer.reset();
+		glm::mat4 PV = P * V;
+		scene.draw<Shader>(PV,
+			[viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
+			(const scene::mesh_type& mesh, const Shader::uniform_buffer& ubo)
+			{ cmd_buffer.draw_indexed(mesh, ubo, viewport); }
+		);
+		cmd_buffer.submit<rasterizer, clipper>(framebuf, tp);
+	}
 };
 
 static application app;
@@ -283,7 +303,7 @@ SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int, char **)
 	app.V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	app.depth_buffer = rast::image<application::depth_format>(width, height);
-	app.g_buffer = application::GBuffer(width, height);
+	if constexpr(application::is_deffered) app.g_buffer = application::GBuffer(width, height);
 	
 	app.scene.load("private/assets/scenes/sponza.json");
 	//app.scene.load("assets/scenes/scene.json");
@@ -305,7 +325,7 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 		app.P = glm::perspective(glm::radians(app.fov), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
 
 		app.depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
-		app.g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
+		if constexpr(application::is_deffered) app.g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
 	}
 	if (event->type == SDL_EVENT_KEY_DOWN) {
 		if (event->key.scancode == SDL_SCANCODE_ESCAPE && !SDL_CursorVisible()) {
@@ -344,26 +364,6 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	last_frame = now;
 	std::cout << dt << "\r";
 
-	// prepare framebuffers
-	application::GFramebuffer gframebuf(app.g_buffer, app.depth_buffer);
-	gframebuf.clear_depth_buffer();
-	gframebuf.clear_color({glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
-
-	//rast::framebuffer::depth_view<rast::color::rgba8, application::depth_format> framebuf(
-	//    (rast::color::rgba8*)app.surface->pixels, app.depth_buffer,
-	//    app.near, app.far, 0.0f, 0.1f
-	//);
-	//application::Framebuffer framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
-	//framebuf.clear_depth_buffer();
-	//framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
-
-	//rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
-	rast::image<rast::color::rgba8>::view framebuf((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
-
-
-	// model matrix
-	static glm::mat4 M = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f)), glm::vec3(2.0f));
-
 	// move camera
 	static game::fly_cam flyCam;
 	glm::vec3 movement = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -379,37 +379,45 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	app.V = glm::lookAt(flyCam.position, flyCam.position + (flyCam.rotation * glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
 	mouseDelta = glm::vec2(0.0f);
 
-	//using shader = rast::shader::lambert_textured;
-	using shader = rast::shader::deferred::first_pass;
-	using clipper = rast::sutherland_hodgman;
-	using rasterizer = rast::raster::bbox_scan;
 
-	// record command buffer
-	static rast::command_buffer<shader> cmd_buffer;
-	cmd_buffer.reset();
-	glm::mat4 PV = app.P * app.V;
-	app.scene.draw<shader>(PV,
-		[viewport = rast::viewport(0, 0, gframebuf.width(), gframebuf.height())]
-		(const scene::mesh_type& mesh, const shader::uniform_buffer& ubo)
-		{ cmd_buffer.draw_indexed(mesh, ubo, viewport); }
-	);
-	cmd_buffer.submit<rasterizer, clipper>(gframebuf, tp);
+	// prepare framebuffers
+	// deffered
+	if constexpr (application::is_deffered) {
+		application::GFramebuffer framebuf(app.g_buffer, app.depth_buffer);
+		framebuf.clear_depth_buffer();
+		framebuf.clear_color({glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
+		rast::image<rast::color::rgba8>::view out_framebuf((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
 
-	tp.wait();
-	rast::shader::deferred::second_pass::uniform_buffer ubo;
-	ubo.fragment.texture = rast::texture<application::g_format>::sampler(app.g_buffer);
-	float stride = (float)framebuf.width / tp.thread_count();
-	for (int i = 0; i < tp.thread_count(); ++i) {
-		tp.enque([&framebuffer = framebuf, &ubo, i, stride]() {
-			rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height);
-			rast::renderer::draw_screen_quad<rast::shader::deferred::second_pass::fragment>(
-				framebuffer,
-				ubo.fragment,
-				rast::viewport(0, 0, framebuffer.width, framebuffer.height),
-				tile
-			);
-		});
+		// first pass
+		app.draw<rast::shader::deferred::first_pass>(framebuf, tp);
+
+		tp.wait();
+
+		// second pass
+		rast::shader::deferred::second_pass::fragment::uniform_buffer ubo;
+		ubo.texture = rast::texture<application::g_format>::sampler(app.g_buffer);
+		rast::shade_screen_quad<rast::shader::deferred::second_pass::fragment>(ubo, out_framebuf, tp);
 	}
+	else {
+		// forward
+		application::Framebuffer framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
+		framebuf.clear_depth_buffer();
+		framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
+
+		// depth view
+		//rast::framebuffer::depth_view<rast::color::rgba8, application::depth_format> framebuf(
+		//    (rast::color::rgba8*)app.surface->pixels, app.depth_buffer,
+		//    app.near, app.far, 0.0f, 0.1f
+		//);
+
+		// no depth
+		//rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
+
+		app.draw<rast::shader::lambert_textured>(framebuf, tp);
+	}
+
+
+
 
 	// present to screen
 	tp.wait();

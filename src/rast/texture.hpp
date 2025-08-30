@@ -22,8 +22,8 @@ namespace rast {
 			inline sampler(const image<color>& img) : sampler(img.data(), img.width(), img.height()) {}
 
 			inline color sample(glm::vec2 coords) const {
-				size_type x = (size_type)(coords.x * (width - 1)) % width;
-				size_type y = (size_type)(coords.y * (height - 1)) % height;
+				size_type x = static_cast<size_type>(coords.x * (width - 1)) % width;
+				size_type y = static_cast<size_type>(coords.y * (height - 1)) % height;
 				return data[y * width + x];
 			}
 

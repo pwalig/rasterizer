@@ -75,4 +75,24 @@ namespace rast {
 			commands.clear();
 		}
 	};
+
+	template <typename FragmentShader, typename ImageView, typename ThreadPool>
+	void shade_screen_quad(
+		typename FragmentShader::uniform_buffer ubo,
+		ImageView& framebuffer,
+		ThreadPool& tp
+	) {
+		float stride = (float)framebuffer.width / tp.thread_count();
+		for (int i = 0; i < tp.thread_count(); ++i) {
+			tp.enque([&framebuffer, &ubo, i, stride]() {
+				rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height);
+				rast::renderer::draw_screen_quad<FragmentShader>(
+					framebuffer,
+					ubo,
+					rast::viewport(0, 0, framebuffer.width, framebuffer.height),
+					tile
+				);
+			});
+		}
+	}
 }
