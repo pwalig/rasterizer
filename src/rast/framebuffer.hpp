@@ -76,7 +76,7 @@ namespace rast::framebuffer {
 		inline color_depth(color_format* ColorData, image<depth_format>& DepthImage) :
 			colorImage(ColorData), depthImage(DepthImage.data()), _width(DepthImage.width()), _height(DepthImage.height()) {}
 		inline color_depth(image<color_format>& ColorImage, depth_format* DepthData) :
-			colorImage(ColorImage.data()), depthImage(DepthData.data()), _width(ColorImage.width()), _height(ColorImage.height()) {}
+			colorImage(ColorImage.data()), depthImage(DepthData), _width(ColorImage.width()), _height(ColorImage.height()) {}
 
 		inline uint32_t width() const { return _width; }
 		inline uint32_t height() const { return _height; }
