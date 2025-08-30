@@ -6,11 +6,11 @@ namespace rast::depth_test {
 	};
 
 	template <typename depth_format>
-	inline bool always(depth_format newDepth, depth_format oldDepth) {
+	inline bool always(depth_format, depth_format) {
 		return true;
 	}
 	template <typename depth_format>
-	inline bool never(depth_format newDepth, depth_format oldDepth) {
+	inline bool never(depth_format, depth_format) {
 		return false;
 	}
 	template <typename depth_format>

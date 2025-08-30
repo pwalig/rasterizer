@@ -210,8 +210,8 @@ namespace rast::framebuffer {
 	using rgba8 = color<rast::color::rgba8>;
 
 	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>
-	class depth_view : public color_depth<ColorFormat, DepthFormat, DepthTest> {
-		using parent = color_depth<ColorFormat, DepthFormat>;
+	class depth_view : public color_depth<ColorFormat, DepthFormat, alpha_blend::replace<ColorFormat>, DepthTest> {
+		using parent = color_depth<ColorFormat, DepthFormat, alpha_blend::replace<ColorFormat>, DepthTest>;
 		using color_format = ColorFormat;
 		using depth_format = DepthFormat;
 	public:

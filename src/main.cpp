@@ -405,19 +405,18 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 		framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
 
 		// depth view
-		//rast::framebuffer::depth_view<rast::color::rgba8, application::depth_format> framebuf(
+		//rast::framebuffer::depth_view<rast::color::rgba8, application::depth_format, rast::depth_test::less> framebuf(
 		//    (rast::color::rgba8*)app.surface->pixels, app.depth_buffer,
 		//    app.near, app.far, 0.0f, 0.1f
 		//);
+		//framebuf.clear_depth_buffer();
+		//framebuf.clear_color(rast::color::rgba8(0, 0, 0, 255));
 
 		// no depth
 		//rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
 
 		app.draw<rast::shader::lambert_textured>(framebuf, tp);
 	}
-
-
-
 
 	// present to screen
 	tp.wait();
