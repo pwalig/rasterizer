@@ -88,6 +88,7 @@ struct scene {
 
 	void load(const char* filename) {
 		std::filesystem::path scene_file_path = filename;
+		if (!std::filesystem::exists(scene_file_path)) throw std::runtime_error("file does not exist");
 		scene_file_path.remove_filename();
 		std::ifstream ifs(filename);
 		rapidjson::IStreamWrapper isw(ifs);
@@ -305,8 +306,12 @@ SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int, char **)
 	app.depth_buffer = rast::image<application::depth_format>(width, height);
 	if constexpr(application::is_deffered) app.g_buffer = application::GBuffer(width, height);
 	
-	app.scene.load("private/assets/scenes/sponza.json");
-	//app.scene.load("assets/scenes/scene.json");
+	try {
+		app.scene.load("private/assets/scenes/sponza.json");
+	}
+	catch (std::runtime_error&) {
+		app.scene.load("assets/scenes/scene.json");
+	}
 
 	return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
