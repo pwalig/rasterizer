@@ -257,6 +257,7 @@ struct application {
 	rast::image<depth_format> depth_buffer;
 
 	inline const static bool is_deffered = false;
+	inline const static bool render_on_demand_only = true;
 
 	template <typename Shader, typename Framebuffer, typename ThreadPool>
 	inline void draw(
@@ -286,7 +287,7 @@ SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int, char **)
 	int width = 1280;
 	int height = 720;
 
-	SDL_SetAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
+	SDL_SetAppMetadata("Software Rasterizer Program", "1.0", "com.example.pwalig.rasterizer");
 
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
@@ -367,7 +368,6 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	auto now = clock::now();
 	float dt = std::chrono::duration_cast<std::chrono::duration<float>>(now - last_frame).count();
 	last_frame = now;
-	std::cout << dt << "\r";
 
 	// move camera
 	static game::fly_cam flyCam;
@@ -381,6 +381,18 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 		if (pressed[SDL_SCANCODE_LSHIFT]) movement.y -= 1.0f;
 		flyCam.update(movement, glm::vec2(mouseDelta.y, -mouseDelta.x), dt);
 	}
+	if (app.render_on_demand_only) {
+		static bool last_frame_rendered = false;
+		static bool is_first_frame = true;
+		if (is_first_frame) is_first_frame = false;
+		else if (movement == glm::vec3(0.0f, 0.0f, 0.0f) && (mouseDelta == glm::vec2(0.0f, 0.0f) || SDL_CursorVisible())) {
+			if (last_frame_rendered) std::cout << dt << "\r";
+			last_frame_rendered = false;
+			return SDL_APP_CONTINUE;
+		}
+		last_frame_rendered = true;
+	}
+	std::cout << dt << "\r";
 	app.V = glm::lookAt(flyCam.position, flyCam.position + (flyCam.rotation * glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
 	mouseDelta = glm::vec2(0.0f);
 
@@ -418,7 +430,7 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 		//framebuf.clear_color(rast::color::rgba8(0, 0, 0, 255));
 
 		// no depth
-		//rast::framebuffer::rgba8 noDepthFramebuffer((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
+		//rast::framebuffer::rgba8 framebuf((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
 
 		app.draw<rast::shader::lambert_textured>(framebuf, tp);
 	}
