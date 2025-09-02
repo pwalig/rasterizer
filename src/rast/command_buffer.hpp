@@ -67,7 +67,6 @@ namespace rast {
 					for (const command& cmd : cmds) {
 						Rasterizer::template rasterize<Shader>(
 							framebuffer.get_raster_adapter<Shader>(cmd.ubo.fragment),
-							//framebuffer::raster_adapter<Framebuffer, Shader>(framebuffer, cmd.ubo.fragment),
 							cmd.raster_range.begin, cmd.raster_range.end, cmd.viewport, tile
 						);
 					}

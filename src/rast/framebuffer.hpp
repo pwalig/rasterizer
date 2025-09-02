@@ -71,7 +71,7 @@ namespace rast::framebuffer {
 			inline framebuffer_only(Framebuffer& FrameBuffer)
 				: framebuffer(FrameBuffer) {}
 			inline void operator()(uint32_t x, uint32_t y, const vertex* triangle, glm::ivec3 equation_results, int area) {
-				framebuffer.template draw<Shader>(x, y, triangle, uniform_buffer(), equation_results, area);
+				framebuffer.template draw<Shader>(x, y, triangle, equation_results, area);
 			}
 		};
 	}
@@ -287,7 +287,6 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const typename Shader::fragment::uniform_buffer&,
 			const glm::ivec3& results, int area
 		) {
 			// depth test
