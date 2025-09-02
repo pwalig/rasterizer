@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -154,6 +154,8 @@
     <ClInclude Include="src\rast\convert.hpp" />
     <ClInclude Include="src\rast\depth_test.hpp" />
     <ClInclude Include="src\rast\discard_fragment.hpp" />
+    <ClInclude Include="src\rast\fragbuff\fragbuff_utils.hpp" />
+    <ClInclude Include="src\rast\fragbuff\rewrite.hpp" />
     <ClInclude Include="src\rast\interpolation.hpp" />
     <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp" />
     <ClInclude Include="src\rast\raster\bbox_scan.hpp" />

@@ -3,11 +3,10 @@
 
 namespace rast::raster {
 	struct bbox_scan {
-		template <typename Shader, typename Framebuffer>
+		template <typename Shader, typename Callable>
 		inline static void rasterize_one(
-			Framebuffer& framebuffer,
+			Callable&& output,
 			const typename Shader::vertex::output* triangle,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const viewport& viewport,
 			const tile& tile
 		) {
@@ -47,13 +46,14 @@ namespace rast::raster {
 				glm::ivec3 E = Cy - Cx;
 				for (int x = min.x; x < max.x; ++x, E -= Dy) {
 					if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
-						framebuffer.template draw<Shader>(x, y, triangle, uniform_buffer, E, area);
+						output(x, y, triangle, E, area);
+						//framebuffer.template draw<Shader>(x, y, triangle, uniform_buffer, E, area);
 					}
 				}
 			}
 		}
 
-		template<typename Shader, typename Framebuffer>
-		inline const static function<Shader, Framebuffer> rasterize = execute<bbox_scan, Shader, Framebuffer>;
+		template<typename Shader, typename Callable>
+		inline const static function<Shader, Callable> rasterize = execute<bbox_scan, Shader, Callable>;
 	};
 }

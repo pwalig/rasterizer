@@ -46,6 +46,21 @@ namespace rast::framebuffer {
 		return float_depth_to_depth_format<depth_format>(get_float_depth(triangle, results, area));
 	}
 
+	template <typename Framebuffer, typename Shader>
+	struct raster_adapter {
+		using vertex = typename Shader::vertex::output;
+		using uniform_buffer = typename Shader::fragment::uniform_buffer;
+
+		Framebuffer& framebuffer;
+		const uniform_buffer& ubo;
+
+		inline raster_adapter(Framebuffer& FrameBuffer, const uniform_buffer& UniformBuffer)
+			: framebuffer(FrameBuffer), ubo(UniformBuffer) {}
+		inline void operator()(uint32_t x, uint32_t y, const vertex* triangle, glm::ivec3 equation_results, int area) {
+			framebuffer.template draw<Shader>(x, y, triangle, ubo, equation_results, area);
+		}
+	};
+
 	using default_alpha_blend = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 
 	template<typename ColorFormat, typename DepthFormat, alpha_blend::function::type<ColorFormat> AlphaBlend = default_alpha_blend::blend, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>

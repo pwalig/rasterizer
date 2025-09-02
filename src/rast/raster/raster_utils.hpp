@@ -12,12 +12,11 @@ namespace rast::raster {
 		);
 	}
 
-	template <typename Shader, typename Framebuffer>
+	template <typename Shader, typename Callable>
 	using function = void(*)(
-		Framebuffer& framebuffer,
+		Callable&& output,
 		const typename Shader::vertex::output* vertex_begin,
 		const typename Shader::vertex::output* vertex_end,
-		const typename Shader::fragment::uniform_buffer& uniform_buffer,
 		const viewport& viewport,
 		const tile& tile
 	);
@@ -31,18 +30,17 @@ namespace rast::raster {
 		);
 	}
 
-	template <typename Rasterizer, typename Shader, typename Framebuffer>
+	template <typename Rasterizer, typename Shader, typename Callable>
 	inline void execute(
-		Framebuffer& framebuffer,
+		Callable&& output,
 		const typename Shader::vertex::output* vertex_begin,
 		const typename Shader::vertex::output* vertex_end,
-		const typename Shader::fragment::uniform_buffer& uniform_buffer,
 		const viewport& viewport,
 		const tile& tile
 	) {
 		using vertex = typename Shader::vertex::output;
 		for (const vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
-			Rasterizer::template rasterize_one<Shader>(framebuffer, triangle, uniform_buffer, viewport, tile);
+			Rasterizer::template rasterize_one<Shader>(output, triangle, viewport, tile);
 		}
 	}
 }
