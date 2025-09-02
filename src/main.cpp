@@ -258,6 +258,7 @@ struct application {
 
 	inline const static bool is_deffered = false;
 	inline const static bool render_on_demand_only = true;
+	bool request_frame = true;
 
 	template <typename Shader, typename Framebuffer, typename ThreadPool>
 	inline void draw(
@@ -332,6 +333,7 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 
 		app.depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
 		if constexpr(application::is_deffered) app.g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
+		app.request_frame = true;
 	}
 	if (event->type == SDL_EVENT_KEY_DOWN) {
 		if (event->key.scancode == SDL_SCANCODE_ESCAPE && !SDL_CursorVisible()) {
@@ -383,8 +385,7 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	}
 	if (app.render_on_demand_only) {
 		static bool last_frame_rendered = false;
-		static bool is_first_frame = true;
-		if (is_first_frame) is_first_frame = false;
+		if (app.request_frame) app.request_frame = false;
 		else if (movement == glm::vec3(0.0f, 0.0f, 0.0f) && (mouseDelta == glm::vec2(0.0f, 0.0f) || SDL_CursorVisible())) {
 			if (last_frame_rendered) std::cout << dt << "\r";
 			last_frame_rendered = false;
