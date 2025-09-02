@@ -122,5 +122,14 @@
     <ClInclude Include="src\rast\raster\left_edge.hpp">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\fragbuff\fragbuff_utils.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\fragbuff\rewrite.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\raster\raster_output_interface.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,14 +1,16 @@
 #pragma once
 #include "raster_utils.hpp"
+#include "raster_output_interface.hpp"
 
 namespace rast::raster {
 	struct bbox_scan {
-		template <typename Shader, typename Callable>
+		template <typename Shader, typename Callable, typename ...Args>
 		inline static void rasterize_one(
 			Callable&& output,
 			const typename Shader::vertex::output* triangle,
 			const viewport& viewport,
-			const tile& tile
+			const tile& tile,
+			Args&&... args
 		) {
 			glm::ivec2 a = toScreenSpace(triangle[0].rastPos, viewport);
 			glm::ivec2 b = toScreenSpace(triangle[1].rastPos, viewport);
@@ -46,22 +48,23 @@ namespace rast::raster {
 				glm::ivec3 E = Cy - Cx;
 				for (int x = min.x; x < max.x; ++x, E -= Dy) {
 					if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
-						output(x, y, triangle, E, area);
+						dispached_output<Shader>(output, x, y, triangle, E, area, args...);
 					}
 				}
 			}
 		}
 
-		template <typename Shader, typename Callable>
+		template <typename Shader, typename Callable, typename ...Args>
 		inline static void rasterize(
 			Callable&& output,
 			const typename Shader::vertex::output* vertex_begin,
 			const typename Shader::vertex::output* vertex_end,
-			const viewport& viewport, const tile& tile
+			const viewport& viewport, const tile& tile,
+			Args&&... args
 		) {
 			using vertex = typename Shader::vertex::output;
 			for (const vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
-				rasterize_one<Shader>(output, triangle, viewport, tile);
+				rasterize_one<Shader>(output, triangle, viewport, tile, args...);
 			}
 		}
 	};

@@ -4,6 +4,7 @@
 
 #include "mesh.hpp"
 #include "renderer.hpp"
+#include "raster/raster_output_interface.hpp"
 
 namespace rast {
 	template <typename Shader>
@@ -66,8 +67,15 @@ namespace rast {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 					for (const command& cmd : cmds) {
 						Rasterizer::template rasterize<Shader>(
-							framebuffer.get_raster_adapter<Shader>(cmd.ubo.fragment),
-							cmd.raster_range.begin, cmd.raster_range.end, cmd.viewport, tile
+							framebuffer,
+							//[&framebuffer](uint32_t x, uint32_t y,
+							//	const typename Shader::vertex::output* triangle,
+							//	glm::ivec3 equation_results, int area,
+							//	const typename Shader::fragment::uniform_buffer& ubo
+							//) {
+							//	framebuffer.template draw<Shader>(x, y, triangle, equation_results, area, ubo);
+							//},
+							cmd.raster_range.begin, cmd.raster_range.end, cmd.viewport, tile, cmd.ubo.fragment
 						);
 					}
 				});

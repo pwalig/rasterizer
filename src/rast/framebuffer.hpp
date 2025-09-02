@@ -9,6 +9,7 @@
 #include "alpha_blend.hpp"
 #include "discard_fragment.hpp"
 #include "depth_test.hpp"
+#include "raster/raster_output_interface.hpp"
 
 #define rast_framebuffer_shader_output_assert \
 using fragment_output = typename Shader::fragment::output; \
@@ -132,8 +133,8 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const glm::ivec3& results, int area
+			const glm::ivec3& results, int area,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer
 		) {
 			rast_framebuffer_shader_output_assert
 
@@ -215,8 +216,8 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
-			const glm::ivec3& results, int area
+			const glm::ivec3& results, int area,
+			const typename Shader::fragment::uniform_buffer& uniform_buffer
 		) {
 			rast_framebuffer_shader_output_assert
 
@@ -287,7 +288,8 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const glm::ivec3& results, int area
+			const glm::ivec3& results, int area,
+			const typename Shader::fragment::uniform_buffer&
 		) {
 			// depth test
 			depth_format& oldDepth = this->depth(x, y);
@@ -302,4 +304,15 @@ namespace rast::framebuffer {
 			}
 		}
 	};
+}
+
+namespace rast::raster {
+	template<typename ColorFormat, typename DepthFormat, alpha_blend::function::type<ColorFormat> AlphaBlend, depth_test::function::type<DepthFormat> DepthTest>
+	inline constexpr output_interface output_interface_v<framebuffer::color_depth<ColorFormat, DepthFormat, AlphaBlend, DepthTest>> = output_interface::framebuffer;
+
+	template<typename ColorFormat, alpha_blend::function::type<ColorFormat> AlphaBlend>
+	inline constexpr output_interface output_interface_v<framebuffer::color<ColorFormat, AlphaBlend>> = output_interface::framebuffer;
+
+	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest>
+	inline constexpr output_interface output_interface_v<framebuffer::depth_view<ColorFormat, DepthFormat, DepthTest>> = output_interface::framebuffer;
 }
