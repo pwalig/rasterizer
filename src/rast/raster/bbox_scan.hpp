@@ -47,13 +47,22 @@ namespace rast::raster {
 				for (int x = min.x; x < max.x; ++x, E -= Dy) {
 					if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
 						output(x, y, triangle, E, area);
-						//framebuffer.template draw<Shader>(x, y, triangle, uniform_buffer, E, area);
 					}
 				}
 			}
 		}
 
-		template<typename Shader, typename Callable>
-		inline const static function<Shader, Callable> rasterize = execute<bbox_scan, Shader, Callable>;
+		template <typename Shader, typename Callable>
+		inline static void rasterize(
+			Callable&& output,
+			const typename Shader::vertex::output* vertex_begin,
+			const typename Shader::vertex::output* vertex_end,
+			const viewport& viewport, const tile& tile
+		) {
+			using vertex = typename Shader::vertex::output;
+			for (const vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
+				rasterize_one<Shader>(output, triangle, viewport, tile);
+			}
+		}
 	};
 }

@@ -46,20 +46,35 @@ namespace rast::framebuffer {
 		return float_depth_to_depth_format<depth_format>(get_float_depth(triangle, results, area));
 	}
 
-	template <typename Framebuffer, typename Shader>
-	struct raster_adapter {
-		using vertex = typename Shader::vertex::output;
-		using uniform_buffer = typename Shader::fragment::uniform_buffer;
+	namespace raster_adapter {
+		template <typename Framebuffer, typename Shader>
+		struct with_ubo {
+			using vertex = typename Shader::vertex::output;
+			using uniform_buffer = typename Shader::fragment::uniform_buffer;
 
-		Framebuffer& framebuffer;
-		const uniform_buffer& ubo;
+			Framebuffer& framebuffer;
+			const uniform_buffer& ubo;
 
-		inline raster_adapter(Framebuffer& FrameBuffer, const uniform_buffer& UniformBuffer)
-			: framebuffer(FrameBuffer), ubo(UniformBuffer) {}
-		inline void operator()(uint32_t x, uint32_t y, const vertex* triangle, glm::ivec3 equation_results, int area) {
-			framebuffer.template draw<Shader>(x, y, triangle, ubo, equation_results, area);
-		}
-	};
+			inline with_ubo(Framebuffer& FrameBuffer, const uniform_buffer& UniformBuffer)
+				: framebuffer(FrameBuffer), ubo(UniformBuffer) {}
+			inline void operator()(uint32_t x, uint32_t y, const vertex* triangle, glm::ivec3 equation_results, int area) {
+				framebuffer.template draw<Shader>(x, y, triangle, ubo, equation_results, area);
+			}
+		};
+		template <typename Framebuffer, typename Shader>
+		struct framebuffer_only {
+			using vertex = typename Shader::vertex::output;
+			using uniform_buffer = typename Shader::fragment::uniform_buffer;
+
+			Framebuffer& framebuffer;
+
+			inline framebuffer_only(Framebuffer& FrameBuffer)
+				: framebuffer(FrameBuffer) {}
+			inline void operator()(uint32_t x, uint32_t y, const vertex* triangle, glm::ivec3 equation_results, int area) {
+				framebuffer.template draw<Shader>(x, y, triangle, uniform_buffer(), equation_results, area);
+			}
+		};
+	}
 
 	using default_alpha_blend = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 
@@ -103,6 +118,14 @@ namespace rast::framebuffer {
 
 		void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
 			std::fill_n(depthImage, area(), clear_value);
+		}
+
+		template <typename Shader>
+		using raster_adapter = raster_adapter::with_ubo<color_depth, Shader>;
+
+		template <typename Shader>
+		raster_adapter<Shader> get_raster_adapter(const typename Shader::fragment::uniform_buffer& ubo) {
+			return raster_adapter<Shader>(*this, ubo);
 		}
 
 		template <typename Shader>
@@ -251,6 +274,14 @@ namespace rast::framebuffer {
 		inline depth_view(
 			image<color_format>& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
 		) : parent(ColorImage, DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+
+		template <typename Shader>
+		using raster_adapter = raster_adapter::framebuffer_only<depth_view, Shader>;
+
+		template <typename Shader>
+		raster_adapter<Shader> get_raster_adapter(const typename Shader::fragment::uniform_buffer&) {
+			return raster_adapter<Shader>(*this);
+		}
 
 		template <typename Shader>
 		void draw(

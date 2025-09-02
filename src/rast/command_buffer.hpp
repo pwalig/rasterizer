@@ -65,8 +65,9 @@ namespace rast {
 				tp.enque([&framebuffer, &cmds = (this->commands), i, stride]() {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 					for (const command& cmd : cmds) {
-						Rasterizer::template rasterize<Shader, framebuffer::raster_adapter<Framebuffer, Shader>>(
-							framebuffer::raster_adapter<Framebuffer, Shader>(framebuffer, cmd.ubo.fragment),
+						Rasterizer::template rasterize<Shader>(
+							framebuffer.get_raster_adapter<Shader>(cmd.ubo.fragment),
+							//framebuffer::raster_adapter<Framebuffer, Shader>(framebuffer, cmd.ubo.fragment),
 							cmd.raster_range.begin, cmd.raster_range.end, cmd.viewport, tile
 						);
 					}

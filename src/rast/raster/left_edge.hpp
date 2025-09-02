@@ -3,11 +3,10 @@
 
 namespace rast::raster {
 	struct left_edge {
-		template <typename Shader, typename Framebuffer>
+		template <typename Shader, typename Callable>
 		inline static void rasterize_one(
-			Framebuffer& framebuffer,
+			Callable&& output,
 			const typename Shader::vertex::output* triangle,
-			const typename Shader::fragment::uniform_buffer& uniform_buffer,
 			const viewport& viewport,
 			const tile& tile
 		) {
@@ -66,13 +65,23 @@ namespace rast::raster {
 				}
 				Cx = Cy - E;
 				for (int x = X; x < max.x; ++x, E -= Dy) {
-					framebuffer.template draw<Shader>(x, y, triangle, uniform_buffer, E, area);
+					output(x, y, triangle, E, area);
 					if (E.x < 0 || E.y < 0 || E.z < 0) break;
 				}
 			}
 		}
 
-		template<typename Shader, typename Framebuffer>
-		inline const static function<Shader, Framebuffer> rasterize = execute<left_edge, Shader, Framebuffer>;
+		template <typename Shader, typename Callable>
+		inline static void rasterize(
+			Callable&& output,
+			const typename Shader::vertex::output* vertex_begin,
+			const typename Shader::vertex::output* vertex_end,
+			const viewport& viewport, const tile& tile
+		) {
+			using vertex = typename Shader::vertex::output;
+			for (const vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
+				rasterize_one<Shader>(output, triangle, viewport, tile);
+			}
+		}
 	};
 }
