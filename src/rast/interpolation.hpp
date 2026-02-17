@@ -25,6 +25,31 @@ namespace rast::interpol {
 		);
 	}
 
+	namespace coefs {
+		template <typename T>
+		inline constexpr void normalize(T& coefs) {
+			auto sum = coefs.x + coefs.y + coefs.z;
+			coefs /= sum;
+		}
+		template <typename T>
+		inline constexpr T normalized(T coefs) {
+			auto sum = coefs.x + coefs.y + coefs.z;
+			return coefs / sum;
+		}
+		template <typename T>
+		inline constexpr T linear(T partial_coefs) {
+			return normalized(partial_coefs);
+		}
+		template <typename T, typename VertexT>
+		inline constexpr T perspective(T partial_coefs, VertexT* triangle) {
+			return normalized(T(
+				partial_coefs.x / triangle[0].rastPos.w,
+				partial_coefs.y / triangle[1].rastPos.w,
+				partial_coefs.z / triangle[2].rastPos.w
+			));
+		}
+	}
+
 	inline glm::vec3 linear_coefs(const glm::ivec3& equation_results, int triangle_area) {
 		glm::vec3 res(
 			(float)equation_results.y / triangle_area,

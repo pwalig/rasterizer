@@ -32,19 +32,19 @@ namespace rast::framebuffer {
 		}
 	}
 	template <typename vertex_output>
-	inline float get_float_depth(const vertex_output* triangle, const glm::ivec3& results, int area) {
+	inline float get_float_depth(const vertex_output* triangle, glm::vec3 partial_coefs) {
 		return interpol::interpolate(
 			glm::vec3(
 				triangle[0].rastPos.z,
 				triangle[1].rastPos.z,
 				triangle[2].rastPos.z
 			),
-			interpol::linear_coefs(results, area)
+			interpol::coefs::linear(partial_coefs)
 		);
 	}
 	template <typename depth_format, typename vertex_output>
-	inline depth_format get_depth(const vertex_output* triangle, const glm::ivec3& results, int area) {
-		return float_depth_to_depth_format<depth_format>(get_float_depth(triangle, results, area));
+	inline depth_format get_depth(const vertex_output* triangle, glm::vec3 partial_coefs) {
+		return float_depth_to_depth_format<depth_format>(get_float_depth(triangle, partial_coefs));
 	}
 
 	using default_alpha_blend = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
@@ -95,37 +95,31 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const glm::ivec3& results, int area,
+			glm::vec3 partial_coefs,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer
 		) {
 			rast_framebuffer_shader_output_assert
 
 			// depth test
 			depth_format& oldDepth = depth(x, y);
-			depth_format newDepth = get_depth<depth_format>(triangle, results, area);
+			depth_format newDepth = get_depth<depth_format>(triangle, partial_coefs);
 			if (DepthTest(newDepth, oldDepth)) {
 
+				fragment_output frag = Shader::fragment::shade(
+					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::coefs::perspective(partial_coefs, triangle)),
+					uniform_buffer
+				);
 				if constexpr (is_discardable_v<fragment_output>) {
-					fragment_output frag = Shader::fragment::shade(
-						interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-						uniform_buffer
-					);
-					if (should_discard(frag)) return;
-
-					color(x, y) = AlphaBlend(
-						get_frag_from_discardable(frag),
-						color(x, y)
-					);
-					oldDepth = newDepth;
+					if (!should_discard(frag)) {
+						color(x, y) = AlphaBlend(
+							get_frag_from_discardable(frag),
+							color(x, y)
+						);
+						oldDepth = newDepth;
+					}
 				}
 				else {
-					color(x, y) = AlphaBlend(
-						Shader::fragment::shade(
-							interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-							uniform_buffer
-						),
-						color(x, y)
-					);
+					color(x, y) = AlphaBlend(frag, color(x, y));
 					oldDepth = newDepth;
 				}
 			}
@@ -134,9 +128,9 @@ namespace rast::framebuffer {
 		template <typename Shader>
 		auto raster_adapter(const typename Shader::fragment::uniform_buffer& uniform_buffer) {
 			return [this, &uniform_buffer](
-				uint32_t x, uint32_t y, const typename Shader::vertex::output* triangle, glm::ivec3 equation_results, int area
+				uint32_t x, uint32_t y, const typename Shader::vertex::output* triangle, glm::vec3 partial_coefs
 			) {
-				this->draw<Shader>(x, y, triangle, equation_results, area, uniform_buffer);
+				this->draw<Shader>(x, y, triangle, partial_coefs, uniform_buffer);
 			};
 		}
 	};
@@ -187,32 +181,21 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const glm::ivec3& results, int area,
+			glm::vec3 partial_coefs,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer
 		) {
 			rast_framebuffer_shader_output_assert
 
+			fragment_output frag = Shader::fragment::shade(
+				interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::coefs::perspective(partial_coefs, triangle)),
+				uniform_buffer
+			);
 			if constexpr (is_discardable_v<fragment_output>) {
-				fragment_output frag = Shader::fragment::shade(
-					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-					uniform_buffer
-				);
-				if (should_discard(frag)) return;
-
-				at(x, y) = AlphaBlend(
-					get_frag_from_discardable(frag),
-					at(x, y)
-				);
+				if (!should_discard(frag)) {
+					at(x, y) = AlphaBlend(get_frag_from_discardable(frag), at(x, y));
+				}
 			}
-			else {
-				at(x, y) = AlphaBlend(
-					Shader::fragment::shade(
-						interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::persp_coefs(results, area, triangle)),
-						uniform_buffer
-					),
-					at(x, y)
-				);
-			}
+			else at(x, y) = AlphaBlend(frag, at(x, y));
 		}
 	};
 
@@ -251,12 +234,12 @@ namespace rast::framebuffer {
 		void draw(
 			uint32_t x, uint32_t y,
 			const typename Shader::vertex::output* triangle,
-			const glm::ivec3& results, int area,
+			glm::vec3 partial_coefs,
 			const typename Shader::fragment::uniform_buffer&
 		) {
 			// depth test
 			depth_format& oldDepth = this->depth(x, y);
-			float depth = get_float_depth(triangle, results, area);
+			float depth = get_float_depth(triangle, partial_coefs);
 			depth_format newDepth = float_depth_to_depth_format<depth_format>(depth);
 			if (DepthTest(newDepth, oldDepth)) {
 				oldDepth = newDepth;
@@ -270,9 +253,9 @@ namespace rast::framebuffer {
 		template <typename Shader>
 		auto raster_adapter(const typename Shader::fragment::uniform_buffer& uniform_buffer) {
 			return [this, &uniform_buffer](
-				uint32_t x, uint32_t y, const typename Shader::vertex::output* triangle, glm::ivec3 equation_results, int area
+				uint32_t x, uint32_t y, const typename Shader::vertex::output* triangle, glm::vec3 partial_coefs
 			) {
-				this->draw<Shader>(x, y, triangle, equation_results, area, uniform_buffer);
+				this->draw<Shader>(x, y, triangle, partial_coefs, uniform_buffer);
 			};
 		}
 	};

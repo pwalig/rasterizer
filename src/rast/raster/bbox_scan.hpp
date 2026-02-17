@@ -37,6 +37,7 @@ namespace rast::raster {
 			glm::ivec3 Dy = y120 - y012;
 
 			int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
+			if (area <= 0) return; // back face detected - early return
 
 			// Dx * Y - fill_convention
 			glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention(Dx, Dy);
@@ -48,7 +49,7 @@ namespace rast::raster {
 				glm::ivec3 E = Cy - Cx;
 				for (int x = min.x; x < max.x; ++x, E -= Dy) {
 					if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
-						dispached_output<Shader>(output, x, y, triangle, E, area, args...);
+						dispached_output<Shader>(output, x, y, triangle, partial_coefs(E, area), args...);
 					}
 				}
 			}

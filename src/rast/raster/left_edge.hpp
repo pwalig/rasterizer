@@ -66,7 +66,7 @@ namespace rast::raster {
 				}
 				Cx = Cy - E;
 				for (int x = X; x < max.x; ++x, E -= Dy) {
-					dispached_output<Shader>(output, x, y, triangle, E, area, args...);
+					dispached_output<Shader>(output, x, y, triangle, partial_coefs(E, area), args...);
 					if (E.x < 0 || E.y < 0 || E.z < 0) break;
 				}
 			}

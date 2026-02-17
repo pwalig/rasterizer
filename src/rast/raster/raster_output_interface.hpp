@@ -23,15 +23,15 @@ namespace rast::raster {
 		Callable&& output,
 		uint32_t x, uint32_t y,
 		const typename Shader::vertex::output* triangle,
-		const glm::ivec3& equation_results, int area,
+		glm::vec3 partial_coefs,
 		Args&&... args
 	) {
 		
 		if constexpr (output_interface_v<Callable> == output_interface::call) {
-			output(x, y, triangle, equation_results, area, std::forward<Args>(args)...);
+			output(x, y, triangle, partial_coefs, std::forward<Args>(args)...);
 		}
 		else if constexpr (output_interface_v<Callable> == output_interface::framebuffer) {
-			output.template draw<Shader>(x, y, triangle, equation_results, area, std::forward<Args>(args)...);
+			output.template draw<Shader>(x, y, triangle, partial_coefs, std::forward<Args>(args)...);
 		}
 	}
 }
