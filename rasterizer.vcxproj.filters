@@ -131,5 +131,8 @@
     <ClInclude Include="src\rast\raster\raster_output_interface.hpp">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\perspective_divide.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

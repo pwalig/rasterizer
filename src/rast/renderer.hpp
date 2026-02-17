@@ -10,6 +10,7 @@
 #include "image.hpp"
 #include "viewport.hpp"
 #include "tile.hpp"
+#include "perspective_divide.hpp"
 
 namespace rast {
 	template <typename VertexT>
@@ -19,21 +20,6 @@ namespace rast {
 	};
 
 	class renderer {
-	private:
-		inline static void perspective_divide(glm::vec4& vertex) {
-			vertex.x /= vertex.w;
-			vertex.y /= vertex.w;
-			vertex.z /= vertex.w;
-		}
-		inline static glm::vec4 perspective_divided(const glm::vec4& vertex) {
-			return glm::vec4(
-				vertex.x / vertex.w,
-				vertex.y / vertex.w,
-				vertex.z / vertex.w,
-				vertex.w
-			);
-		}
-
 	public:
 		template <typename VertexIter>
 		inline static void perspective_divide(
@@ -41,7 +27,7 @@ namespace rast {
 			typename VertexIter end
 		) {
 			for (VertexIter it = begin; it != end; ++it) {
-				perspective_divide(it->rastPos);
+				perspective_divide::one(it->rastPos);
 			}
 		}
 
