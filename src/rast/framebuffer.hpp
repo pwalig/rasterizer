@@ -11,15 +11,17 @@
 #include "depth_test.hpp"
 #include "raster/raster_output_interface.hpp"
 
-#define rast_framebuffer_shader_output_assert \
-using fragment_output = typename Shader::fragment::output; \
-if constexpr (is_discardable_v<fragment_output>) { \
-	static_assert(std::is_same_v<color_format, typename fragment_output::value_type>); \
-} else { \
-	static_assert(std::is_same_v<color_format, fragment_output>); \
-}
-
 namespace rast::framebuffer {
+	template <typename ColorFormat, typename FragmentOutput>
+	inline constexpr bool matching_format() {
+		if constexpr (is_discardable_v<FragmentOutput>)
+			return std::is_same_v<ColorFormat, typename FragmentOutput::value_type>;
+		else
+			return std::is_same_v<ColorFormat, FragmentOutput>;
+	}
+	template <typename ColorFormat, typename FragmentOutput>
+	inline static const bool matching_format_v = matching_format<ColorFormat, FragmentOutput>();
+
 	template <typename DepthFormat>
 	inline DepthFormat float_depth_to_depth_format(float depth) {
 		if constexpr (std::is_floating_point_v<DepthFormat>) {
@@ -34,11 +36,9 @@ namespace rast::framebuffer {
 	template <typename vertex_output>
 	inline float get_float_depth(const vertex_output* triangle, glm::vec3 partial_coefs) {
 		return interpol::interpolate(
-			glm::vec3(
-				triangle[0].rastPos.z,
-				triangle[1].rastPos.z,
-				triangle[2].rastPos.z
-			),
+			triangle[0].rastPos.z,
+			triangle[1].rastPos.z,
+			triangle[2].rastPos.z,
 			interpol::coefs::linear(partial_coefs)
 		);
 	}
@@ -98,7 +98,8 @@ namespace rast::framebuffer {
 			glm::vec3 partial_coefs,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer
 		) {
-			rast_framebuffer_shader_output_assert
+			using fragment_output = typename Shader::fragment::output;
+			static_assert(matching_format_v<color_format, fragment_output>);
 
 			// depth test
 			depth_format& oldDepth = depth(x, y);
@@ -184,7 +185,8 @@ namespace rast::framebuffer {
 			glm::vec3 partial_coefs,
 			const typename Shader::fragment::uniform_buffer& uniform_buffer
 		) {
-			rast_framebuffer_shader_output_assert
+			using fragment_output = typename Shader::fragment::output;
+			static_assert(matching_format_v<color_format, fragment_output>);
 
 			fragment_output frag = Shader::fragment::shade(
 				interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::coefs::perspective(partial_coefs, triangle)),

@@ -1,28 +1,13 @@
 #pragma once
-#include <glm/glm.hpp>
 
 namespace rast::interpol {
-	template <typename T>
-	inline T interpolate(const T& a, const T& b, const T& c, const glm::vec3& coefs) {
-		return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
+	template <typename T, typename Vec3>
+	inline constexpr T interpolate(T a, T b, T c, Vec3 coefs) {
+		return (a * coefs[0]) + (b * coefs[1]) + (c * coefs[2]);
 	}
-
-	template <typename T>
-	inline T interpolate(const glm::vec<3, T>& values, const glm::vec3& coefs) {
-		return (T)(values.x * coefs.x) + (T)(values.y * coefs.y) + (T)(values.z * coefs.z);
-	}
-
-	template <typename T>
-	inline T interpolate2(T a, T b, T c, const glm::vec3& coefs) {
-		return (T)(a * coefs.x) + (T)(b * coefs.y) + (T)(c * coefs.z);
-	}
-
-	inline constexpr glm::vec3 average_coefs() {
-		return glm::vec3(
-			1.0f / 3.0f,
-			1.0f / 3.0f,
-			1.0f / 3.0f
-		);
+	template <typename T, typename Vec3>
+	inline constexpr T interpolate(T elems[3], Vec3 coefs) {
+		return (elems[0] * coefs[0]) + (elems[1] * coefs[1]) + (elems[2] * coefs[2]);
 	}
 
 	namespace coefs {
@@ -37,37 +22,30 @@ namespace rast::interpol {
 			return coefs / sum;
 		}
 		template <typename T>
+		inline constexpr T average() {
+			return T(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f);
+		}
+		template <typename T>
 		inline constexpr T linear(T partial_coefs) {
 			return normalized(partial_coefs);
 		}
+		template <typename T>
+		inline constexpr T perspective(T partial_coefs, float w1, float w2, float w3) {
+			return normalized(T(
+				partial_coefs.x / w1,
+				partial_coefs.y / w2,
+				partial_coefs.z / w3
+			));
+		}
 		template <typename T, typename VertexT>
 		inline constexpr T perspective(T partial_coefs, VertexT* triangle) {
-			return normalized(T(
-				partial_coefs.x / triangle[0].rastPos.w,
-				partial_coefs.y / triangle[1].rastPos.w,
-				partial_coefs.z / triangle[2].rastPos.w
-			));
+			return perspective(partial_coefs, triangle[0].rastPos.w, triangle[1].rastPos.w, triangle[2].rastPos.w);
 		}
 	}
 
-	inline glm::vec3 linear_coefs(const glm::ivec3& equation_results, int triangle_area) {
-		glm::vec3 res(
-			(float)equation_results.y / triangle_area,
-			(float)equation_results.z / triangle_area,
-			(float)equation_results.x / triangle_area
-		);
-		float sum = res.x + res.y + res.z;
-		return res / sum;
+	template <typename VertexT, typename Vec3>
+	inline constexpr VertexT perspective(Vec3 partial_coefs, VertexT* triangle) {
+		return interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs::perspective(partial_coefs, triangle));
 	}
 
-	template <typename VertexT>
-	inline glm::vec3 persp_coefs(const glm::ivec3& equation_results, int triangle_area, const VertexT* triangle) {
-		glm::vec3 pcoefs(
-			(float)equation_results.y / triangle_area / triangle[0].rastPos.w,
-			(float)equation_results.z / triangle_area / triangle[1].rastPos.w,
-			(float)equation_results.x / triangle_area / triangle[2].rastPos.w
-		);
-		float sum = pcoefs.x + pcoefs.y + pcoefs.z;
-		return pcoefs / sum;
-	}
 }

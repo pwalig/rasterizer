@@ -2,24 +2,24 @@
 
 namespace rast {
 	template <typename Vec4>
-	inline constexpr Vec4 perspective_divided(Vec4 vertex) {
-		return {
-			vertex[0] /= vertex[3],
-			vertex[1] /= vertex[3],
-			vertex[2] /= vertex[3],
-			vertex[3]
-		};
+	inline constexpr Vec4 perspective_divided(Vec4 vec4) {
+		return Vec4(
+			vec4[0] / vec4[3],
+			vec4[1] / vec4[3],
+			vec4[2] / vec4[3],
+			vec4[3]
+		);
 	}
 	namespace perspective_divide {
 		template <typename Vec4>
-		inline constexpr void one(Vec4& Vector) {
-			Vector[0] /= Vector[3];
-			Vector[1] /= Vector[3];
-			Vector[2] /= Vector[3];
+		inline constexpr void divide(Vec4& vec4) {
+			vec4[0] /= vec4[3];
+			vec4[1] /= vec4[3];
+			vec4[2] /= vec4[3];
 		}
 		template <typename Vec4Iter>
 		inline constexpr void range(Vec4Iter begin, Vec4Iter end) {
-			for (auto it = begin; it != end; ++it) one(*it);
+			for (auto it = begin; it != end; ++it) divide(*it);
 		}
 		template <typename RangeOfVec4s>
 		inline constexpr void range(RangeOfVec4s& Range) {

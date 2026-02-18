@@ -27,7 +27,7 @@ namespace rast {
 			typename VertexIter end
 		) {
 			for (VertexIter it = begin; it != end; ++it) {
-				perspective_divide::one(it->rastPos);
+				perspective_divide::divide(it->rastPos);
 			}
 		}
 

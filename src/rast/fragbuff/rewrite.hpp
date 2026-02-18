@@ -11,17 +11,16 @@ namespace rast::fragbuff {
 			uint32_t x;
 			uint32_t y;
 			vertex* triangle;
-			int equation_results[3];
-			int area;
+			float partial_coefs[3];
 		};
 
 		std::vector<entry> storage;
 
 		void push(
 			uint32_t x, uint32_t y, vertex* triangle,
-			int equation_results[3], int area
+			float partial_coefs[3]
 		) {
-			storage.push_back({ x, y, triangle, equation_results, area });
+			storage.push_back({ x, y, triangle, partial_coefs });
 		};
 	};
 }
