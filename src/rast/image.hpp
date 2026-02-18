@@ -59,7 +59,7 @@ namespace rast {
 		inline size_type width() const { return _width; }
 		inline size_type height() const { return _height; }
 		inline color& at(size_type x, size_type y) { return _data[y * _width + x]; }
-		inline const color& at(size_type x, size_type y) const { return _data.at(y * _width + x); }
+		inline const color& at(size_type x, size_type y) const { return _data[y * _width + x]; }
 		inline color* data() { return _data; }
 		inline const color* data() const { return _data; }
 		inline const size_type area() const { return _width * _height; }

@@ -1,6 +1,14 @@
 #pragma once
 
 namespace rast::interpol {
+	template <size_t Size, typename T>
+	inline constexpr T interpolate(T elems[Size], float coefs[Size]) {
+		T res;
+		for (size_t i = 0; i < Size; ++i) {
+			res += elems[i] * coefs[i];
+		}
+		return res;
+	}
 	template <typename T, typename Vec3>
 	inline constexpr T interpolate(T a, T b, T c, Vec3 coefs) {
 		return (a * coefs[0]) + (b * coefs[1]) + (c * coefs[2]);

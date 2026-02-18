@@ -11,9 +11,9 @@ namespace rast::raster {
 			const tile& tile,
 			Args&&... args
 		) {
-			glm::ivec2 a = toScreenSpace(triangle[0].rastPos, viewport);
-			glm::ivec2 b = toScreenSpace(triangle[1].rastPos, viewport);
-			glm::ivec2 c = toScreenSpace(triangle[2].rastPos, viewport);
+			glm::ivec2 a = to_screen_space(triangle[0].rastPos, viewport);
+			glm::ivec2 b = to_screen_space(triangle[1].rastPos, viewport);
+			glm::ivec2 c = to_screen_space(triangle[2].rastPos, viewport);
 
 			glm::ivec2 min = glm::ivec2(
 				std::max((int)std::min({ a.x, b.x, c.x }), std::max(tile.min.x, viewport.offset.x)),
@@ -66,7 +66,7 @@ namespace rast::raster {
 				}
 				Cx = Cy - E;
 				for (int x = X; x < max.x; ++x, E -= Dy) {
-					dispached_output<Shader>(output, x, y, triangle, partial_coefs(E, area), args...);
+					dispached_output<Shader>(output, x, y, triangle, partial_coefs<glm::vec3>(E, area), std::forward<Args>(args)...);
 					if (E.x < 0 || E.y < 0 || E.z < 0) break;
 				}
 			}

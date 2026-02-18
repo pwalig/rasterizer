@@ -6,35 +6,35 @@ namespace rast::depth_test {
 	};
 
 	template <typename depth_format>
-	inline bool always(depth_format, depth_format) {
+	inline constexpr bool always(depth_format, depth_format) {
 		return true;
 	}
 	template <typename depth_format>
-	inline bool never(depth_format, depth_format) {
+	inline constexpr bool never(depth_format, depth_format) {
 		return false;
 	}
 	template <typename depth_format>
-	inline bool less(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr bool less(depth_format newDepth, depth_format oldDepth) {
 		return newDepth < oldDepth;
 	}
 	template <typename depth_format>
-	inline bool equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr bool equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth == oldDepth;
 	}
 	template <typename depth_format>
-	inline bool less_or_equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr bool less_or_equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth <= oldDepth;
 	}
 	template <typename depth_format>
-	inline bool greater(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr bool greater(depth_format newDepth, depth_format oldDepth) {
 		return newDepth > oldDepth;
 	}
 	template <typename depth_format>
-	inline bool not_equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr bool not_equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth != oldDepth;
 	}
 	template <typename depth_format>
-	inline bool greater_or_equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr bool greater_or_equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth >= oldDepth;
 	}
 
@@ -114,6 +114,8 @@ namespace rast::depth_test {
 
 	namespace runtime {
 		template <typename depth_format>
-		void get_function(option Option) { return functions[static_cast<uint8_t>(Option)]; }
+		inline constexpr function::type<depth_format> get_function(option Option) {
+			return functions<depth_format>[static_cast<uint8_t>(Option)];
+		}
 	}
 }

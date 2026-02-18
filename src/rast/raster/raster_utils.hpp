@@ -5,18 +5,22 @@
 #include "../tile.hpp"
 
 namespace rast::raster {
-	inline constexpr glm::ivec2 toScreenSpace(const glm::vec4& vertex, const viewport& viewport) {
+	inline constexpr glm::ivec2 to_screen_space(const glm::vec4& vertex, const viewport& viewport) {
 		return glm::ivec2(
 			(( vertex.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
 			(( -vertex.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
 		);
 	}
 
-	inline constexpr glm::vec3 partial_coefs(glm::ivec3 E, int area) {
-		return glm::vec3(
-			static_cast<float>(E.y) / area,
-			static_cast<float>(E.z) / area,
-			static_cast<float>(E.x) / area
+	template <typename T, typename EquationResults>
+	inline constexpr T partial_coefs(EquationResults E, typename EquationResults::value_type area) {
+		static_assert(std::is_integral_v<typename EquationResults::value_type>);
+		using Float = typename T::value_type;
+		static_assert(std::is_floating_point_v<Float>);
+		return T(
+			static_cast<Float>(E.y) / area,
+			static_cast<Float>(E.z) / area,
+			static_cast<Float>(E.x) / area
 		);
 	}
 
@@ -30,8 +34,10 @@ namespace rast::raster {
 	);
 
 
-	glm::ivec3 fill_convention(const glm::ivec3& Dx, const glm::ivec3& Dy) {
-		return glm::ivec3(
+	template <typename T>
+	inline constexpr T fill_convention(T Dx, T Dy) {
+		static_assert(std::is_integral_v<typename T::value_type>);
+		return T(
 			(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
 			(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
 			(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
