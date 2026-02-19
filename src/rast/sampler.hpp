@@ -14,8 +14,8 @@ namespace rast {
 		size_type width;
 		size_type height;
 
-		inline static constexpr size_type mip_length(size_type Length, size_type mip) {
-			return mipmapped_image<color>::length_at_mip_level(Length, mip);
+		inline constexpr size_type mip_length(size_type Length, size_type mip) const {
+			return mipmapped_image<color>::length_at_valid_mip_level(Length, width, height, mip);
 		}
 
 	public:

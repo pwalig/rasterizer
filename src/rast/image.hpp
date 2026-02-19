@@ -173,8 +173,12 @@ namespace rast {
 			}
 			return res;
 		}
+		inline static constexpr size_type valid_mip_level(size_type Width, size_type Height, size_type mip) noexcept {
+			return std::min(mip, mip_levels(Width, Height) - 1);
+		}
 		inline static constexpr size_type mip_offset(size_type Width, size_type Height, size_type mip) noexcept {
 			size_type offset = 0;
+			mip = valid_mip_level(Width, Height, mip);
 			while (mip > 0) {
 				offset += Width * Height;
 				Width /= 2;
@@ -183,8 +187,11 @@ namespace rast {
 			}
 			return offset;
 		}
-		inline static constexpr size_type length_at_mip_level(size_type Size, size_type mip) noexcept {
-			return Size >> mip;
+		inline static constexpr size_type length_at_mip_level(size_type Length, size_type mip) noexcept {
+			return Length >> mip;
+		}
+		inline static constexpr size_type length_at_valid_mip_level(size_type Length, size_type Width, size_type Height, size_type mip) noexcept {
+			return length_at_mip_level(Length, valid_mip_level(Width, Height, mip));
 		}
 		inline static constexpr void downsize(typename image<T>::view Dst, typename image<T>::view Src) {
 			for (size_type x = 0; x < Dst.width(); ++x) {
@@ -213,8 +220,8 @@ namespace rast {
 
 		inline constexpr size_type width() const { return image<T>::_width; }
 		inline constexpr size_type height() const { return image<T>::_height; }
-		inline constexpr size_type width(size_type mip) const { return length_at_mip_level(image<T>::_width, mip); }
-		inline constexpr size_type height(size_type mip) const { return length_at_mip_level(image<T>::_height, mip); }
+		inline constexpr size_type width(size_type mip) const { return length_at_mip_level(width(), mip); }
+		inline constexpr size_type height(size_type mip) const { return length_at_mip_level(height(), mip); }
 		inline constexpr size_type area() const noexcept { return image<T>::_width * image<T>::_height; }
 		inline constexpr size_type area(size_type mip) const noexcept { return width(mip) * height(mip); }
 		inline constexpr size_type mip_levels() const { return mip_levels(width(), height()); }
