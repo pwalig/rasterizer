@@ -14,6 +14,7 @@ namespace rast::shader {
 	struct lambert_textured {
 		struct fragment {
 			inline static bool linear = false;
+			inline static uint32_t mip_to_sample = 0;
 			using input = inputs::normal_uv;
 			using output = outputs::discardable<color::rgba8>;
 			inline static float alpha_clip_threshold = 0.25f;
@@ -45,8 +46,8 @@ namespace rast::shader {
 				glm::vec4 color;
 				if (uniforms.texture) {
 					//color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y));
-					if (linear) color = uniforms.texture.sample_linear<color_interpolator>(frag.uv.x, frag.uv.y);
-					else color = uniforms.texture.sample_nearest<convert::uint_to_f01<uint8_t, float>>(frag.uv.x, frag.uv.y);
+					if (linear) color = uniforms.texture.sample_linear<color_interpolator>(frag.uv.x, frag.uv.y, mip_to_sample);
+					else color = uniforms.texture.sample_nearest<convert::uint_to_f01<uint8_t, float>>(frag.uv.x, frag.uv.y, mip_to_sample);
 					if (color.a <= alpha_clip_threshold) return output::discard();
 				}
 				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);

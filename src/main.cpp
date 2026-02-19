@@ -72,7 +72,7 @@ struct scene {
 	using shader = rast::shader::lambert_textured;
 	using mesh_type = rast::mesh::indexed<rast::shader::inputs::position_normal_uv>;
 
-	std::vector<rast::image<rast::color::rgba8>> textures;
+	std::vector<rast::mipmapped_image<rast::color::rgba8>> textures;
 	std::vector<mesh_type> meshes;
 	std::vector<material<shader>> materials;
 	std::vector<object> objects;
@@ -126,9 +126,9 @@ struct scene {
 				for (rapidjson::SizeType i = 0; i < textures_node.Size(); i++) {
 					std::filesystem::path tmp = texture_pack_path;
 					tmp.append(textures_node[i].GetString());
-					textures.push_back(rast::image<rast::color::rgba8>::load(
+					textures.push_back(rast::mipmapped_image<rast::color::rgba8>(rast::image<rast::color::rgba8>::load(
 						tmp.string().c_str()
-					));
+					)));
 				}
 
 			}
@@ -347,8 +347,12 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 	if (event->type == SDL_EVENT_KEY_UP) {
 		if (event->key.scancode < pressed.size())
 			pressed.reset(event->key.scancode);
-		if (event->key.scancode == SDL_SCANCODE_1) {
+		if (event->key.scancode == SDL_SCANCODE_0) {
 			rast::shader::lambert_textured::fragment::linear = !rast::shader::lambert_textured::fragment::linear;
+			app.request_frame = true;
+		}
+		if (event->key.scancode >= SDL_SCANCODE_1 && event->key.scancode <= SDL_SCANCODE_9) {
+			rast::shader::lambert_textured::fragment::mip_to_sample = event->key.scancode - SDL_SCANCODE_1;
 			app.request_frame = true;
 		}
 	}
