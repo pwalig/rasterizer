@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cstring>
 #include "trivial_iterator.hpp"
 
 // vector which size is always equal to capacity

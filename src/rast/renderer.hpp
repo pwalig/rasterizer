@@ -23,8 +23,8 @@ namespace rast {
 	public:
 		template <typename VertexIter>
 		inline static void perspective_divide(
-			typename VertexIter begin,
-			typename VertexIter end
+			VertexIter begin,
+			VertexIter end
 		) {
 			for (VertexIter it = begin; it != end; ++it) {
 				perspective_divide::divide(it->rastPos);
@@ -32,7 +32,7 @@ namespace rast {
 		}
 
 		template <typename VertexShader, typename Clipper>
-		inline static void run_vertex_shader_array(
+		inline static typename VertexShader::output* run_vertex_shader_array(
 			const typename VertexShader::input* vertex_begin,
 			const typename VertexShader::input* vertex_end,
 			const typename VertexShader::uniform_buffer& uniform_buffer,
@@ -62,7 +62,6 @@ namespace rast {
 			const viewport& viewport,
 			const tile& tile
 		) {
-			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
 
 			for (auto vert = vertex_begin; vert != vertex_end;) {
@@ -103,7 +102,6 @@ namespace rast {
 			const typename VertexShader::uniform_buffer& uniform_buffer,
 			typename VertexShader::output* output
 		) {
-			using input_vertex = typename VertexShader::input;
 			using output_vertex = typename VertexShader::output;
 
 			std::vector<output_vertex> vertex_buffer;
@@ -155,7 +153,6 @@ namespace rast {
 			const viewport& viewport,
 			const tile& tile
 		) {
-			using input_vertex = typename Shader::vertex::input;
 			using output_vertex = typename Shader::vertex::output;
 
 			std::vector<output_vertex> vertex_buffer;

@@ -65,14 +65,14 @@ namespace rast {
 		inline const size_type area() const { return _width * _height; }
 
 		template <resize_filter filter>
-		inline void resize(size_type Width, size_type Height);
-
-		template<>
-		inline void resize<resize_filter::dont_care>(size_type Width, size_type Height) {
-			if (_data) delete[] _data;
-			_data = new color[Width * Height];
-			_width = Width;
-			_height = Height;
+		inline void resize(size_type Width, size_type Height) {
+			if constexpr (filter == resize_filter::dont_care) {
+				if (_data) delete[] _data;
+				_data = new color[Width * Height];
+				_width = Width;
+				_height = Height;
+			}
+			else static_assert(false);
 		}
 
 		inline void clear(color clear_color) {

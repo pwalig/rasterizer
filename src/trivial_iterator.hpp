@@ -96,7 +96,7 @@ public:
 		temp -= n;
 		return temp;
 	}
-	friend inline difference_type operator-(const trivial_proxy_random_access_iterator& lhs, const trivial_proxy_random_access_iterator& rhs) { return (lhs.ptr - rhs.ptr) / siz; }
+	friend inline difference_type operator-(const trivial_proxy_random_access_iterator& lhs, const trivial_proxy_random_access_iterator& rhs) { return (lhs.ptr - rhs.ptr) / lhs.siz; }
 };
 
 #define iterator_defs(ptr, size) \
@@ -143,4 +143,4 @@ inline const_reverse_iterator crend() const { return const_reverse_iterator(ptr 
 
 #define proxy_all_iterator_defs(ptr, proxy_size, size) \
 proxy_iterator_defs(ptr, proxy_size, size) \
-proxy_const_iterator_defs(ptr, proxy_size, size) \
+proxy_const_iterator_defs(ptr, proxy_size, size)

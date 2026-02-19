@@ -14,7 +14,7 @@ namespace rast {
 		// Shader::vertex::output* end = clip<typename Shader::vertex::output>(verts);
 		template <typename vertex>
 		inline static vertex* clip(
-			typename vertex* verts
+			vertex* verts
 		) {
 			if (
 				verts[0].rastPos.z > verts[0].rastPos.w ||

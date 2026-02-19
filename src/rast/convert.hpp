@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <xmmintrin.h>
 
 #include <glm/glm.hpp>
 

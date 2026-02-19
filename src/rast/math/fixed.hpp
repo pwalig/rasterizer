@@ -100,19 +100,19 @@ namespace rast::math {
 
 	private:
 		inline constexpr value_type one() { return static_cast<value_type>(1) << bits_of_precision; }
-		template <typename T>
-		inline static constexpr value_type to_fixed(T Value) {
-			if constexpr (std::is_floating_point_v<T>) return static_cast<value_type>(std::round(Value * one()));
+		template <typename U>
+		inline static constexpr value_type to_fixed(U Value) {
+			if constexpr (std::is_floating_point_v<U>) return static_cast<value_type>(std::round(Value * one()));
 			else {
-				static_assert(std::is_integral_v<T>);
-				return static_cast<value_type>(Value << bits_of_precision);
+				static_assert(std::is_integral_v<U>);
+				return static_cast<value_type>(Value * one());
 			}
 		}
 		value_type _data;
 
 	public:
 		inline constexpr explicit fixed() : _data(0) {}
-		template <typename T> inline constexpr explicit fixed(T Value) : _data(to_fixed(Value)) {}
+		template <typename U> inline constexpr explicit fixed(U Value) : _data(to_fixed(Value)) {}
 
 		friend constexpr fixed floor<T, Precision>(fixed Value);
 		friend constexpr fixed round<T, Precision>(fixed Value);
@@ -149,15 +149,15 @@ namespace rast::math {
 		friend inline constexpr bool operator==(fixed lhs, fixed rhs) { return lhs._data == rhs._data; }
 		friend inline constexpr bool operator!=(fixed lhs, fixed rhs) { return lhs._data != rhs._data; }
 	};
-	template <typename uint8_t Precision> using fixed8 = fixed<int8_t, Precision>;
-	template <typename uint8_t Precision> using fixed16 = fixed<int16_t, Precision>;
-	template <typename uint8_t Precision> using fixed32 = fixed<int32_t, Precision>;
-	template <typename uint8_t Precision> using fixed64 = fixed<int64_t, Precision>;
-	template <typename uint8_t Precision> using ufixed8 = fixed<uint8_t, Precision>;
-	template <typename uint8_t Precision> using ufixed16 = fixed<uint16_t, Precision>;
-	template <typename uint8_t Precision> using ufixed32 = fixed<uint32_t, Precision>;
-	template <typename uint8_t Precision> using ufixed64 = fixed<uint64_t, Precision>;
-	template <typename uint8_t Precision> using fixed_size = fixed<size_t, Precision>;
+	template <uint8_t Precision> using fixed8 = fixed<int8_t, Precision>;
+	template <uint8_t Precision> using fixed16 = fixed<int16_t, Precision>;
+	template <uint8_t Precision> using fixed32 = fixed<int32_t, Precision>;
+	template <uint8_t Precision> using fixed64 = fixed<int64_t, Precision>;
+	template <uint8_t Precision> using ufixed8 = fixed<uint8_t, Precision>;
+	template <uint8_t Precision> using ufixed16 = fixed<uint16_t, Precision>;
+	template <uint8_t Precision> using ufixed32 = fixed<uint32_t, Precision>;
+	template <uint8_t Precision> using ufixed64 = fixed<uint64_t, Precision>;
+	template <uint8_t Precision> using fixed_size = fixed<size_t, Precision>;
 
 	template <typename T, uint8_t Precision> constexpr fixed<T, Precision> floor(fixed<T, Precision> Value) {
 		return fixed<T, Precision>();

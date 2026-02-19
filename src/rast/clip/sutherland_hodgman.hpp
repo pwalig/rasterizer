@@ -15,7 +15,7 @@ namespace rast {
 		// Shader::vertex::output* end = clip<typename Shader::vertex::output>(verts);
 		template <typename vertex>
 		inline static vertex* clip(
-			typename vertex* verts
+			vertex* verts
 		) {
 			vertex list[maxSutherlandHodgmanVerts];
 			std::memcpy(list, verts, 3 * sizeof(vertex));

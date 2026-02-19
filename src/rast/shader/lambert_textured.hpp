@@ -38,7 +38,7 @@ namespace rast::shader {
 
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
-				using arm = math::fixed_point_arithmetic<uint32_t, 16>;
+				//using arm = math::fixed_point_arithmetic<uint32_t, 16>;
 
 				glm::vec3 N = glm::normalize(frag.normal);
 				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);

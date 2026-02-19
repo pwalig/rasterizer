@@ -272,10 +272,10 @@ struct application {
 		glm::mat4 PV = P * V;
 		scene.draw<Shader>(PV,
 			[viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
-			(const scene::mesh_type& mesh, const Shader::uniform_buffer& ubo)
+			(const scene::mesh_type& mesh, const typename Shader::uniform_buffer& ubo)
 			{ cmd_buffer.draw_indexed(mesh, ubo, viewport); }
 		);
-		cmd_buffer.submit<rasterizer, clipper>(framebuf, tp);
+		cmd_buffer.template submit<rasterizer, clipper>(framebuf, tp);
 	}
 };
 

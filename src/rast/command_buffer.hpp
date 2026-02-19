@@ -62,7 +62,7 @@ namespace rast {
 			tp.wait(); // should be some sort of synch not wait
 
 			float stride = (float)framebuffer.width() / tp.thread_count();
-			for (int i = 0; i < tp.thread_count(); ++i) {
+			for (size_t i = 0; i < tp.thread_count(); ++i) {
 				tp.enque([&framebuffer, &cmds = (this->commands), i, stride]() {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 					for (const command& cmd : cmds) {
