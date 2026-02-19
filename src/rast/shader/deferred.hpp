@@ -7,7 +7,7 @@
 
 #include "shader_macros.hpp"
 #include "../color.hpp"
-#include "../texture.hpp"
+#include "../sampler.hpp"
 
 namespace rast::shader::deferred {
 	struct first_pass {
@@ -19,13 +19,13 @@ namespace rast::shader::deferred {
 			};
 
 			struct uniform_buffer {
-				texture<color::rgba8>::sampler texture;
+				sampler<color::rgba8> texture;
 			};
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
 				return {
 					frag.normal,
-					uniforms.texture.sample(frag.uv)
+					uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y)
 				};
 			}
 		};
@@ -59,14 +59,14 @@ namespace rast::shader::deferred {
 			using output = color::rgba8;
 
 			struct uniform_buffer {
-				texture<first_pass::fragment::output>::sampler texture;
+				sampler<first_pass::fragment::output> texture;
 				glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
 				glm::vec3 light_color = glm::vec3(1.0f);
 				glm::vec3 ambient = glm::vec3(0.1f);
 			};
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
-				first_pass::fragment::output F = uniforms.texture.sample(frag);
+				first_pass::fragment::output F = uniforms.texture.sample_nearest(frag.x, frag.y);
 				//return F.albedo;
 				//return convert::f01_to_uint<float, uint8_t>(glm::vec4((F.normal + 1.0f) / 2.0f, 1.0f));
 				glm::vec3 N = glm::normalize(F.normal);

@@ -26,7 +26,7 @@
 #include "rast/shader/constant.hpp"
 #include "rast/shader/vertex_colored.hpp"
 #include "rast/shader/textured.hpp"
-#include "rast/texture.hpp"
+#include "rast/sampler.hpp"
 #include "rast/shader/lambert_textured.hpp"
 #include "rast/shader/deferred.hpp"
 #include "rast/framebuffer.hpp"
@@ -347,6 +347,10 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 	if (event->type == SDL_EVENT_KEY_UP) {
 		if (event->key.scancode < pressed.size())
 			pressed.reset(event->key.scancode);
+		if (event->key.scancode == SDL_SCANCODE_1) {
+			rast::shader::lambert_textured::fragment::linear = !rast::shader::lambert_textured::fragment::linear;
+			app.request_frame = true;
+		}
 	}
 	if (event->type == SDL_EVENT_MOUSE_MOTION) {
 		mouseDelta.x = event->motion.xrel;
@@ -413,7 +417,7 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 
 		// second pass
 		rast::shader::deferred::second_pass::fragment::uniform_buffer ubo;
-		ubo.texture = rast::texture<application::g_format>::sampler(app.g_buffer);
+		ubo.texture = rast::sampler<application::g_format>(app.g_buffer);
 		rast::shade_screen_quad<rast::shader::deferred::second_pass::fragment>(ubo, out_framebuf, tp);
 	}
 	else {

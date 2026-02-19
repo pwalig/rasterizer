@@ -50,7 +50,7 @@
     <ClInclude Include="src\rast\shader\vertex_colored.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\texture.hpp">
+    <ClInclude Include="src\rast\sampler.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\textured.hpp">
@@ -132,6 +132,12 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\perspective_divide.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\math\fixed.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\math\rounding.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

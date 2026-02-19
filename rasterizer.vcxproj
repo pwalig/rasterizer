@@ -158,6 +158,8 @@
     <ClInclude Include="src\rast\fragbuff\rewrite.hpp" />
     <ClInclude Include="src\rast\interpolation.hpp" />
     <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp" />
+    <ClInclude Include="src\rast\math\fixed.hpp" />
+    <ClInclude Include="src\rast\math\rounding.hpp" />
     <ClInclude Include="src\rast\perspective_divide.hpp" />
     <ClInclude Include="src\rast\raster\bbox_scan.hpp" />
     <ClInclude Include="src\rast\raster\left_edge.hpp" />
@@ -177,7 +179,7 @@
     <ClInclude Include="src\rast\shader\textured.hpp" />
     <ClInclude Include="src\rast\shader\vertex_colored.hpp" />
     <ClInclude Include="src\rast\shader\shader_macros.hpp" />
-    <ClInclude Include="src\rast\texture.hpp" />
+    <ClInclude Include="src\rast\sampler.hpp" />
     <ClInclude Include="src\sa_vector.hpp" />
     <ClInclude Include="src\trivial_iterator.hpp" />
   </ItemGroup>

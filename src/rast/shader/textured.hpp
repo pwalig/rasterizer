@@ -6,7 +6,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 
 #include "../color.hpp"
-#include "../texture.hpp"
+#include "../sampler.hpp"
 #include "shader_macros.hpp"
 
 namespace rast::shader {
@@ -16,11 +16,11 @@ namespace rast::shader {
 			using output = color::rgba8;
 
 			struct uniform_buffer {
-				texture<rast::color::rgba8>::sampler texture;
+				sampler<rast::color::rgba8> texture;
 			};
 
 			inline static color::rgba8 shade(const input& frag, const uniform_buffer& uniforms) {
-				if (uniforms.texture) return uniforms.texture.sample(frag);
+				if (uniforms.texture) return uniforms.texture.sample_nearest(frag.x, frag.y);
 				else return color::rgba8(255, 0, 255, 255);
 			}
 		};

@@ -24,7 +24,9 @@ namespace rast::convert {
 		);
 	}
 
-	template <typename Source, typename Dest>
-	inline constexpr Dest between(Source src) {
+	inline __m128 uint_to_f01_sse(__m128i in) {
+		__m128 res = _mm_cvtepi32_ps(in);
+		__m128 div = _mm_set_ps1(static_cast<float>(std::numeric_limits<uint32_t>::max()));
+		return _mm_div_ps(res, div);
 	}
 }

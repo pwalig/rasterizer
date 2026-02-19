@@ -1,0 +1,31 @@
+#pragma once
+#include <type_traits>
+
+namespace rast::math {
+	template <typename U, typename T>
+	inline constexpr U trunc(T x) {
+		static_assert(std::is_floating_point_v<T>);
+		static_assert(std::is_arithmetic_v<U>);
+
+		if constexpr (std::is_floating_point_v<U>)
+			return static_cast<U>(static_cast<int64_t>(x));
+		else return static_cast<U>(x);
+	}
+	template <typename U, typename T>
+	inline constexpr U round(T x) {
+		return trunc<U>(x >= 0.0 ? x + 0.5 : x - 0.5);
+	}
+	template <typename U, typename T>
+	inline constexpr U floor(T x) {
+		return trunc<U>(x >= 0.0 ? x : x - 1.0);
+	}
+	template <typename U, typename T>
+	inline constexpr U ceil(T x) {
+		return trunc<U>(x >= 0.0 ? x + 1.0 : x);
+	}
+	static_assert(trunc<int>(3.14f) == 3);
+	static_assert(trunc<float>(3.14f) == 3.0f);
+	static_assert(trunc<float>(-3.14f) == -3.0f);
+	static_assert(floor<float>(3.14f) == 3.0f);
+	static_assert(floor<float>(-3.14f) == -4.0f);
+}
