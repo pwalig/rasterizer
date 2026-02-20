@@ -159,7 +159,7 @@
     <ClInclude Include="src\rast\interpolation.hpp" />
     <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp" />
     <ClInclude Include="src\rast\math\fixed.hpp" />
-    <ClInclude Include="src\rast\math\rounding.hpp" />
+    <ClInclude Include="src\rast\math.hpp" />
     <ClInclude Include="src\rast\perspective_divide.hpp" />
     <ClInclude Include="src\rast\raster\bbox_scan.hpp" />
     <ClInclude Include="src\rast\raster\left_edge.hpp" />

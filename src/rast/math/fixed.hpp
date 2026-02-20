@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <cmath>
 #include <type_traits>
-#include "rounding.hpp"
+#include "../math.hpp"
 
 namespace rast::math {
 	template <typename T, uint8_t Precision>

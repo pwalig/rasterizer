@@ -22,8 +22,8 @@ namespace rast {
 		using value_type = T;
 		using reference = std::add_lvalue_reference_t<value_type>;
 		using pointer = std::add_pointer_t<value_type>;
-		using const_reference = std::add_const_t<reference>;
-		using const_pointer = std::add_const_t<pointer>;
+		using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
+		using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
 
 	protected:
 		pointer _data;
@@ -99,8 +99,8 @@ namespace rast {
 			using value_type = U;
 			using reference = std::add_lvalue_reference_t<value_type>;
 			using pointer = std::add_pointer_t<value_type>;
-			using const_reference = std::add_const_t<reference>;
-			using const_pointer = std::add_const_t<pointer>;
+			using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
+			using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
 			
 		private:
 			pointer _data;
@@ -151,8 +151,8 @@ namespace rast {
 		using value_type = T;
 		using reference = std::add_lvalue_reference_t<value_type>;
 		using pointer = std::add_pointer_t<value_type>;
-		using const_reference = std::add_const_t<reference>;
-		using const_pointer = std::add_const_t<pointer>;
+		using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
+		using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
 
 		inline static constexpr size_type mip_levels(size_type Width, size_type Height) noexcept {
 			size_type MipLevels = 0;
@@ -208,7 +208,7 @@ namespace rast {
 		
 		inline constexpr mipmapped_image() : image<T>() {}
 		inline mipmapped_image(size_type Width, size_type Height) : image<T>(new color[size(Width, Height)], Width, Height) {}
-		inline explicit mipmapped_image(mipmapped_image<T>&& rhs) : image<T>(rhs.image<T>::_data, rhs.image<T>::_width, rhs.image<T>::_height) {
+		inline explicit mipmapped_image(mipmapped_image<T>&& rhs) noexcept : image<T>(rhs.image<T>::_data, rhs.image<T>::_width, rhs.image<T>::_height) {
 			rhs.image<T>::_data = nullptr;
 		}
 		inline explicit mipmapped_image(const image<T>& Image) : mipmapped_image(Image.width(), Image.height()) {

@@ -137,7 +137,7 @@
     <ClInclude Include="src\rast\math\fixed.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\math\rounding.hpp">
+    <ClInclude Include="src\rast\math.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

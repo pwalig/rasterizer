@@ -23,6 +23,10 @@ namespace rast::math {
 	inline constexpr U ceil(T x) {
 		return trunc<U>(x >= 0.0 ? x + 1.0 : x);
 	}
+	template <typename T>
+	inline constexpr T abs(T x) {
+		return x < 0 ? -x : x;
+	}
 	static_assert(trunc<int>(3.14f) == 3);
 	static_assert(trunc<float>(3.14f) == 3.0f);
 	static_assert(trunc<float>(-3.14f) == -3.0f);
