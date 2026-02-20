@@ -5,6 +5,18 @@
 #include "math/fixed.hpp"
 
 namespace rast {
+	enum struct min_filter {
+		nearest, linear,
+		nearest_mipmap_nearest,
+		nearest_mipmap_linear,
+		linear_mipmap_nearest,
+		linear_mipmap_linear,
+		bilinear = linear,
+		trilinear = linear_mipmap_linear
+	};
+	enum struct mag_filter {
+		nearest, linear, bilinear = linear
+	};
 	template <typename ColorT = color::rgba8>
 	struct sampler {
 		using size_type = uint32_t;
@@ -35,14 +47,6 @@ namespace rast {
 			size_type off = mipmapped_image<color>::mip_offset(width, height, mip);
 			return (data + off)[y * mip_length(width, mip) + x];
 		}
-		template <auto Converter>
-		inline constexpr auto sample(size_type x, size_type y, size_type mip = 0) const {
-			return Converter(sample(x, y));
-		}
-		template <typename Callable>
-		inline constexpr auto sample(size_type x, size_type y, Callable converter, size_type mip = 0) const {
-			return converter(sample(x, y));
-		}
 
 		inline constexpr const_reference sample_nearest(float u, float v, size_type mip = 0) const {
 			size_type w = mip_length(width, mip);
@@ -51,78 +55,6 @@ namespace rast {
 			size_type y = math::floor<size_type>(v * h) % h;
 			return sample(x, y, mip);
 		}
-		template <auto Converter>
-		inline constexpr auto sample_nearest(float u, float v, size_type mip = 0) const {
-			return Converter(sample_nearest(u, v, mip));
-		}
-
-		inline constexpr void sample_nearest_mipmap_nearest(
-			const float u[4], const float v[4], color dst[4]
-		) const {
-			float x[4] = {
-				u[0] * width, u[1] * width,
-				u[2] * width, u[3] * width
-			};
-			float y[4] = {
-				v[0] * height, v[1] * height,
-				v[2] * height, v[3] * height
-			};
-			float x_up = math::abs(x[0] - x[1]);
-			float x_down = math::abs(x[2] - x[3]);
-			float y_left = math::abs(y[0] - y[2]);
-			float y_right = math::abs(y[1] - y[3]);
-
-			auto _get_mip_level = [](float dx, float dy) {
-				size_type delta = math::floor<size_type>((dx + dy) / 2.0f);
-				if (delta == 0) return size_type(0);
-				--delta;
-				size_type mip = 0;
-				while (delta > 0) {
-					delta /= 2;
-					mip += 1;
-				}
-				return mip;
-				};
-			size_type mip_levels[4] = {
-				_get_mip_level(x_up, y_left), _get_mip_level(x_up, y_right),
-				_get_mip_level(x_down, y_left), _get_mip_level(x_down, y_right)
-			};
-			dst[0] = sample_nearest(u[0], v[0], mip_levels[0]);
-			dst[1] = sample_nearest(u[1], v[1], mip_levels[1]);
-			dst[2] = sample_nearest(u[2], v[2], mip_levels[2]);
-			dst[3] = sample_nearest(u[3], v[3], mip_levels[3]);
-		}
-		inline constexpr std::array<value_type, 4> sample_nearest_mipmap_nearest(
-			const float u[4], const float v[4]
-		) const {
-			auto res = std::array<value_type, 4>();
-			sample_nearest_mipmap_nearest(u, v, res.data());
-			return res;
-		}
-
-		//inline constexpr auto sample_linear(uint32_t u, uint32_t v) const {
-		//	using arm = math::fixed_point_arithmetic<uint32_t, 16>;
-		//	u *= width;
-		//	v *= height;
-		//	uint32_t coefs[2] = {
-		//		u - arm::half - arm::floor(u - arm::half),
-		//		v - arm::half - arm::floor(v - arm::half),
-		//	};
-		//	size_type x[2] = {
-		//		static_cast<size_type>(arm::round(u)) % width,
-		//		static_cast<size_type>(arm::round(u - arm::one)) % width
-		//	};
-		//	size_type y[2] = {
-		//		arm::from_fixed<size_type>(arm::round(v)) % height,
-		//		arm::from_fixed<size_type>(arm::round(v - arm::one)) % height
-		//	};
-		//	return (
-		//		(sample(x[0], y[0]) * arm::multiply(coefs[0], coefs[1])) +
-		//		(sample(x[1], y[0]) * arm::multiply((1.0f - coefs[0]), coefs[1])) +
-		//		(sample(x[0], y[1]) * arm::multiply(coefs[0], (1.0f - coefs[1]))) +
-		//		(sample(x[1], y[1]) * arm::multiply((1.0f - coefs[0]), (1.0f - coefs[1])))
-		//	) / arm::one;
-		//}
 
 		template <auto Interpolate>
 		inline constexpr auto sample_linear(float u, float v, size_type mip = 0) const {
@@ -164,6 +96,76 @@ namespace rast {
 			return sample_linear<default_interpolator>(u, v, mip);
 		}
 
+		template <auto Sample>
+		inline constexpr void sample_nearest_mipmap(
+			const float u[4], const float v[4], color dst[4]
+		) const {
+			float x[4] = {
+				u[0] * width, u[1] * width,
+				u[2] * width, u[3] * width
+			};
+			float y[4] = {
+				v[0] * height, v[1] * height,
+				v[2] * height, v[3] * height
+			};
+			float x_up = math::abs(x[0] - x[1]);
+			float x_down = math::abs(x[2] - x[3]);
+			float y_left = math::abs(y[0] - y[2]);
+			float y_right = math::abs(y[1] - y[3]);
+
+			auto _get_mip_level = [](float dx, float dy) {
+				size_type delta = math::floor<size_type>((dx + dy) / 2.0f);
+				if (delta == 0) return size_type(0);
+				--delta;
+				size_type mip = 0;
+				while (delta > 0) {
+					delta /= 2;
+					mip += 1;
+				}
+				return mip;
+				};
+			size_type mip_levels[4] = {
+				_get_mip_level(x_up, y_left), _get_mip_level(x_up, y_right),
+				_get_mip_level(x_down, y_left), _get_mip_level(x_down, y_right)
+			};
+			dst[0] = (this->*Sample)(u[0], v[0], mip_levels[0]);
+			dst[1] = (this->*Sample)(u[1], v[1], mip_levels[1]);
+			dst[2] = (this->*Sample)(u[2], v[2], mip_levels[2]);
+			dst[3] = (this->*Sample)(u[3], v[3], mip_levels[3]);
+		}
+		inline constexpr void sample_nearest_mipmap_nearest(
+			const float u[4], const float v[4], color dst[4]
+		) const {
+			sample_nearest_mipmap<&rast::sampler<color>::sample_nearest>(u, v, dst);
+		}
+		inline constexpr void sample_nearest_mipmap_linear(
+			const float u[4], const float v[4], color dst[4]
+		) const {
+			sample_nearest_mipmap<&rast::sampler<color>::sample_linear<default_interpolator>>(u, v, dst);
+		}
+		template <auto Sample, size_t Amount>
+		inline constexpr std::array<value_type, Amount> sample_many(
+			const float u[Amount], const float v[Amount]
+		) const {
+			auto res = std::array<value_type, Amount>();
+			(this->*Sample)(u, v, res.data());
+			return res;
+		}
+		inline constexpr std::array<value_type, 4> sample_nearest_mipmap_nearest(
+			const float u[4], const float v[4]
+		) const {
+			auto res = std::array<value_type, 4>();
+			sample_nearest_mipmap_nearest(u, v, res.data());
+			return res;
+		}
+		inline constexpr auto sample_nearest_mipmap_linear(
+			const float u[4], const float v[4]
+		) const {
+			auto res = std::array<value_type, 4>();
+			sample_nearest_mipmap_linear(u, v, res.data());
+			return res;
+		}
+
 		inline explicit operator bool() const { return data != nullptr; }
 	};
 	namespace testing::sampler {
@@ -203,6 +205,20 @@ namespace rast {
 			static_assert(s1[1] == 17.0f);
 			static_assert(s1[2] == 18.0f);
 			static_assert(s1[3] == 19.0f);
+
+			constexpr float u2[4] = { 0.25f, 0.5f, 0.25f, 0.5f };
+			constexpr float v2[4] = { 0.25f, 0.25f, 0.5f, 0.5f };
+			constexpr auto s2 = mipsmp.sample_nearest_mipmap_linear(u2, v2);
+			static_assert(s2[0] == 2.5f);
+			static_assert(s2[1] == 3.5f);
+			static_assert(s2[2] == 6.5f);
+			static_assert(s2[3] == 7.5f);
+
+			constexpr float u3[4] = { 0.5f, 1.0f, 0.5f, 1.0f };
+			constexpr float v3[4] = { 0.5f, 0.5f, 1.0f, 1.0f };
+			constexpr auto s3 = mipsmp.sample_nearest_mipmap_linear(u3, v3);
+			static_assert(s3[0] == 17.5f);
+
 			return true;
 		}
 		static_assert(test());

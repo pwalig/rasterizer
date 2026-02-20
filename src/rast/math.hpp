@@ -13,18 +13,18 @@ namespace rast::math {
 	}
 	template <typename U, typename T>
 	inline constexpr U round(T x) {
-		return trunc<U>(x >= 0.0 ? x + 0.5 : x - 0.5);
+		return trunc<U>(x >= T(0.0) ? x + T(0.5) : x - T(0.5));
 	}
 	template <typename U, typename T>
 	inline constexpr U floor(T x) {
-		return trunc<U>(x >= 0.0 ? x : x - 1.0);
+		return trunc<U>(x >= T(0.0) ? x : x - T(1.0));
 	}
 	template <typename U, typename T>
 	inline constexpr U ceil(T x) {
-		return trunc<U>(x >= 0.0 ? x + 1.0 : x);
+		return trunc<U>(x >= T(0.0) ? x + T(1.0) : x);
 	}
 	template <typename T>
-	inline constexpr T abs(T x) {
+	inline constexpr T abs(T x) noexcept {
 		return x < 0 ? -x : x;
 	}
 	static_assert(trunc<int>(3.14f) == 3);

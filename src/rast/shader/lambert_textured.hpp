@@ -47,7 +47,7 @@ namespace rast::shader {
 				if (uniforms.texture) {
 					//color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y));
 					if (linear) color = uniforms.texture.sample_linear<color_interpolator>(frag.uv.x, frag.uv.y, mip_to_sample);
-					else color = uniforms.texture.sample_nearest<convert::uint_to_f01<uint8_t, float>>(frag.uv.x, frag.uv.y, mip_to_sample);
+					else color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y, mip_to_sample));
 					if (color.a <= alpha_clip_threshold) return output::discard();
 				}
 				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
