@@ -87,11 +87,22 @@ namespace rast {
 		}
 
 		inline static constexpr auto default_interpolator(
-				const color& color0, const color& color1, const color& color2, const color& color3,
-				float coef0, float coef1, float coef2, float coef3
-			) {
-				return (color0 * coef0) + (color1 * coef1) + (color2 * coef2) + (color3 * coef3);
-			};
+			const color& color0, const color& color1, const color& color2, const color& color3,
+			float coef0, float coef1, float coef2, float coef3
+		) {
+			return (color0 * coef0) + (color1 * coef1) + (color2 * coef2) + (color3 * coef3);
+		};
+		template <auto MultiplyByFloat>
+		inline static constexpr auto interpolate(
+			const color& color0, const color& color1, const color& color2, const color& color3,
+			float coef0, float coef1, float coef2, float coef3
+		) {
+			return
+				(MultiplyByFloat(color0, coef0)) +
+				(MultiplyByFloat(color1, coef1)) +
+				(MultiplyByFloat(color2, coef2)) +
+				(MultiplyByFloat(color3, coef3));
+		}
 		inline constexpr auto sample_linear(float u, float v, size_type mip = 0) const {
 			return sample_linear<default_interpolator>(u, v, mip);
 		}
@@ -168,7 +179,7 @@ namespace rast {
 
 		inline explicit operator bool() const { return data != nullptr; }
 	};
-	namespace testing::sampler {
+	namespace sampler_test {
 		constexpr float data[4] = { 0.0f, 1.0f, 2.0f, 3.0f };
 		constexpr float mip_data[16 + 4 + 1] = {
 			0.0f, 1.0f, 2.0f, 3.0f,
@@ -179,48 +190,44 @@ namespace rast {
 			18.0f, 19.0f,
 			20.0f
 		};
-		inline constexpr bool test() {
-			constexpr auto smp = rast::sampler<float>(data, 2, 2);
-			static_assert(smp.sample(0, 0) == 0.0f);
-			static_assert(smp.sample(1, 0) == 1.0f);
-			static_assert(smp.sample(0, 1) == 2.0f);
-			static_assert(smp.sample(1, 1) == 3.0f);
-			static_assert(smp.sample_nearest(0.25f, 0.25f) == 0.0f);
-			static_assert(smp.sample_linear(0.5f, 0.5f) == 1.5f);
 
-			// mip map test
-			constexpr auto mipsmp = rast::sampler<float>(mip_data, 4, 4);
-			constexpr float u0[4] = { 0.125f, 0.375f, 0.125f, 0.375f };
-			constexpr float v0[4] = { 0.125f, 0.125f, 0.375f, 0.375f };
-			constexpr auto s0 = mipsmp.sample_nearest_mipmap_nearest(u0, v0);
-			static_assert(s0[0] == 0.0f);
-			static_assert(s0[1] == 1.0f);
-			static_assert(s0[2] == 4.0f);
-			static_assert(s0[3] == 5.0f);
+		constexpr auto smp = rast::sampler<float>(data, 2, 2);
+		static_assert(smp.sample(0, 0) == 0.0f);
+		static_assert(smp.sample(1, 0) == 1.0f);
+		static_assert(smp.sample(0, 1) == 2.0f);
+		static_assert(smp.sample(1, 1) == 3.0f);
+		static_assert(smp.sample_nearest(0.25f, 0.25f) == 0.0f);
+		static_assert(smp.sample_linear(0.5f, 0.5f) == 1.5f);
 
-			constexpr float u1[4] = { 0.25f, 0.75f, 0.25f, 0.75f };
-			constexpr float v1[4] = { 0.25f, 0.25f, 0.75f, 0.75f };
-			constexpr auto s1 = mipsmp.sample_nearest_mipmap_nearest(u1, v1);
-			static_assert(s1[0] == 16.0f);
-			static_assert(s1[1] == 17.0f);
-			static_assert(s1[2] == 18.0f);
-			static_assert(s1[3] == 19.0f);
+		// mip map test
+		constexpr auto mipsmp = rast::sampler<float>(mip_data, 4, 4);
+		constexpr float u0[4] = { 0.125f, 0.375f, 0.125f, 0.375f };
+		constexpr float v0[4] = { 0.125f, 0.125f, 0.375f, 0.375f };
+		constexpr auto s0 = mipsmp.sample_nearest_mipmap_nearest(u0, v0);
+		static_assert(s0[0] == 0.0f);
+		static_assert(s0[1] == 1.0f);
+		static_assert(s0[2] == 4.0f);
+		static_assert(s0[3] == 5.0f);
 
-			constexpr float u2[4] = { 0.25f, 0.5f, 0.25f, 0.5f };
-			constexpr float v2[4] = { 0.25f, 0.25f, 0.5f, 0.5f };
-			constexpr auto s2 = mipsmp.sample_nearest_mipmap_linear(u2, v2);
-			static_assert(s2[0] == 2.5f);
-			static_assert(s2[1] == 3.5f);
-			static_assert(s2[2] == 6.5f);
-			static_assert(s2[3] == 7.5f);
+		constexpr float u1[4] = { 0.25f, 0.75f, 0.25f, 0.75f };
+		constexpr float v1[4] = { 0.25f, 0.25f, 0.75f, 0.75f };
+		constexpr auto s1 = mipsmp.sample_nearest_mipmap_nearest(u1, v1);
+		static_assert(s1[0] == 16.0f);
+		static_assert(s1[1] == 17.0f);
+		static_assert(s1[2] == 18.0f);
+		static_assert(s1[3] == 19.0f);
 
-			constexpr float u3[4] = { 0.5f, 1.0f, 0.5f, 1.0f };
-			constexpr float v3[4] = { 0.5f, 0.5f, 1.0f, 1.0f };
-			constexpr auto s3 = mipsmp.sample_nearest_mipmap_linear(u3, v3);
-			static_assert(s3[0] == 17.5f);
+		constexpr float u2[4] = { 0.25f, 0.5f, 0.25f, 0.5f };
+		constexpr float v2[4] = { 0.25f, 0.25f, 0.5f, 0.5f };
+		constexpr auto s2 = mipsmp.sample_nearest_mipmap_linear(u2, v2);
+		static_assert(s2[0] == 2.5f);
+		static_assert(s2[1] == 3.5f);
+		static_assert(s2[2] == 6.5f);
+		static_assert(s2[3] == 7.5f);
 
-			return true;
-		}
-		static_assert(test());
+		constexpr float u3[4] = { 0.5f, 1.0f, 0.5f, 1.0f };
+		constexpr float v3[4] = { 0.5f, 0.5f, 1.0f, 1.0f };
+		constexpr auto s3 = mipsmp.sample_nearest_mipmap_linear(u3, v3);
+		static_assert(s3[0] == 17.5f);
 	}
 }
