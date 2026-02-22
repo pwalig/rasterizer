@@ -143,5 +143,8 @@
     <ClInclude Include="src\rast\utils\structure_of_arrays.hpp">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\math\vec.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

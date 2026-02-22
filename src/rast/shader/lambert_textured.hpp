@@ -9,6 +9,7 @@
 #include "../convert.hpp"
 #include "../color.hpp"
 #include "../sampler.hpp"
+#include "../math/vec.hpp"
 
 namespace rast::shader {
 	struct lambert_textured {
@@ -16,7 +17,13 @@ namespace rast::shader {
 			inline static bool linear = false;
 			inline static uint32_t mip_to_sample = 0;
 			using input = inputs::normal_uv;
+			struct _4input {
+				math::_4fvec3 normal;
+				math::_4fvec2 uv;
+			};
 			using output = outputs::discardable<color::rgba8>;
+			using _4output = math::_4vec4<uint8_t>;
+
 			inline static float alpha_clip_threshold = 0.25f;
 
 			struct uniform_buffer {
@@ -58,6 +65,34 @@ namespace rast::shader {
 					color.a
 				));
 			}
+			inline static constexpr _4output shade(const _4input& frag, const uniform_buffer& uniforms) {
+				math::_4fvec3 N = frag.normal.normalized();
+				math::_4fscalar nl = math::dot(N, math::_4fvec3(uniforms.light_direction.x, uniforms.light_direction.y, uniforms.light_direction.z));
+				math::_4fvec4 color = math::_4fvec4(1.0f, 1.0f, 1.0f, 1.0f);
+				color.r() *= (nl * math::_4fscalar(uniforms.light_color.x) + math::_4fscalar(uniforms.ambient.x));
+				color.g() *= (nl * math::_4fscalar(uniforms.light_color.y) + math::_4fscalar(uniforms.ambient.y));
+				color.b() *= (nl * math::_4fscalar(uniforms.light_color.z) + math::_4fscalar(uniforms.ambient.z));
+				return _4output(
+					math::cast<uint8_t>(math::clamp(color.r(), math::_4fscalar(0.0f), math::_4fscalar(1.0f)) * math::_4fscalar(std::numeric_limits<uint8_t>::max())),
+					math::cast<uint8_t>(math::clamp(color.g(), math::_4fscalar(0.0f), math::_4fscalar(1.0f)) * math::_4fscalar(std::numeric_limits<uint8_t>::max())),
+					math::cast<uint8_t>(math::clamp(color.b(), math::_4fscalar(0.0f), math::_4fscalar(1.0f)) * math::_4fscalar(std::numeric_limits<uint8_t>::max())),
+					math::cast<uint8_t>(math::clamp(color.a(), math::_4fscalar(0.0f), math::_4fscalar(1.0f)) * math::_4fscalar(std::numeric_limits<uint8_t>::max()))
+				);
+			}
+
+			inline static constexpr bool _4shade_test() {
+				_4input frag = {
+					math::_4fvec3(0.0f, 1.0f, 0.0f),
+					math::_4fvec2(0.0f, 0.0f)
+				};
+				uniform_buffer ubo = {
+					sampler<rast::color::rgba8>(),
+					glm::vec3(0.0f, 1.0f, 0.0f),
+					glm::vec3(1.0f), glm::vec3(0.0f)
+				};
+				auto res = shade(frag, ubo);
+				return res.r()[0] == res.r()[1];
+			}
 		};
 
 
@@ -77,4 +112,5 @@ namespace rast::shader {
 
 		using uniform_buffer = shader_uniform_buffer<lambert_textured>;
 	};
+	static_assert(lambert_textured::fragment::_4shade_test());
 }

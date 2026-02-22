@@ -27,9 +27,18 @@ namespace rast::math {
 	inline constexpr T abs(T x) noexcept {
 		return x < 0 ? -x : x;
 	}
+	template <typename T>
+	inline constexpr T sqrt(T x, T curr, T prev) {
+		return curr == prev ? curr : sqrt(x, static_cast<T>(0.5) * (curr + x / curr), curr);
+	}
+	template <typename T>
+	inline constexpr T sqrt(T x) {
+		return sqrt(x, x, static_cast<T>(0));
+	}
 	static_assert(trunc<int>(3.14f) == 3);
 	static_assert(trunc<float>(3.14f) == 3.0f);
 	static_assert(trunc<float>(-3.14f) == -3.0f);
 	static_assert(floor<float>(3.14f) == 3.0f);
 	static_assert(floor<float>(-3.14f) == -4.0f);
+	static_assert(sqrt<float>(12.25f) == 3.5f);
 }
