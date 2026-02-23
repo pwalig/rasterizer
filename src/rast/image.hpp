@@ -178,7 +178,7 @@ namespace rast {
 		}
 		inline static constexpr size_type mip_offset(size_type Width, size_type Height, size_type mip) noexcept {
 			size_type offset = 0;
-			mip = valid_mip_level(Width, Height, mip);
+			//mip = valid_mip_level(Width, Height, mip);
 			while (mip > 0) {
 				offset += Width * Height;
 				Width /= 2;
