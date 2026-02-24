@@ -6,35 +6,35 @@ namespace rast::depth_test {
 	};
 
 	template <typename depth_format>
-	inline constexpr bool always(depth_format, depth_format) {
-		return true;
+	inline constexpr auto always(depth_format newDepth, depth_format) {
+		return newDepth == newDepth; // this is done to obtain an appropriate type of the comparison
 	}
 	template <typename depth_format>
-	inline constexpr bool never(depth_format, depth_format) {
-		return false;
+	inline constexpr auto never(depth_format newDepth, depth_format) {
+		return newDepth != newDepth; // this is done to obtain an appropriate type of the comparison
 	}
 	template <typename depth_format>
-	inline constexpr bool less(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr auto less(depth_format newDepth, depth_format oldDepth) {
 		return newDepth < oldDepth;
 	}
 	template <typename depth_format>
-	inline constexpr bool equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr auto equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth == oldDepth;
 	}
 	template <typename depth_format>
-	inline constexpr bool less_or_equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr auto less_or_equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth <= oldDepth;
 	}
 	template <typename depth_format>
-	inline constexpr bool greater(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr auto greater(depth_format newDepth, depth_format oldDepth) {
 		return newDepth > oldDepth;
 	}
 	template <typename depth_format>
-	inline constexpr bool not_equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr auto not_equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth != oldDepth;
 	}
 	template <typename depth_format>
-	inline constexpr bool greater_or_equal(depth_format newDepth, depth_format oldDepth) {
+	inline constexpr auto greater_or_equal(depth_format newDepth, depth_format oldDepth) {
 		return newDepth >= oldDepth;
 	}
 

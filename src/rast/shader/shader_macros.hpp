@@ -128,6 +128,10 @@ namespace rast::shader {
 			inline discardable() : value(), discarded(true) {}
 		public:
 			using value_type = output;
+			using reference = std::add_lvalue_reference_t<value_type>;
+			using pointer = std::add_pointer_t<value_type>;
+			using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
+			using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
 
 			inline discardable(output&& v) : value(std::forward<output>(v)), discarded(false) {}
 			static discardable discard() { return discardable(); }
@@ -135,19 +139,38 @@ namespace rast::shader {
 			inline value_type& get_value() { return value; }
 			inline const value_type& get_value() const { return value; }
 			inline bool is_discarded() const { return discarded; }
+
+			inline constexpr const_reference operator*() const { return value; }
+			inline constexpr reference operator*() { return value; }
+
+			inline constexpr explicit operator bool() const { return !discarded; }
+		};
+
+		template <typename T>
+		struct alpha_discardable {
+		private:
+			using U = typename T::value_type;
+			T _value;
+			inline constexpr alpha_discardable() : _value() { _value[4] = U(0); }
+		public:
+			using value_type = T;
+			using reference = std::add_lvalue_reference_t<value_type>;
+			using pointer = std::add_pointer_t<value_type>;
+			using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
+			using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
+
+			inline constexpr alpha_discardable(value_type&& Value) : _value(std::move(Value)) {}
+			inline static constexpr alpha_discardable discard() { return alpha_discardable(); }
+
+			inline constexpr const_reference operator*() const { return _value; }
+			inline constexpr reference operator*() { return _value; }
+
+			inline constexpr explicit operator bool() const { return _value[4] != U(0); }
 		};
 	}
 }
 
 namespace rast {
-	template <>
-	inline constexpr bool is_discardable_v<shader::outputs::discardable<color::rgba8>> = true;
-	template <>
-	inline bool should_discard<shader::outputs::discardable<color::rgba8>>(const shader::outputs::discardable<color::rgba8>& dsc) {
-		return dsc.is_discarded();
-	}
-	template <>
-	inline color::rgba8 get_frag_from_discardable<shader::outputs::discardable<color::rgba8>>(const shader::outputs::discardable<color::rgba8>& dsc) {
-		return dsc.get_value();
-	}
+	template <> inline constexpr bool is_discardable_v<shader::outputs::discardable<color::rgba8>> = true;
+	template <> inline constexpr bool is_discardable_v<shader::outputs::alpha_discardable<color::rgba8>> = true;
 }

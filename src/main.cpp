@@ -29,7 +29,8 @@
 #include "rast/sampler.hpp"
 #include "rast/shader/lambert_textured.hpp"
 #include "rast/shader/deferred.hpp"
-#include "rast/framebuffer.hpp"
+#include "rast/framebuffer/depth_view.hpp"
+#include "rast/framebuffer/color_depth.hpp"
 #include "rast/renderer.hpp"
 #include "rast/command_buffer.hpp"
 #include "rast/clip/sutherland_hodgman.hpp"
@@ -38,6 +39,8 @@
 #include "game/fly_cam.hpp"
 #include "rast/raster/bbox_scan.hpp"
 #include "rast/raster/left_edge.hpp"
+
+#include "rast/static_test.hpp"
 
 //static thd::thread_pool tp(std::thread::hardware_concurrency());
 static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);

@@ -26,7 +26,7 @@ namespace rast::interpol {
 		}
 		template <typename T>
 		inline constexpr T normalized(T coefs) {
-			auto sum = coefs.x + coefs.y + coefs.z;
+			auto sum = coefs[0] + coefs[1] + coefs[2];
 			return coefs / sum;
 		}
 		template <typename T>
@@ -37,12 +37,25 @@ namespace rast::interpol {
 		inline constexpr T linear(T partial_coefs) {
 			return normalized(partial_coefs);
 		}
-		template <typename T>
-		inline constexpr T perspective(T partial_coefs, float w1, float w2, float w3) {
-			return normalized(T(
-				partial_coefs.x / w1,
-				partial_coefs.y / w2,
-				partial_coefs.z / w3
+		template <typename Vec3>
+		inline constexpr Vec3 perspective(Vec3 partial_coefs, Vec3 w) {
+			return normalized(Vec3(
+				partial_coefs[0] / w[0],
+				partial_coefs[1] / w[1],
+				partial_coefs[2] / w[2]
+			));
+		}
+		template <typename Vec3>
+		inline constexpr Vec3 perspective(
+			Vec3 partial_coefs,
+			typename Vec3::value_type w1,
+			typename Vec3::value_type w2,
+			typename Vec3::value_type w3
+		) {
+			return normalized(Vec3(
+				partial_coefs[0] / w1,
+				partial_coefs[1] / w2,
+				partial_coefs[2] / w3
 			));
 		}
 		template <typename T, typename VertexT>
@@ -55,5 +68,4 @@ namespace rast::interpol {
 	inline constexpr VertexT perspective(Vec3 partial_coefs, VertexT* triangle) {
 		return interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs::perspective(partial_coefs, triangle));
 	}
-
 }

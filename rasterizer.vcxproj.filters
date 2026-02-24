@@ -68,7 +68,7 @@
     <ClInclude Include="src\rast\shader\shader_macros.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\framebuffer.hpp">
+    <ClInclude Include="src\rast\framebuffer\depth_view.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\deferred.hpp">
@@ -144,6 +144,21 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\math\vec.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\framebuffer\utils.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\framebuffer\color_depth.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\framebuffer\color.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\static_test.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\framebuffer\vectorized.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

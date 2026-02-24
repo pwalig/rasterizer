@@ -52,6 +52,12 @@ namespace rast::math {
 		template <typename U> friend inline constexpr _scalar operator%(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp %= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator>>(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp >>= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator<<(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp <<= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar<bool, Count> operator==(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] == rhs[i]); return res; }
+		template <typename U> friend inline constexpr _scalar<bool, Count> operator!=(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] != rhs[i]); return res; }
+		template <typename U> friend inline constexpr _scalar<bool, Count> operator<=(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] <= rhs[i]); return res; }
+		template <typename U> friend inline constexpr _scalar<bool, Count> operator>=(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] >= rhs[i]); return res; }
+		template <typename U> friend inline constexpr _scalar<bool, Count> operator<(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] < rhs[i]); return res; }
+		template <typename U> friend inline constexpr _scalar<bool, Count> operator>(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] > rhs[i]); return res; }
 
 		friend inline constexpr _scalar<bool, Count> operator==(const _scalar& lhs, const _scalar& rhs) {
 			auto res = _scalar<bool, Count>();
@@ -64,6 +70,22 @@ namespace rast::math {
 			return res;
 		}
 	};
+
+	template <size_t Count, typename T>
+	inline constexpr _scalar<T, Count> vectorize(T Value) {
+		return _scalar<T, Count>(std::move(Value));
+	}
+
+	template <typename T, size_t Count>
+	inline constexpr _scalar<T, Count> load(_scalar<T*, Count> Address) {
+		auto res = _scalar<T, Count>();
+		for_count res[i] = *(Address[i]);
+		return res;
+	}
+	template <typename T, size_t Count>
+	inline constexpr void store(_scalar<T*, Count> Address, const _scalar<T, Count>& Value) {
+		for_count *(Address[i]) = Value[i];
+	}
 
 	template <typename T>
 	inline constexpr _scalar<T, 4> make_x4(
@@ -151,10 +173,12 @@ namespace rast::math {
 		return res;
 	}
 
+	template <typename T> using x1 = _scalar<T, 1>;
 	template <typename T> using x4 = _scalar<T, 4>;
 	template <typename T> using x8 = _scalar<T, 8>;
 	template <typename T> using x16 = _scalar<T, 16>;
 
+	template <size_t Count> using boolx = _scalar<bool, Count>;
 	template <size_t Count> using i8x = _scalar<int8_t, Count>;
 	template <size_t Count> using u8x = _scalar<uint8_t, Count>;
 	template <size_t Count> using i16x = _scalar<int16_t, Count>;
@@ -165,6 +189,17 @@ namespace rast::math {
 	template <size_t Count> using u64x = _scalar<uint64_t, Count>;
 	template <size_t Count> using f32x = _scalar<float, Count>;
 	template <size_t Count> using f64x = _scalar<double, Count>;
+
+	using i8x1 = _scalar<int8_t, 1>;
+	using u8x1 = _scalar<uint8_t, 1>;
+	using i16x1 = _scalar<int16_t, 1>;
+	using u16x1 = _scalar<uint16_t, 1>;
+	using i32x1 = _scalar<int32_t, 1>;
+	using u32x1 = _scalar<uint32_t, 1>;
+	using i64x1 = _scalar<int64_t, 1>;
+	using u64x1 = _scalar<uint64_t, 1>;
+	using f32x1 = _scalar<float, 1>;
+	using f64x1 = _scalar<double, 1>;
 
 	using i8x4 = _scalar<int8_t, 4>;
 	using u8x4 = _scalar<uint8_t, 4>;
@@ -181,6 +216,19 @@ namespace rast::math {
 		float a, float b, float c, float d
 	) {
 		return make_x4<float>(a, b, c, d);
+	}
+
+	template <size_t Count>
+	inline constexpr bool and_accross(boolx<Count> Val) noexcept {
+		bool res = true;
+		for_count res &= Val[i];
+		return res;
+	}
+	template <size_t Count>
+	inline constexpr bool or_accross(boolx<Count> Val) noexcept {
+		bool res = false;
+		for_count res |= Val[i];
+		return res;
 	}
 
 	namespace _scalar_test {
@@ -362,10 +410,20 @@ namespace rast::math {
 		return res;
 	}
 
+	template <typename T, size_t Dim, size_t Count>
+	inline constexpr void store(_scalar<_vec<T, Dim, 1>*, Count> Address, const _vec<T, Dim, Count>& Value) {
+		for_count for_dim (*(Address[i]))[j][0] = Value[j][i];
+	}
+
 	template <typename T, size_t Count> using vec1x = _vec<T, 1, Count>;
 	template <typename T, size_t Count> using vec2x = _vec<T, 2, Count>;
 	template <typename T, size_t Count> using vec3x = _vec<T, 3, Count>;
 	template <typename T, size_t Count> using vec4x = _vec<T, 4, Count>;
+
+	template <typename T> using vec1x1 = vec1x<T, 1>;
+	template <typename T> using vec2x1 = vec2x<T, 1>;
+	template <typename T> using vec3x1 = vec3x<T, 1>;
+	template <typename T> using vec4x1 = vec4x<T, 1>;
 
 	template <typename T> using vec1x4 = vec1x<T, 4>;
 	template <typename T> using vec2x4 = vec2x<T, 4>;
@@ -376,6 +434,11 @@ namespace rast::math {
 	template <typename T> using vec2x8 = vec2x<T, 8>;
 	template <typename T> using vec3x8 = vec3x<T, 8>;
 	template <typename T> using vec4x8 = vec4x<T, 8>;
+
+	template <size_t Count> using u8vec1x = vec1x<uint8_t, Count>;
+	template <size_t Count> using u8vec2x = vec2x<uint8_t, Count>;
+	template <size_t Count> using u8vec3x = vec3x<uint8_t, Count>;
+	template <size_t Count> using u8vec4x = vec4x<uint8_t, Count>;
 
 	template <size_t Count> using i32vec1x = vec1x<int32_t, Count>;
 	template <size_t Count> using i32vec2x = vec2x<int32_t, Count>;
@@ -392,15 +455,32 @@ namespace rast::math {
 	template <size_t Count> using f32vec3x = vec3x<float, Count>;
 	template <size_t Count> using f32vec4x = vec4x<float, Count>;
 
+	using u8vec1x1 = vec1x1<uint8_t>;
+	using u8vec2x1 = vec2x1<uint8_t>;
+	using u8vec3x1 = vec3x1<uint8_t>;
+	using u8vec4x1 = vec4x1<uint8_t>;
+
 	using i32vec1x4 = vec1x4<int32_t>;
 	using i32vec2x4 = vec2x4<int32_t>;
 	using i32vec3x4 = vec3x4<int32_t>;
 	using i32vec4x4 = vec4x4<int32_t>;
 
+	using f32vec1x1 = vec1x1<float>;
+	using f32vec2x1 = vec2x1<float>;
+	using f32vec3x1 = vec3x1<float>;
+	using f32vec4x1 = vec4x1<float>;
+
 	using f32vec1x4 = vec1x4<float>;
 	using f32vec2x4 = vec2x4<float>;
 	using f32vec3x4 = vec3x4<float>;
 	using f32vec4x4 = vec4x4<float>;
+
+	template <typename T, size_t Dim, size_t Count>
+	inline constexpr _vec<T, Count, Dim> transpose(_vec<T, Dim, Count> val) {
+		auto res = _vec<T, Count, Dim>();
+		for_count for_dim res[i][j] = val[j][i];
+		return res;
+	}
 
 	template <size_t Dim, typename T, size_t Count>
 	inline constexpr _vec<typename T::value_type, Dim, Count> transpose(_scalar<T, Count> val) {
@@ -413,6 +493,13 @@ namespace rast::math {
 #if _MSC_VER && !__INTEL_COMPILER
 #pragma warning( pop )
 #endif
+		return res;
+	}
+
+	template <typename U, typename T, size_t Dim, size_t Count>
+	inline constexpr _scalar<U, Count> transpose(_vec<T, Dim, Count> val) {
+		auto res = _scalar<U, Count>();
+		for_count for_dim res[i][j] = val[j][i];
 		return res;
 	}
 
