@@ -28,22 +28,30 @@ namespace rast::math {
 		inline constexpr explicit _scalar(const_reference Value) : _data() {
 			for_count _data[i] = Value;
 		}
+		template <typename U>
+		inline constexpr explicit _scalar(_scalar<U, Count> other) : _data() {
+			for_count _data[i] = U(other[i]);
+		}
 		inline constexpr const_reference operator[](size_type i) const { return _data[i]; }
 		inline constexpr reference operator[](size_type i) { return _data[i]; }
 		inline constexpr size_type size() const { return Count; }
 		inline constexpr const_pointer data() const { return _data; }
 		inline constexpr pointer data() { return _data; }
 
-		inline constexpr _scalar& operator+=(const _scalar& rhs) { for_count _data[i] += rhs[i]; return *this; }
-		inline constexpr _scalar& operator-=(const _scalar& rhs) { for_count _data[i] -= rhs[i]; return *this; }
-		inline constexpr _scalar& operator*=(const _scalar& rhs) { for_count _data[i] *= rhs[i]; return *this; }
-		inline constexpr _scalar& operator/=(const _scalar& rhs) { for_count _data[i] /= rhs[i]; return *this; }
-		inline constexpr _scalar& operator%=(const _scalar& rhs) { for_count _data[i] %= rhs[i]; return *this; }
-		friend inline constexpr _scalar operator+(const _scalar& lhs, const _scalar& rhs) { _scalar tmp = lhs; tmp += rhs; return tmp; }
-		friend inline constexpr _scalar operator-(const _scalar& lhs, const _scalar& rhs) { _scalar tmp = lhs; tmp -= rhs; return tmp; }
-		friend inline constexpr _scalar operator*(const _scalar& lhs, const _scalar& rhs) { _scalar tmp = lhs; tmp *= rhs; return tmp; }
-		friend inline constexpr _scalar operator/(const _scalar& lhs, const _scalar& rhs) { _scalar tmp = lhs; tmp /= rhs; return tmp; }
-		friend inline constexpr _scalar operator%(const _scalar& lhs, const _scalar& rhs) { _scalar tmp = lhs; tmp %= rhs; return tmp; }
+		template <typename U> inline constexpr _scalar& operator+=(const _scalar<U, Count>& rhs) { for_count _data[i] += rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator-=(const _scalar<U, Count>& rhs) { for_count _data[i] -= rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator*=(const _scalar<U, Count>& rhs) { for_count _data[i] *= rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator/=(const _scalar<U, Count>& rhs) { for_count _data[i] /= rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator%=(const _scalar<U, Count>& rhs) { for_count _data[i] %= rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator>>=(const _scalar<U, Count>& rhs) { for_count _data[i] >>= rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator<<=(const _scalar<U, Count>& rhs) { for_count _data[i] <<= rhs[i]; return *this; }
+		template <typename U> friend inline constexpr _scalar operator+(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp += rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator-(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp -= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator*(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp *= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator/(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp /= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator%(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp %= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator>>(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp >>= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator<<(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp <<= rhs; return tmp; }
 
 		friend inline constexpr _scalar<bool, Count> operator==(const _scalar& lhs, const _scalar& rhs) {
 			auto res = _scalar<bool, Count>();
@@ -75,6 +83,24 @@ namespace rast::math {
 	) {
 		auto res = _scalar<U, Count>();
 		for_count res[i] = math::floor<U>(Value[i]);
+		return res;
+	}
+
+	template <typename U, typename T, size_t Count>
+	inline constexpr _scalar<U, Count> ceil(
+		const _scalar<T, Count>& Value
+	) {
+		auto res = _scalar<U, Count>();
+		for_count res[i] = math::ceil<U>(Value[i]);
+		return res;
+	}
+
+	template <typename U, typename T, size_t Count>
+	inline constexpr _scalar<U, Count> round(
+		const _scalar<T, Count>& Value
+	) {
+		auto res = _scalar<U, Count>();
+		for_count res[i] = math::round<U>(Value[i]);
 		return res;
 	}
 

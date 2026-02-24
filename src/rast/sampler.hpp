@@ -81,8 +81,7 @@ namespace rast {
 			math::u32x<Count> Length,
 			math::u32x<Count> mip
 		) const {
-			for (size_t i = 0; i < Count; ++i) Length[i] >>= mip[i];
-			return Length;
+			return Length >> mip;
 		}
 
 	public:
@@ -101,6 +100,19 @@ namespace rast {
 		}
 
 		template <size_t Count>
+		inline constexpr math::_scalar<const_pointer, Count> address(
+			math::u32x<Count> x, math::u32x<Count> y,
+			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
+		) const {
+			auto off = math::u32x<Count>();
+			for (size_t i = 0; i < Count; ++i)
+				off[i] = mipmapped_image<color>::mip_offset(width, height, mip[i]);
+
+			using u32ptr = math::_scalar<const_pointer, Count>;
+			return u32ptr(data) + off + (y * mip_length(math::u32x<Count>(width), mip) + x);
+		}
+
+		template <size_t Count>
 		inline constexpr math::_scalar<value_type, Count> sample(
 			math::u32x<Count> x, math::u32x<Count> y,
 			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
@@ -110,19 +122,20 @@ namespace rast {
 			return res;
 		}
 
+		// sample transpose
 		template <typename T, size_t Dim, size_t Count>
-		inline constexpr math::_vec<T, Dim, Count> transpose_sample(
+		inline constexpr math::_vec<T, Dim, Count> sample_t(
 			math::u32x<Count> x, math::u32x<Count> y,
 			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
 		) const {
+			auto addrs = address(x, y, mip);
 			auto res = math::_vec<T, Dim, Count>();
 			for (size_t i = 0; i < Count; ++i) {
-				auto sampled = sample(x[i], y[i], mip[i]);
 #if _MSC_VER && !__INTEL_COMPILER
 #pragma warning( push )
 #pragma warning( disable : 4267 )
 #endif
-				for (size_t j = 0; j < Dim; ++j) res[j][i] = static_cast<T>(sampled[j]);
+				for (size_t j = 0; j < Dim; ++j) res[j][i] = static_cast<T>((*addrs[i])[j]);
 #if _MSC_VER && !__INTEL_COMPILER
 #pragma warning( pop )
 #endif
@@ -147,9 +160,22 @@ namespace rast {
 		) const {
 			math::u32x<Count> w = mip_length(math::u32x<Count>(width), mip);
 			math::u32x<Count> h = mip_length(math::u32x<Count>(height), mip);
-			math::u32x<Count> x = wrapping::wrap<Mode>(math::floor<size_type>(u * math::cast<float>(w)), w);
-			math::u32x<Count> y = wrapping::wrap<Mode>(math::floor<size_type>(v * math::cast<float>(h)), h);
+			math::u32x<Count> x = wrapping::wrap<Mode>(math::floor<int32_t>(u * w), w);
+			math::u32x<Count> y = wrapping::wrap<Mode>(math::floor<int32_t>(v * h), h);
 			return sample(x, y, mip);
+		}
+
+		// nearest sampling with transposition
+		template <typename T, size_t Dim, wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
+		inline constexpr math::_vec<T, Dim, Count> sample_nearest_t(
+			math::f32x<Count> u, math::f32x<Count> v,
+			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
+		) const {
+			math::u32x<Count> w = mip_length(math::u32x<Count>(width), mip);
+			math::u32x<Count> h = mip_length(math::u32x<Count>(height), mip);
+			math::u32x<Count> x = wrapping::wrap<Mode>(math::floor<int32_t>(u * w), w);
+			math::u32x<Count> y = wrapping::wrap<Mode>(math::floor<int32_t>(v * h), h);
+			return sample_t<T, Dim, Count>(x, y, mip);
 		}
 
 		template <auto Interpolate>
@@ -183,25 +209,35 @@ namespace rast {
 			);
 		}
 
-		//template <auto Interpolate, size_t Count>
-		//inline constexpr auto sample_linear_x(
-		//	math::f32x<Count> u, math::f32x<Count> v,
-		//	math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
-		//) const {
-		//	math::u32x<Count> w = mip_length(math::u32x<Count>(width), mip);
-		//	math::u32x<Count> h = mip_length(math::u32x<Count>(height), mip);
-		//	u *= math::cast<float>(w);
-		//	v *= math::cast<float>(h);
-		//	auto coefs = math::f32vec2x4(
-		//		u - math::f32x4(0.5f) - math::floor<float>(u - math::f32x4(0.5f)),
-		//		v - math::f32x4(0.5f) - math::floor<float>(v - math::f32x4(0.5f))
-		//	);
-		//	auto x = math::u32vec2x<Count>(
-		//		math::round<size_type>(u) % w,
-		//		math::round<size_type>(u) % w,
-		//	);
-		//	math::u32vec2x<Count> y = math::round<size_type>(v) % h;
-		//}
+		template <typename T, size_t Dim, wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
+		inline constexpr auto sample_linear_t(
+			math::f32x<Count> u, math::f32x<Count> v,
+			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
+		) const {
+			math::u32x<Count> w = mip_length(math::u32x<Count>(width), mip);
+			math::u32x<Count> h = mip_length(math::u32x<Count>(height), mip);
+			u *= w;
+			v *= h;
+			auto coefs = math::f32vec2x4(
+				u - math::f32x4(0.5f) - math::floor<float>(u - math::f32x4(0.5f)),
+				v - math::f32x4(0.5f) - math::floor<float>(v - math::f32x4(0.5f))
+			);
+			math::u32x<Count> x0 = wrapping::wrap<Mode>(math::round<int32_t>(u), w);
+			math::u32x<Count> x1 = wrapping::wrap<Mode>(x0 - math::u32x<Count>(1), w);
+			math::u32x<Count> y0 = wrapping::wrap<Mode>(math::round<int32_t>(v), h);
+			math::u32x<Count> y1 = wrapping::wrap<Mode>(y0 - math::u32x<Count>(1), w);
+			auto coef = math::f32vec4x4(
+				coefs[0] * coefs[1],
+				(math::f32x4(1.0f) - coefs[0]) * coefs[1],
+				coefs[0] * (math::f32x4(1.0f) - coefs[1]),
+				(math::f32x4(1.0f) - coefs[0]) * (math::f32x4(1.0f) - coefs[1])
+			);
+			return
+				(sample_t<T, Dim, Count>(x0, y0, mip) * coef[0]) +
+				(sample_t<T, Dim, Count>(x1, y0, mip) * coef[1]) +
+				(sample_t<T, Dim, Count>(x0, y1, mip) * coef[2]) +
+				(sample_t<T, Dim, Count>(x1, y1, mip) * coef[3]);
+		}
 
 		inline static constexpr auto default_interpolator(
 			const color& color0, const color& color1, const color& color2, const color& color3,
@@ -226,8 +262,8 @@ namespace rast {
 
 		template <auto (sampler::*Sample)(float, float, size_type) const>
 		inline constexpr auto sample_nearest_mipmap(math::f32x4 u, math::f32x4 v) const {
-			math::f32x4 x = u * math::f32x4(static_cast<float>(width));
-			math::f32x4 y = v * math::f32x4(static_cast<float>(height));
+			math::f32x4 x = u * math::u32x4(width);
+			math::f32x4 y = v * math::u32x4(height);
 
 			float x_up = math::abs(x[0] - x[1]);
 			float x_down = math::abs(x[2] - x[3]);
@@ -268,16 +304,6 @@ namespace rast {
 	};
 	namespace sampler_test {
 		constexpr float data[4] = { 0.0f, 1.0f, 2.0f, 3.0f };
-		constexpr float mip_data[16 + 4 + 1] = {
-			0.0f, 1.0f, 2.0f, 3.0f,
-			4.0f, 5.0f, 6.0f, 7.0f,
-			8.0f, 9.0f, 10.0f, 11.0f,
-			12.0f, 13.0f, 14.0f, 15.0f,
-			16.0f, 17.0f,
-			18.0f, 19.0f,
-			20.0f
-		};
-
 		constexpr auto smp = rast::sampler<float>(data, 2, 2);
 		static_assert(smp.sample(0, 0) == 0.0f);
 		static_assert(smp.sample(1, 0) == 1.0f);
@@ -285,7 +311,14 @@ namespace rast {
 		static_assert(smp.sample(1, 1) == 3.0f);
 		static_assert(smp.sample_nearest(0.25f, 0.25f) == 0.0f);
 		static_assert(smp.sample_linear(0.5f, 0.5f) == 1.5f);
-
+		constexpr auto addrs = smp.address(
+			math::make_x4<uint32_t>(0, 1, 0, 1),
+			math::make_x4<uint32_t>(0, 0, 1, 1)
+		);
+		static_assert(addrs[0] == data);
+		static_assert(addrs[1] == data + 1);
+		static_assert(addrs[2] == data + 2);
+		static_assert(addrs[3] == data + 3);
 		constexpr auto sampled = smp.sample(
 			math::make_x4<uint32_t>(0, 1, 0, 1),
 			math::make_x4<uint32_t>(0, 0, 1, 1)
@@ -304,6 +337,15 @@ namespace rast {
 		static_assert(sampled2[3] == 3.0f);
 
 		// mip map test
+		constexpr float mip_data[16 + 4 + 1] = {
+			0.0f, 1.0f, 2.0f, 3.0f,
+			4.0f, 5.0f, 6.0f, 7.0f,
+			8.0f, 9.0f, 10.0f, 11.0f,
+			12.0f, 13.0f, 14.0f, 15.0f,
+			16.0f, 17.0f,
+			18.0f, 19.0f,
+			20.0f
+		};
 		constexpr auto mipsmp = rast::sampler<float>(mip_data, 4, 4);
 		constexpr auto s0 = mipsmp.sample_nearest_mipmap_nearest(
 			math::make_f32x4(0.125f, 0.375f, 0.125f, 0.375f),

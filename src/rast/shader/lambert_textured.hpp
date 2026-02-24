@@ -67,9 +67,9 @@ namespace rast::shader {
 				math::f32vec3x4 N = frag.normal.normalized();
 				math::f32vec3x4 L = math::f32vec3x4(uniforms.light_direction.x, uniforms.light_direction.y, uniforms.light_direction.z);
 				math::f32x4 nl = math::clamp<float>(math::dot(N, L), math::f32x4(0.0f), math::f32x4(1.0f));
-				auto texture_read = math::transpose<4>(uniforms.texture.sample_nearest_x(frag.uv.x(), frag.uv.y()));
+				auto texture_read = uniforms.texture.sample_linear_t<float, 4>(frag.uv.x(), frag.uv.y());
 				auto max_u8x4 = math::f32x4(static_cast<float>(std::numeric_limits<uint8_t>::max()));
-				auto color = math::cast<float>(texture_read) / max_u8x4;
+				auto color = texture_read / max_u8x4;
 				color.r() *= (nl * math::f32x4(uniforms.light_color.x) + math::f32x4(uniforms.ambient.x));
 				color.g() *= (nl * math::f32x4(uniforms.light_color.y) + math::f32x4(uniforms.ambient.y));
 				color.b() *= (nl * math::f32x4(uniforms.light_color.z) + math::f32x4(uniforms.ambient.z));
