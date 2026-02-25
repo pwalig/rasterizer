@@ -107,28 +107,25 @@ namespace rast::framebuffer {
 			math::f32x<Count> float_depth = (z[0] * linear_coefs[0]) + (z[1] * linear_coefs[1]) + (z[2] * linear_coefs[2]);
 			math::_scalar<depth_format, Count> new_depth = float_depth_to_depth_format<depth_format>(float_depth);
 			math::boolx<Count> depth_mask = DepthTest(new_depth, math::load(_depth_data, data_off));
+
 			if (math::or_accross(depth_mask)) {
 				math::f32vec3x<Count> persp_coefs = interpol::coefs::perspective(partial_coefs, w);
 				auto interpolated = (v0 * persp_coefs[0]) + (v1 * persp_coefs[1]) + (v2 * persp_coefs[2]); // interpolated can be anything
 				auto frag = FragmentShader(interpolated, args...); // frag can by anything
-				auto new_color = AlphaBlend(frag, math::load(_color_data, data_off)); // new_color might be a math::_vec or math::_scalar
-				math::store(_color_data, data_off, new_color, depth_mask);
-				math::store(_depth_data, data_off, new_depth, depth_mask);
-			}
 
-			//math::store(color_data(x, y), frag);
-			//math::_scalar<depth_format*, Count> old_depth_ptr = depth_data(x, y);
-			//if (math::or_accross(DepthTest(newDepth, math::load(old_depth_ptr)))) {
-				//auto frag = math::transpose(FragmentShader(v0, args...));
-				//color_format frag = math::transpose(FragmentShader(
-				//	interpol::interpolate(
-				//		v0.data, v1.data, v2.data,
-				//		interpol::coefs::perspective(partial_coefs, v0.rastPos[4], v1.rastPos[4], v2.rastPos[4])
-				//	), args...
-				//));
-				//math::store(color_data(x, y), frag);
-				//math::store(old_depth_ptr, newDepth);
-			//}
+				if constexpr (is_discardable_v<decltype(frag)>) {
+					auto nodiscard_mask = math::boolx<Count>(frag);
+					if (math::or_accross(nodiscard_mask)) {
+						auto new_color = AlphaBlend(*frag, math::load(_color_data, data_off)); // new_color might be a math::_vec or math::_scalar
+						math::store(_color_data, data_off, new_color, depth_mask & nodiscard_mask);
+						math::store(_depth_data, data_off, new_depth, depth_mask);
+					}
+				} else {
+					auto new_color = AlphaBlend(frag, math::load(_color_data, data_off)); // new_color might be a math::_vec or math::_scalar
+					math::store(_color_data, data_off, new_color, depth_mask);
+					math::store(_depth_data, data_off, new_depth, depth_mask);
+				}
+			}
 		}
 	};
 }

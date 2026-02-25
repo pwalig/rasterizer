@@ -13,20 +13,28 @@ namespace rast::static_test {
 		using input = math::f32vec4x<Count>;
 
 		template <size_t Count>
-		inline constexpr math::u8vec4x<Count> shade(const input<Count>& frag) {
-			auto max_u8x = math::f32x<Count>(std::numeric_limits<uint8_t>::max());
-			return math::u8vec4x<Count>(
-				math::cast<uint8_t>(math::clamp(frag.r(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
-				math::cast<uint8_t>(math::clamp(frag.g(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
-				math::cast<uint8_t>(math::clamp(frag.b(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
-				math::cast<uint8_t>(math::clamp(frag.a(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x)
-			);
+		inline constexpr math::f32vec4x<Count> shade(const input<Count>& frag) {
+			return frag;
+			//auto max_u8x = math::f32x<Count>(std::numeric_limits<uint8_t>::max());
+			//return math::u8vec4x<Count>(
+			//	math::cast<uint8_t>(math::clamp(frag.r(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
+			//	math::cast<uint8_t>(math::clamp(frag.g(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
+			//	math::cast<uint8_t>(math::clamp(frag.b(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
+			//	math::cast<uint8_t>(math::clamp(frag.a(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x)
+			//);
 		}
 	};
 
 	template <size_t Count>
-	inline constexpr math::u8vec4x<Count> blend(const math::u8vec4x<Count>& src, const math::u8vec4x<Count>&) {
-		return src;
+	inline constexpr math::u8vec4x<Count> blend(const math::f32vec4x<Count>& src, const math::u8vec4x<Count>& dst) {
+		math::f32vec4x<Count> color = (src * src.a()) + (math::cast<float>(dst) * (math::vectorize<Count>(1.0f) - src.a()));
+		math::f32x<Count> max_u8x = math::f32x<Count>(static_cast<float>(std::numeric_limits<uint8_t>::max()));
+		return math::u8vec4x<Count>(
+			math::cast<uint8_t>(math::clamp(color.r(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
+			math::cast<uint8_t>(math::clamp(color.g(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
+			math::cast<uint8_t>(math::clamp(color.b(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x),
+			math::cast<uint8_t>(math::clamp(color.a(), math::f32x<Count>(0.0f), math::f32x<Count>(1.0f)) * max_u8x)
+		);
 	}
 
 	inline constexpr std::pair<std::array<math::u8vec4x1, 16>, std::array<uint32_t, 16>> render() {
@@ -64,16 +72,8 @@ namespace rast::static_test {
 			math::vectorize<4>(1.0f),
 			math::vectorize<4>(1.0f)
 		);
-		auto z = math::f32vec3x4(
-			math::make_f32x4(0.0f, 0.0f, 0.0f, 0.0f),
-			math::make_f32x4(0.0f, 0.0f, 0.0f, 0.0f),
-			math::make_f32x4(0.0f, 0.0f, 0.0f, 0.0f)
-		);
-		auto w = math::f32vec3x4(
-			math::make_f32x4(1.0f, 1.0f, 1.0f, 1.0f),
-			math::make_f32x4(1.0f, 1.0f, 1.0f, 1.0f),
-			math::make_f32x4(1.0f, 1.0f, 1.0f, 1.0f)
-		);
+		auto z = math::vectorize<4>(math::f32vec3x1(0.0f, 0.0f, 0.0f));
+		auto w = math::vectorize<4>(math::f32vec3x1(1.0f, 1.0f, 1.0f));
 		auto partial_coefs = math::f32vec3x4(
 			math::make_f32x4(1.0f, 0.0f, 0.0f, 1.0f),
 			math::make_f32x4(0.0f, 1.0f, 0.0f, 1.0f),

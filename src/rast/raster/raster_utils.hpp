@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "../math/vec.hpp"
 
 #include "../viewport.hpp"
 #include "../tile.hpp"
@@ -9,6 +10,18 @@ namespace rast::raster {
 		return glm::ivec2(
 			(( vertex.x + 1.0f ) * (float)viewport.extent.x * 0.5f + (float)viewport.offset.x),
 			(( -vertex.y + 1.0f ) * (float)viewport.extent.y * 0.5f + (float)viewport.offset.y)
+		);
+	}
+
+	template <size_t Count>
+	inline constexpr math::i32vec2x<Count> to_screen_space(
+		const math::f32x<Count>& x,
+		const math::f32x<Count>& y,
+		const viewport_x<Count>& Viewport
+	) {
+		return math::i32vec2x<Count>(
+			(x + math::f32x<Count>(1.0f)) * math::cast<float>(Viewport.extent[0]) * math::f32x<Count>(0.5f) + math::cast<float>(Viewport.offset[0]),
+			(-y + math::f32x<Count>(1.0f)) * math::cast<float>(Viewport.extent[1]) * math::f32x<Count>(0.5f) + math::cast<float>(Viewport.offset[1])
 		);
 	}
 

@@ -22,7 +22,7 @@ namespace rast::alpha_blend {
 		else if constexpr (Factor == factor::one_minus_src_color) return color * Color(static_cast<typename Color::value_type>(1) - src[4]);
 		else if constexpr (Factor == factor::dst_color) return color * Color(dst[4]);
 		else if constexpr (Factor == factor::one_minus_dst_color) return color * Color(static_cast<typename Color::value_type>(1) - dst[4]);
-		else return color; // otherwise complains about missing return statement
+		else return color; // otherwise compiler complains about missing return statement
 	}
 
 	inline rast::color::rgba8 mul_by_factor_helper(const rast::color::rgba8& color, float factor) {

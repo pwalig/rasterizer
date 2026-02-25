@@ -45,6 +45,9 @@ namespace rast::math {
 		template <typename U> inline constexpr _scalar& operator%=(const _scalar<U, Count>& rhs) { for_count _data[i] %= rhs[i]; return *this; }
 		template <typename U> inline constexpr _scalar& operator>>=(const _scalar<U, Count>& rhs) { for_count _data[i] >>= rhs[i]; return *this; }
 		template <typename U> inline constexpr _scalar& operator<<=(const _scalar<U, Count>& rhs) { for_count _data[i] <<= rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator&=(const _scalar<U, Count>& rhs) { for_count _data[i] &= rhs[i]; return *this; }
+		template <typename U> inline constexpr _scalar& operator|=(const _scalar<U, Count>& rhs) { for_count _data[i] |= rhs[i]; return *this; }
+		inline constexpr _scalar operator-() { _scalar res; for_count res[i] = -(data[i]); return res; }
 		template <typename U> friend inline constexpr _scalar operator+(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp += rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator-(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp -= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator*(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp *= rhs; return tmp; }
@@ -52,6 +55,8 @@ namespace rast::math {
 		template <typename U> friend inline constexpr _scalar operator%(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp %= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator>>(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp >>= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator<<(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp <<= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator&(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp &= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator|(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp |= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar<bool, Count> operator==(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] == rhs[i]); return res; }
 		template <typename U> friend inline constexpr _scalar<bool, Count> operator!=(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] != rhs[i]); return res; }
 		template <typename U> friend inline constexpr _scalar<bool, Count> operator<=(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] <= rhs[i]); return res; }
@@ -97,6 +102,12 @@ namespace rast::math {
 		for_count Address[Offsets[i]] = Value[i];
 	}
 
+	template <typename T>
+	inline constexpr _scalar<T, 1> make_x1(T a0) {
+		auto res = _scalar<T, 1>();
+		res[0] = std::move(a0);
+		return res;
+	}
 	template <typename T>
 	inline constexpr _scalar<T, 4> make_x4(
 		T a0, T a1, T a2, T a3
@@ -386,6 +397,7 @@ namespace rast::math {
 		inline constexpr _vec& operator*=(const value_type& rhs) { for_dim data[j] *= rhs; return *this; }
 		inline constexpr _vec& operator/=(const value_type& rhs) { for_dim data[j] /= rhs; return *this; }
 		inline constexpr _vec& operator%=(const value_type& rhs) { for_dim data[j] %= rhs; return *this; }
+		inline constexpr _vec operator-() { _vec res; for_dim res[j] = -(data[j]); return res; }
 		friend inline constexpr _vec operator+(const _vec& lhs, const _vec& rhs) { _vec tmp = lhs; tmp += rhs; return tmp; }
 		friend inline constexpr _vec operator-(const _vec& lhs, const _vec& rhs) { _vec tmp = lhs; tmp -= rhs; return tmp; }
 		friend inline constexpr _vec operator*(const _vec& lhs, const _vec& rhs) { _vec tmp = lhs; tmp *= rhs; return tmp; }
@@ -418,6 +430,13 @@ namespace rast::math {
 			return *this / length();
 		}
 	};
+
+	template <size_t Count, typename T, size_t Dim>
+	inline constexpr _vec<T, Dim, Count> vectorize(_vec<T, Dim, 1> Value) {
+		auto res = _vec<T, Dim, Count>();
+		for_dim res[j] = vectorize<Count>(Value[j][0]);
+		return res;
+	}
 
 	template <typename T, size_t Dim, size_t Count>
 	inline constexpr _scalar<T, Count> dot(const _vec<T, Dim, Count>& a, const _vec<T, Dim, Count>& b) {
