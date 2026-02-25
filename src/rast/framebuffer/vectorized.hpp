@@ -92,14 +92,18 @@ namespace rast::framebuffer {
 		> inline constexpr void draw(
 			math::u32x<Count> x, math::u32x<Count> y,
 			const VertexT& v0, const VertexT& v1, const VertexT& v2,
-			const math::f32vec3x<Count>& persp_coefs, Args... args
+			const math::f32vec3x<Count>& z, const math::f32vec3x<Count> w,
+			const math::f32vec3x<Count>& partial_coefs, Args... args
 		) {
+			auto linear_coefs = interpol::coefs::linear(partial_coefs);
+			auto float_depth = (z[0] * linear_coefs[0]) + (z[1] * linear_coefs[1]) + (z[2] * linear_coefs[2]);
+			math::_scalar<depth_format, Count> new_depth = float_depth_to_depth_format<depth_format>(float_depth);
+			math::store(depth_data(x, y), new_depth);
+
+			auto persp_coefs = interpol::coefs::perspective(partial_coefs, w);
 			auto interpolated = (v0 * persp_coefs[0]) + (v1 * persp_coefs[1]) + (v2 * persp_coefs[2]);
 			auto frag = FragmentShader(interpolated, args...);
 			math::store(color_data(x, y), frag);
-			//math::_scalar<depth_format, Count> newDepth = get_depth<depth_format>(
-			//	v0.rastPos[3], v1.rastPos[3], v2.rastPos[3], partial_coefs
-			//);
 			//math::_scalar<depth_format*, Count> old_depth_ptr = depth_data(x, y);
 			//if (math::or_accross(DepthTest(newDepth, math::load(old_depth_ptr)))) {
 				//auto frag = math::transpose(FragmentShader(v0, args...));

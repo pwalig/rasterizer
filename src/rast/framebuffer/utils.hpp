@@ -29,7 +29,7 @@ namespace rast::framebuffer {
 		else if constexpr (std::is_floating_point_v<DepthFormat>) return math::cast<DepthFormat>(depth);
 		else return math::cast<DepthFormat>(
 			(depth * math::f32x<Count>(0.5f) + math::f32x<Count>(0.5f)) *
-			math::f32x<Count>(std::numeric_limits<DepthFormat>::max())
+			math::f32x<Count>(static_cast<float>(std::numeric_limits<DepthFormat>::max()))
 		);
 		
 	}

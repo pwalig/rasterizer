@@ -212,6 +212,11 @@ namespace rast::math {
 	using f32x4 = _scalar<float, 4>;
 	using f64x4 = _scalar<double, 4>;
 
+	inline constexpr u32x4 make_u32x4(
+		uint32_t a, uint32_t b, uint32_t c, uint32_t d
+	) {
+		return make_x4<uint32_t>(a, b, c, d);
+	}
 	inline constexpr f32x4 make_f32x4(
 		float a, float b, float c, float d
 	) {
