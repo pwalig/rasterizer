@@ -161,5 +161,8 @@
     <ClInclude Include="src\rast\framebuffer\vectorized.hpp">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\raster\vbbox_scan.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

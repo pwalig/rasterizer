@@ -24,6 +24,14 @@ namespace rast::raster {
 			(-y + math::f32x<Count>(1.0f)) * math::cast<float>(Viewport.extent[1]) * math::f32x<Count>(0.5f) + math::cast<float>(Viewport.offset[1])
 		);
 	}
+	template <size_t Count>
+	inline constexpr math::i32vec2x<Count> to_screen_space(
+		const math::f32x<Count>& x,
+		const math::f32x<Count>& y,
+		const viewport& Viewport
+	) {
+		return to_screen_space(x, y, viewport_x<Count>(Viewport.offset.x, Viewport.offset.y, Viewport.extent.x, Viewport.extent.y));
+	}
 
 	template <typename T, typename EquationResults>
 	inline constexpr T partial_coefs(EquationResults E, typename EquationResults::value_type area) {

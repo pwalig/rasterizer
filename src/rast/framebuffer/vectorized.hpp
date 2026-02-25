@@ -10,8 +10,10 @@
 #include "utils.hpp"
 
 namespace rast::framebuffer {
-	template<typename ColorFormat, typename DepthFormat>
-	class vectorized {
+	template<
+		typename ColorFormat, typename DepthFormat,
+		auto FragmentShader, auto DepthTest, auto AlphaBlend
+	> class vectorized {
 	public:
 		using color_format = ColorFormat;
 		using depth_format = DepthFormat;
@@ -92,10 +94,8 @@ namespace rast::framebuffer {
 			std::fill_n(_depth_data, area(), clear_value);
 		}
 
-		template <
-			auto FragmentShader, auto DepthTest, auto AlphaBlend,
-			size_t Count, typename VertexT, typename ...Args
-		> inline constexpr void draw(
+		template<size_t Count, typename VertexT, typename ...Args>
+		inline constexpr void operator()(
 			math::u32x<Count> x, math::u32x<Count> y,
 			const VertexT& v0, const VertexT& v1, const VertexT& v2,
 			const math::f32vec3x<Count>& z, const math::f32vec3x<Count> w,

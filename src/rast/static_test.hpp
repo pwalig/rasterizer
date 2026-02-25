@@ -2,6 +2,7 @@
 
 #include "framebuffer/vectorized.hpp"
 #include "shader/lambert_textured.hpp"
+#include "raster/vbbox_scan.hpp"
 #include "image.hpp"
 
 namespace rast::static_test {
@@ -10,10 +11,23 @@ namespace rast::static_test {
 	}
 	namespace shader1 {
 		template <size_t Count>
-		using input = math::f32vec4x<Count>;
+		using input_x = math::f32vec4x<Count>;
+
+		struct rast_input {
+			struct input {
+				glm::vec4 color;
+
+				template <size_t Count>
+				inline constexpr input_x<Count> vectorize() const {
+					return math::vectorize<4, Count>(color);
+				}
+			};
+			input data;
+			glm::vec4 rastPos;
+		};
 
 		template <size_t Count>
-		inline constexpr math::f32vec4x<Count> shade(const input<Count>& frag) {
+		inline constexpr math::f32vec4x<Count> shade(const input_x<Count>& frag) {
 			return frag;
 			//auto max_u8x = math::f32x<Count>(std::numeric_limits<uint8_t>::max());
 			//return math::u8vec4x<Count>(
@@ -53,20 +67,22 @@ namespace rast::static_test {
 			clear_depth, clear_depth, clear_depth, clear_depth
 		};
 
-		auto framebuff = framebuffer::vectorized<color::rgba8, uint32_t>(color_data.data(), depth_data.data(), 4, 4);
-		auto v0 = shader1::input<4>(
+		auto framebuff = framebuffer::vectorized<
+			color::rgba8, uint32_t, shader1::shade<4>, depth_test::less<math::u32x4>, blend<4>
+		>(color_data.data(), depth_data.data(), 4, 4);
+		auto v0 = shader1::input_x<4>(
 			math::vectorize<4>(0.0f),
 			math::vectorize<4>(0.0f),
 			math::vectorize<4>(0.0f),
 			math::vectorize<4>(1.0f)
 		);
-		auto v1 = shader1::input<4>(
+		auto v1 = shader1::input_x<4>(
 			math::vectorize<4>(0.5f),
 			math::vectorize<4>(0.5f),
 			math::vectorize<4>(0.5f),
 			math::vectorize<4>(1.0f)
 		);
-		auto v2 = shader1::input<4>(
+		auto v2 = shader1::input_x<4>(
 			math::vectorize<4>(1.0f),
 			math::vectorize<4>(1.0f),
 			math::vectorize<4>(1.0f),
@@ -82,9 +98,18 @@ namespace rast::static_test {
 		auto x = math::make_u32x4(0, 1, 0, 1);
 		auto y = math::make_u32x4(0, 0, 1, 1);
 
-		framebuff.draw<shader1::shade<4>, depth_test::less<math::u32x4>, blend<4>>(
-			x, y, v0, v1, v2, z, w, partial_coefs
-		);
+		framebuff(x, y, v0, v1, v2, z, w, partial_coefs);
+
+		auto triangle = std::array<shader1::rast_input, 3>();
+		triangle[0].rastPos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		triangle[1].rastPos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		triangle[2].rastPos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		triangle[0].data.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		triangle[1].data.color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+		triangle[2].data.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+		raster::vbbox_scan::rasterize_one<4>(framebuff, triangle.data(), rast::viewport(0, 0, 4, 4), rast::tile(0, 0, 4, 4));
+
 		return std::make_pair(color_data, depth_data);
 	}
 	constexpr auto buffs = render();
@@ -94,6 +119,12 @@ namespace rast::static_test {
 	static_assert(math::and_accross(color_image.at(1, 0) == math::u8vec4x1(127, 127, 127, 255)));
 	static_assert(math::and_accross(color_image.at(0, 1) == math::u8vec4x1(255, 255, 255, 255)));
 	static_assert(math::and_accross(color_image.at(1, 1) == math::u8vec4x1(127, 127, 127, 255)));
+
+	static_assert(math::and_accross(color_image.at(2, 0) == math::u8vec4x1(0, 0, 0, 255)));
+	static_assert(math::and_accross(color_image.at(3, 0) == math::u8vec4x1(0, 0, 0, 255)));
+	static_assert(math::and_accross(color_image.at(2, 1) == math::u8vec4x1(0, 0, 0, 255)));
+	static_assert(math::and_accross(color_image.at(3, 1) == math::u8vec4x1(0, 0, 0, 255)));
+
 	static_assert(depth_image.at(0, 0) == std::numeric_limits<uint32_t>::max() / 2 + 1);
 	static_assert(depth_image.at(1, 0) == std::numeric_limits<uint32_t>::max() / 2 + 1);
 	static_assert(depth_image.at(0, 1) == std::numeric_limits<uint32_t>::max() / 2 + 1);

@@ -80,6 +80,10 @@ namespace rast::math {
 	inline constexpr _scalar<T, Count> vectorize(T Value) {
 		return _scalar<T, Count>(std::move(Value));
 	}
+	template <size_t Count, typename T>
+	inline constexpr _scalar<T, Count> vectorize(_scalar<T, 1> Value) {
+		return _scalar<T, Count>(std::move(Value[0]));
+	}
 
 	template <typename T, typename U, size_t Count>
 	inline constexpr _scalar<T, Count> load(T* Address, _scalar<U, Count> Offsets) {
@@ -241,6 +245,11 @@ namespace rast::math {
 	using f32x4 = _scalar<float, 4>;
 	using f64x4 = _scalar<double, 4>;
 
+	inline constexpr i32x4 make_i32x4(
+		int32_t a, int32_t b, int32_t c, int32_t d
+	) {
+		return make_x4<int32_t>(a, b, c, d);
+	}
 	inline constexpr u32x4 make_u32x4(
 		uint32_t a, uint32_t b, uint32_t c, uint32_t d
 	) {
@@ -435,6 +444,20 @@ namespace rast::math {
 	inline constexpr _vec<T, Dim, Count> vectorize(_vec<T, Dim, 1> Value) {
 		auto res = _vec<T, Dim, Count>();
 		for_dim res[j] = vectorize<Count>(Value[j][0]);
+		return res;
+	}
+
+	template <size_t Dim, size_t Count, typename VectorLike>
+	inline constexpr _vec<typename VectorLike::value_type, Dim, Count> vectorize(VectorLike Value) {
+		auto res = _vec<typename VectorLike::value_type, Dim, Count>();
+#if _MSC_VER && !__INTEL_COMPILER
+#pragma warning( push )
+#pragma warning( disable : 4267 ) // glm uses different type than size_t for vector indexing and does not alias it as size_type
+#endif
+		for_dim res[j] = vectorize<Count>(Value[j]);
+#if _MSC_VER && !__INTEL_COMPILER
+#pragma warning( pop )
+#endif
 		return res;
 	}
 
