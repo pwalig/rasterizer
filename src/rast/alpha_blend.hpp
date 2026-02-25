@@ -10,8 +10,20 @@ namespace rast::alpha_blend {
 		dst_alpha, one_minus_dst_alpha,
 	};
 
-	template <factor, typename Color>
-	Color mul_by_factor(const Color& color, const Color& src, const Color& dst);
+	template <factor Factor, typename Color>
+	inline constexpr Color mul_by_factor(const Color& color, const Color& src, const Color& dst) {
+		if constexpr (Factor == factor::zero) return Color(static_cast<typename Color::value_type>(0));
+		else if constexpr (Factor == factor::one) return color;
+		else if constexpr (Factor == factor::src_color) return color * src;
+		else if constexpr (Factor == factor::one_minus_src_color) return color * (Color(static_cast<typename Color::value_type>(1)) - src);
+		else if constexpr (Factor == factor::dst_color) return color * dst;
+		else if constexpr (Factor == factor::one_minus_dst_color) return color * (Color(static_cast<typename Color::value_type>(1)) - dst);
+		else if constexpr (Factor == factor::src_alpha) return color * Color(src[4]);
+		else if constexpr (Factor == factor::one_minus_src_color) return color * Color(static_cast<typename Color::value_type>(1) - src[4]);
+		else if constexpr (Factor == factor::dst_color) return color * Color(dst[4]);
+		else if constexpr (Factor == factor::one_minus_dst_color) return color * Color(static_cast<typename Color::value_type>(1) - dst[4]);
+		else return color; // otherwise complains about missing return statement
+	}
 
 	inline rast::color::rgba8 mul_by_factor_helper(const rast::color::rgba8& color, float factor) {
 		return rast::color::rgba8(
@@ -89,33 +101,24 @@ namespace rast::alpha_blend {
 		using type = Color(*)(const Color&, const Color&);
 	}
 
-	template <factor, factor, equation>
+	template <typename Color>
+	using function_t = Color(*)(const Color&, const Color&);
+
+	template <factor SrcFactor, factor DstFactor, equation Equation>
 	struct func {
 		template<typename Color>
-		static Color blend(const Color& src, const Color& dst);
+		static Color blend(const Color& src, const Color& dst) {
+			auto s = mul_by_factor<SrcFactor, Color>(src, src, dst);
+			auto d = mul_by_factor<DstFactor, Color>(dst, src, dst);
+			if constexpr (Equation == equation::add) return s + d;
+			else if constexpr (Equation == equation::subtract) return s - d;
+			else if constexpr (Equation == equation::reverse_subtract) return d - s;
+		}
 	};
 
-	template <factor sfactor, factor dfactor>
-	struct func<sfactor, dfactor, equation::add> {
-		template<typename Color>
-		inline static Color blend(const Color& src, const Color& dst) {
-			return mul_by_factor<sfactor, Color>(src, src, dst) + mul_by_factor<dfactor, Color>(dst, src, dst);
-		}
-	};
-	template <factor sfactor, factor dfactor>
-	struct func<sfactor, dfactor, equation::subtract> {
-		template<typename Color>
-		inline static Color blend(const Color& src, const Color& dst) {
-			return mul_by_factor<sfactor, Color>(src, src, dst) - mul_by_factor<dfactor, Color>(dst, src, dst);
-		}
-	};
-	template <factor sfactor, factor dfactor>
-	struct func<sfactor, dfactor, equation::reverse_subtract> {
-		template<typename Color>
-		inline static Color blend(const Color& src, const Color& dst) {
-			return mul_by_factor<sfactor, Color>(dst, src, dst) - mul_by_factor<dfactor, Color>(src, src, dst);
-		}
-	};
+	template <typename Color, factor SrcFactor, factor DstFactor, equation Equation>
+	inline constexpr function_t<Color> function_v = func<SrcFactor, DstFactor, Equation>::blend;
+
 
 	template <>
 	struct func<factor::one, factor::zero, equation::add> {

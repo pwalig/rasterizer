@@ -76,6 +76,12 @@ namespace rast::math {
 		return _scalar<T, Count>(std::move(Value));
 	}
 
+	template <typename T, typename U, size_t Count>
+	inline constexpr _scalar<T, Count> load(T* Address, _scalar<U, Count> Offsets) {
+		auto res = _scalar<T, Count>();
+		for_count res[i] = Address[Offsets[i]];
+		return res;
+	}
 	template <typename T, size_t Count>
 	inline constexpr _scalar<T, Count> load(_scalar<T*, Count> Address) {
 		auto res = _scalar<T, Count>();
@@ -85,6 +91,10 @@ namespace rast::math {
 	template <typename T, size_t Count>
 	inline constexpr void store(_scalar<T*, Count> Address, const _scalar<T, Count>& Value) {
 		for_count *(Address[i]) = Value[i];
+	}
+	template <typename T, typename U, size_t Count>
+	inline constexpr void store(T* Address, const _scalar<U, Count> Offsets, const _scalar<T, Count>& Value) {
+		for_count Address[Offsets[i]] = Value[i];
 	}
 
 	template <typename T>
@@ -189,6 +199,14 @@ namespace rast::math {
 	template <size_t Count> using u64x = _scalar<uint64_t, Count>;
 	template <size_t Count> using f32x = _scalar<float, Count>;
 	template <size_t Count> using f64x = _scalar<double, Count>;
+
+	template <typename T, typename U, size_t Count>
+	inline constexpr void store(
+		T* Address, const _scalar<U, Count> Offsets,
+		const _scalar<T, Count>& Value, const boolx<Count>& Mask
+	) {
+		for_count if (Mask[i]) Address[Offsets[i]] = Value[i];
+	}
 
 	using i8x1 = _scalar<int8_t, 1>;
 	using u8x1 = _scalar<uint8_t, 1>;
@@ -415,9 +433,26 @@ namespace rast::math {
 		return res;
 	}
 
+	template <typename T, typename U, size_t Dim, size_t Count>
+	inline constexpr _vec<T, Dim, Count> load(_vec<T, Dim, 1>* Address, _scalar<U, Count> Offsets) {
+		auto res = _vec<T, Dim, Count>();
+		for_count for_dim res[j][i] = Address[Offsets[i]][j][0];
+		return res;
+	}
 	template <typename T, size_t Dim, size_t Count>
 	inline constexpr void store(_scalar<_vec<T, Dim, 1>*, Count> Address, const _vec<T, Dim, Count>& Value) {
 		for_count for_dim (*(Address[i]))[j][0] = Value[j][i];
+	}
+	template <typename T, typename U, size_t Dim, size_t Count>
+	inline constexpr void store(_vec<T, Dim, 1>* Address, const _scalar<U, Count>& offsets, const _vec<T, Dim, Count>& Value) {
+		for_count for_dim Address[offsets[i]][j][0] = Value[j][i];
+	}
+	template <typename T, typename U, size_t Dim, size_t Count>
+	inline constexpr void store(
+		_vec<T, Dim, 1>* Address, const _scalar<U, Count>& Offsets,
+		const _vec<T, Dim, Count>& Value, const boolx<Count>& Mask
+	) {
+		for_count if(Mask[i]) for_dim Address[Offsets[i]][j][0] = Value[j][i];
 	}
 
 	template <typename T, size_t Count> using vec1x = _vec<T, 1, Count>;

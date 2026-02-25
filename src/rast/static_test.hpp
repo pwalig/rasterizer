@@ -24,6 +24,11 @@ namespace rast::static_test {
 		}
 	};
 
+	template <size_t Count>
+	inline constexpr math::u8vec4x<Count> blend(const math::u8vec4x<Count>& src, const math::u8vec4x<Count>&) {
+		return src;
+	}
+
 	inline constexpr std::pair<std::array<math::u8vec4x1, 16>, std::array<uint32_t, 16>> render() {
 		auto clear_color = color::rgba8(0, 0, 0, 255);
 		std::array<math::u8vec4x1, 16> color_data = {
@@ -77,7 +82,7 @@ namespace rast::static_test {
 		auto x = math::make_u32x4(0, 1, 0, 1);
 		auto y = math::make_u32x4(0, 0, 1, 1);
 
-		framebuff.draw<shader1::shade<4>, depth_test::less<math::u32x1>>(
+		framebuff.draw<shader1::shade<4>, depth_test::less<math::u32x4>, blend<4>>(
 			x, y, v0, v1, v2, z, w, partial_coefs
 		);
 		return std::make_pair(color_data, depth_data);

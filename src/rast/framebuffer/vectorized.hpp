@@ -31,16 +31,22 @@ namespace rast::framebuffer {
 			return _depth_data[y * _width + x];
 		}
 		template <size_t Count>
+		inline constexpr math::u32x<Count> data_offset(
+			math::u32x<Count> x, math::u32x<Count> y
+		) {
+			return y * math::vectorize<Count>(_width) + x;
+		}
+		template <size_t Count>
 		inline constexpr math::_scalar<color_format*, Count> color_data(
 			math::u32x<Count> x, math::u32x<Count> y
 		) {
-			return math::vectorize<Count>(_color_data) + (y * math::vectorize<Count>(_width) + x);
+			return math::vectorize<Count>(_color_data) + data_offset(x, y);
 		}
 		template <size_t Count>
 		inline constexpr math::_scalar<depth_format*, Count> depth_data(
 			math::u32x<Count> x, math::u32x<Count> y
 		) {
-			return math::vectorize<Count>(_depth_data) + (y * math::vectorize<Count>(_width) + x);
+			return math::vectorize<Count>(_depth_data) + data_offset(x, y);
 		}
 
 	public:
@@ -87,7 +93,7 @@ namespace rast::framebuffer {
 		}
 
 		template <
-			auto FragmentShader, auto DepthTest,
+			auto FragmentShader, auto DepthTest, auto AlphaBlend,
 			size_t Count, typename VertexT, typename ...Args
 		> inline constexpr void draw(
 			math::u32x<Count> x, math::u32x<Count> y,
@@ -95,15 +101,22 @@ namespace rast::framebuffer {
 			const math::f32vec3x<Count>& z, const math::f32vec3x<Count> w,
 			const math::f32vec3x<Count>& partial_coefs, Args... args
 		) {
-			auto linear_coefs = interpol::coefs::linear(partial_coefs);
-			auto float_depth = (z[0] * linear_coefs[0]) + (z[1] * linear_coefs[1]) + (z[2] * linear_coefs[2]);
-			math::_scalar<depth_format, Count> new_depth = float_depth_to_depth_format<depth_format>(float_depth);
-			math::store(depth_data(x, y), new_depth);
+			math::u32x<Count> data_off = data_offset(x, y);
 
-			auto persp_coefs = interpol::coefs::perspective(partial_coefs, w);
-			auto interpolated = (v0 * persp_coefs[0]) + (v1 * persp_coefs[1]) + (v2 * persp_coefs[2]);
-			auto frag = FragmentShader(interpolated, args...);
-			math::store(color_data(x, y), frag);
+			math::f32vec3x<Count> linear_coefs = interpol::coefs::linear(partial_coefs);
+			math::f32x<Count> float_depth = (z[0] * linear_coefs[0]) + (z[1] * linear_coefs[1]) + (z[2] * linear_coefs[2]);
+			math::_scalar<depth_format, Count> new_depth = float_depth_to_depth_format<depth_format>(float_depth);
+			math::boolx<Count> depth_mask = DepthTest(new_depth, math::load(_depth_data, data_off));
+			if (math::or_accross(depth_mask)) {
+				math::f32vec3x<Count> persp_coefs = interpol::coefs::perspective(partial_coefs, w);
+				auto interpolated = (v0 * persp_coefs[0]) + (v1 * persp_coefs[1]) + (v2 * persp_coefs[2]); // interpolated can be anything
+				auto frag = FragmentShader(interpolated, args...); // frag can by anything
+				auto new_color = AlphaBlend(frag, math::load(_color_data, data_off)); // new_color might be a math::_vec or math::_scalar
+				math::store(_color_data, data_off, new_color, depth_mask);
+				math::store(_depth_data, data_off, new_depth, depth_mask);
+			}
+
+			//math::store(color_data(x, y), frag);
 			//math::_scalar<depth_format*, Count> old_depth_ptr = depth_data(x, y);
 			//if (math::or_accross(DepthTest(newDepth, math::load(old_depth_ptr)))) {
 				//auto frag = math::transpose(FragmentShader(v0, args...));
