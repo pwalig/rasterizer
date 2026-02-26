@@ -57,6 +57,8 @@ namespace rast::math {
 		template <typename U> friend inline constexpr _scalar operator<<(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp <<= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator&(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp &= rhs; return tmp; }
 		template <typename U> friend inline constexpr _scalar operator|(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; tmp |= rhs; return tmp; }
+		template <typename U> friend inline constexpr _scalar operator&&(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; for_count tmp[i] = (tmp[i] && rhs[i]); return tmp; }
+		template <typename U> friend inline constexpr _scalar operator||(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar tmp = lhs; for_count tmp[i] = (tmp[i] || rhs[i]); return tmp; }
 		template <typename U> friend inline constexpr _scalar<bool, Count> operator==(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] == rhs[i]); return res; }
 		template <typename U> friend inline constexpr _scalar<bool, Count> operator!=(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] != rhs[i]); return res; }
 		template <typename U> friend inline constexpr _scalar<bool, Count> operator<=(const _scalar& lhs, const _scalar<U, Count>& rhs) { _scalar<bool, Count> res; for_count res[i] = (lhs[i] <= rhs[i]); return res; }
@@ -216,6 +218,13 @@ namespace rast::math {
 	template <size_t Count> using f64x = _scalar<double, Count>;
 
 	template <typename T, typename U, size_t Count>
+	inline constexpr _scalar<T, Count> load(T* Address, _scalar<U, Count> Offsets, boolx<Count> Mask) {
+		auto res = _scalar<T, Count>();
+		for_count if(Mask[i]) res[i] = Address[Offsets[i]];
+		return res;
+	}
+
+	template <typename T, typename U, size_t Count>
 	inline constexpr void store(
 		T* Address, const _scalar<U, Count> Offsets,
 		const _scalar<T, Count>& Value, const boolx<Count>& Mask
@@ -326,7 +335,7 @@ namespace rast::math {
 		inline constexpr explicit _vec(
 			value_type X
 		) : data() {
-			x() = std::move(X);
+			for_dim data[j] = X;
 		}
 		inline constexpr explicit _vec(
 			value_type X, value_type Y
@@ -406,7 +415,7 @@ namespace rast::math {
 		inline constexpr _vec& operator*=(const value_type& rhs) { for_dim data[j] *= rhs; return *this; }
 		inline constexpr _vec& operator/=(const value_type& rhs) { for_dim data[j] /= rhs; return *this; }
 		inline constexpr _vec& operator%=(const value_type& rhs) { for_dim data[j] %= rhs; return *this; }
-		inline constexpr _vec operator-() { _vec res; for_dim res[j] = -(data[j]); return res; }
+		inline constexpr _vec operator-() const { _vec res; for_dim res[j] = -(data[j]); return res; }
 		friend inline constexpr _vec operator+(const _vec& lhs, const _vec& rhs) { _vec tmp = lhs; tmp += rhs; return tmp; }
 		friend inline constexpr _vec operator-(const _vec& lhs, const _vec& rhs) { _vec tmp = lhs; tmp -= rhs; return tmp; }
 		friend inline constexpr _vec operator*(const _vec& lhs, const _vec& rhs) { _vec tmp = lhs; tmp *= rhs; return tmp; }
@@ -479,6 +488,12 @@ namespace rast::math {
 	inline constexpr _vec<T, Dim, Count> load(_vec<T, Dim, 1>* Address, _scalar<U, Count> Offsets) {
 		auto res = _vec<T, Dim, Count>();
 		for_count for_dim res[j][i] = Address[Offsets[i]][j][0];
+		return res;
+	}
+	template <typename T, typename U, size_t Dim, size_t Count>
+	inline constexpr _vec<T, Dim, Count> load(_vec<T, Dim, 1>* Address, _scalar<U, Count> Offsets, boolx<Count> Mask) {
+		auto res = _vec<T, Dim, Count>();
+		for_count if(Mask[i]) for_dim res[j][i] = Address[Offsets[i]][j][0];
 		return res;
 	}
 	template <typename T, size_t Dim, size_t Count>

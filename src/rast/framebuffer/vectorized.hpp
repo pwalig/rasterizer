@@ -99,14 +99,15 @@ namespace rast::framebuffer {
 			math::u32x<Count> x, math::u32x<Count> y,
 			const VertexT& v0, const VertexT& v1, const VertexT& v2,
 			const math::f32vec3x<Count>& z, const math::f32vec3x<Count> w,
-			const math::f32vec3x<Count>& partial_coefs, Args... args
+			const math::f32vec3x<Count>& partial_coefs,
+			const math::boolx<Count>& mask, Args... args
 		) {
 			math::u32x<Count> data_off = data_offset(x, y);
 
 			math::f32vec3x<Count> linear_coefs = interpol::coefs::linear(partial_coefs);
 			math::f32x<Count> float_depth = (z[0] * linear_coefs[0]) + (z[1] * linear_coefs[1]) + (z[2] * linear_coefs[2]);
 			math::_scalar<depth_format, Count> new_depth = float_depth_to_depth_format<depth_format>(float_depth);
-			math::boolx<Count> depth_mask = DepthTest(new_depth, math::load(_depth_data, data_off));
+			math::boolx<Count> depth_mask = DepthTest(new_depth, math::load(_depth_data, data_off, mask)) && mask;
 
 			if (math::or_accross(depth_mask)) {
 				math::f32vec3x<Count> persp_coefs = interpol::coefs::perspective(partial_coefs, w);
@@ -116,16 +117,17 @@ namespace rast::framebuffer {
 				if constexpr (is_discardable_v<decltype(frag)>) {
 					auto nodiscard_mask = math::boolx<Count>(frag);
 					if (math::or_accross(nodiscard_mask)) {
-						auto new_color = AlphaBlend(*frag, math::load(_color_data, data_off)); // new_color might be a math::_vec or math::_scalar
-						math::store(_color_data, data_off, new_color, depth_mask & nodiscard_mask);
+						auto new_color = AlphaBlend(*frag, math::load(_color_data, data_off, mask)); // new_color might be a math::_vec or math::_scalar
+						math::store(_color_data, data_off, new_color, depth_mask && nodiscard_mask);
 						math::store(_depth_data, data_off, new_depth, depth_mask);
 					}
 				} else {
-					auto new_color = AlphaBlend(frag, math::load(_color_data, data_off)); // new_color might be a math::_vec or math::_scalar
+					auto new_color = AlphaBlend(frag, math::load(_color_data, data_off, mask)); // new_color might be a math::_vec or math::_scalar
 					math::store(_color_data, data_off, new_color, depth_mask);
 					math::store(_depth_data, data_off, new_depth, depth_mask);
 				}
 			}
+			//color(x[0], y[0]).r()[0] = 255;
 		}
 	};
 }

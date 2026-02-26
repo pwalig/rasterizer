@@ -35,53 +35,71 @@ namespace rast::raster {
 
 			glm::ivec3 Dx = x120 - x012;
 			glm::ivec3 Dy = y120 - y012;
+			math::i32vec3x<Count> vDx = math::vectorize<3, Count>(Dx);
+			math::i32vec3x<Count> vDy = math::vectorize<3, Count>(Dy);
 
 			int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
 			if (area <= 0) return; // back face detected - early return
 
 			// Dx * Y - fill_convention
-			//glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention(Dx, Dy); // fixed point
+			//glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012);// -fill_convention(Dx, Dy); // fixed point
 			//glm::ivec3 Cx = Dy * (glm::ivec3(min.x << 4) - x012);
-			Dx *= 16;
-			Dy *= 16;
 
-			math::i32vec3x<Count> vDx = math::vectorize<3, Count>(Dx);
-			math::i32vec3x<Count> vDy = math::vectorize<3, Count>(Dy);
+			math::i32x<4> x_base = math::make_i32x4(min.x, min.x + 1, min.x, min.x + 1);
+			math::i32x<4> y_base = math::make_i32x4(min.y, min.y, min.y + 1, min.y + 1);
+			//auto test0 = math::vectorize<3, Count>(y012);
+			//auto test05 = math::i32vec3x<Count>(y_base << math::vectorize<Count>(4));
+			//auto test = test05 - test0;
+			//auto test1 = (glm::ivec3(min.y << 4) - y012);
+
+			math::i32vec3x<Count> vCy = vDx * (math::i32vec3x<Count>(y_base << math::vectorize<Count>(4)) - math::vectorize<3, Count>(y012));
+			math::i32vec3x<Count> vCx = vDy * (math::i32vec3x<Count>(x_base << math::vectorize<Count>(4)) - math::vectorize<3, Count>(x012));
+
+			//assert(vCy[0][0] == Cy.x);
+			//assert(vCy[1][0] == Cy.y);
+			//assert(vCy[2][0] == Cy.z);
+
+			//Dx *= 16;
+			//Dy *= 16;
+			vDx *= math::vectorize<Count>(16);
+			vDy *= math::vectorize<Count>(16);
+
 
 			auto v0 = triangle[0].data.template vectorize<Count>();
 			auto v1 = triangle[1].data.template vectorize<Count>();
 			auto v2 = triangle[2].data.template vectorize<Count>();
 			math::f32vec3x<Count> z = math::f32vec3x<Count>(
-				math::vectorize<Count>(triangle[0].rastPos[2]),
-				math::vectorize<Count>(triangle[1].rastPos[2]),
-				math::vectorize<Count>(triangle[2].rastPos[2])
+				math::vectorize<Count>(triangle[0].rastPos.z),
+				math::vectorize<Count>(triangle[1].rastPos.z),
+				math::vectorize<Count>(triangle[2].rastPos.z)
 			);
 			math::f32vec3x<Count> w = math::f32vec3x<Count>(
-				math::vectorize<Count>(triangle[0].rastPos[3]),
-				math::vectorize<Count>(triangle[1].rastPos[3]),
-				math::vectorize<Count>(triangle[2].rastPos[3])
+				math::vectorize<Count>(triangle[0].rastPos.w),
+				math::vectorize<Count>(triangle[1].rastPos.w),
+				math::vectorize<Count>(triangle[2].rastPos.w)
 			);
 			auto varea = math::f32x<Count>(static_cast<float>(area));
 
-			math::i32x<4> x = math::make_i32x4(min.x, min.x + 1, min.x, min.x + 1);
-			math::i32x<4> y = math::make_i32x4(min.y, min.y, min.y + 1, min.y + 1);
-			math::i32vec3x<Count> vCy = vDx * (math::i32vec3x<Count>(y << math::vectorize<Count>(4)) - math::vectorize<3, Count>(y012));
-			math::i32vec3x<Count> vCx = vDy * (math::i32vec3x<Count>(x << math::vectorize<Count>(4)) - math::vectorize<3, Count>(x012));
-
 			math::i32x<4> increment = math::i32x<Count>(2);
+			//Dx *= 2;
+			//Dy *= 2;
+			vDx *= increment;
+			vDy *= increment;
 			math::i32x<4> zero = math::i32x<Count>(0);
 
-			for (; y[0] < max.y; y += increment, vCy += vDx) {
-				math::i32vec3x<Count> E = vCy - vCx;
-				for (; x[0] < max.x; x += increment, E -= vDy) {
-					math::boolx<Count> mask = (E[0] >= zero) & (E[1] >= zero) & (E[2] >= zero);
+			auto vmax = math::vectorize<2, Count>(max);
+
+			for (math::i32x<4> y = y_base; y[0] < max.y; y += increment, vCy += vDx) {
+				math::i32vec3x<Count> vE = vCy - vCx;
+				for (math::i32x<4> x = x_base; x[0] < max.x; x += increment, vE -= vDy) {
+					math::boolx<Count> mask = (vE[0] >= zero) && (vE[1] >= zero) && (vE[2] >= zero);
 					if (math::or_accross(mask)) {
-						auto partial_coefs = math::f32vec3x<Count>(
-							math::cast<float>(E[1]) / varea,
-							math::cast<float>(E[2]) / varea,
-							math::cast<float>(E[0]) / varea
+						auto vpartials = math::f32vec3x<Count>(
+							math::cast<float>(vE[1]) / varea,
+							math::cast<float>(vE[2]) / varea,
+							math::cast<float>(vE[0]) / varea
 						);
-						output(math::cast<uint32_t>(x), math::cast<uint32_t>(y), v0, v1, v2, z, w, partial_coefs, args...); // can't forward args, because they are used multiple times
+						output(math::cast<uint32_t>(x), math::cast<uint32_t>(y), v0, v1, v2, z, w, vpartials, mask && (y < vmax[1]) && (x < vmax[0]), args...); // can't forward args, because they are used multiple times
 					}
 				}
 			}

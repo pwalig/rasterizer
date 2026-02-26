@@ -237,9 +237,11 @@ struct scene {
 struct application {
 	using depth_format = uint32_t;
 	using DepthBuffer = rast::image<depth_format>;
-	using color_format = rast::color::rgba8;
+	using color_format = rast::math::u8vec4x1;
+	//using color_format = rast::color::rgba8;
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
-	using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, blending::blend, rast::depth_test::less>;
+	using Framebuffer = rast::framebuffer::vectorized<color_format, depth_format, rast::shader::lambert_textured::fragment::shade<4>, rast::depth_test::less<rast::math::u32x4>, rast::static_test::blend<4>>;
+	//using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, blending::blend, rast::depth_test::less>;
 
 	using g_format = rast::shader::deferred::first_pass::fragment::output;
 	using GBuffer = rast::image<g_format>;
@@ -269,7 +271,7 @@ struct application {
 		ThreadPool& tp
 	) {
 		using clipper = rast::sutherland_hodgman;
-		using rasterizer = rast::raster::bbox_scan;
+		using rasterizer = rast::raster::vbbox_scan;
 		static rast::command_buffer<Shader> cmd_buffer;
 		cmd_buffer.reset();
 		glm::mat4 PV = P * V;
@@ -429,9 +431,9 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 	}
 	else {
 		// forward
-		application::Framebuffer framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
+		application::Framebuffer framebuf((rast::math::u8vec4x1*)app.surface->pixels, app.depth_buffer);
 		framebuf.clear_depth_buffer();
-		framebuf.clear_color(rast::color::rgba8(25, 25, 50, 255));
+		framebuf.clear_color(rast::math::u8vec4x1(25, 25, 50, 255));
 
 		// depth view
 		//rast::framebuffer::depth_view<rast::color::rgba8, application::depth_format, rast::depth_test::less> framebuf(

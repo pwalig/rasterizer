@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "../math/vec.hpp"
 #include "../discard_fragment.hpp"
 
 namespace rast::shader {
@@ -116,6 +117,18 @@ namespace rast::shader {
 			}
 			friend inline normal_uv operator+ (const normal_uv& rhs, const normal_uv& lhs) {
 				return { rhs.normal + lhs.normal, rhs.uv + lhs.uv };
+			}
+			template <size_t Count>
+			struct vec {
+				math::f32vec3x<Count> normal;
+				math::f32vec2x<Count> uv;
+			};
+			template <size_t Count>
+			inline constexpr vec<Count> vectorize() const {
+				return {
+					math::vectorize<3, Count>(normal),
+					math::vectorize<2, Count>(uv)
+				};
 			}
 		};
 	}
