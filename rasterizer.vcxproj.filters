@@ -164,5 +164,11 @@
     <ClInclude Include="src\rast\raster\vbbox_scan.hpp">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="src\rast\math\sse.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\sized2d_base.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

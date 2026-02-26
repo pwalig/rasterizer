@@ -52,7 +52,7 @@ namespace rast::raster {
 			//auto test = test05 - test0;
 			//auto test1 = (glm::ivec3(min.y << 4) - y012);
 
-			math::i32vec3x<Count> vCy = vDx * (math::i32vec3x<Count>(y_base << math::vectorize<Count>(4)) - math::vectorize<3, Count>(y012));
+			math::i32vec3x<Count> vCy = vDx * (math::i32vec3x<Count>(y_base << math::vectorize<Count>(4)) - math::vectorize<3, Count>(y012));// -fill_convention(vDx, vDy);
 			math::i32vec3x<Count> vCx = vDy * (math::i32vec3x<Count>(x_base << math::vectorize<Count>(4)) - math::vectorize<3, Count>(x012));
 
 			//assert(vCy[0][0] == Cy.x);

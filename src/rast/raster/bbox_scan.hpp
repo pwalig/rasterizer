@@ -4,10 +4,17 @@
 
 namespace rast::raster {
 	struct bbox_scan {
-		template <typename Shader, typename Callable, typename ...Args>
+		template <typename VertexT>
+		struct triangle {
+			const VertexT* vertices; // view<3> would be usefull here
+			glm::uvec3 min;
+			glm::uvec3 max;
+			int area;
+		};
+		template <typename Callable, typename VertexT, typename ...Args>
 		inline static void rasterize_one(
 			Callable&& output,
-			const typename Shader::vertex::output* triangle,
+			const VertexT* triangle,
 			const viewport& viewport,
 			const tile& tile,
 			Args&&... args
@@ -49,7 +56,7 @@ namespace rast::raster {
 				glm::ivec3 E = Cy - Cx;
 				for (int x = min.x; x < max.x; ++x, E -= Dy) {
 					if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
-						dispached_output<Shader>(output, x, y, triangle, partial_coefs<glm::vec3>(E, area), std::forward<Args>(args)...);
+						output(x, y, triangle, partial_coefs<glm::vec3>(E, area), std::forward<Args>(args)...);
 					}
 				}
 			}
@@ -65,7 +72,7 @@ namespace rast::raster {
 		) {
 			using vertex = typename Shader::vertex::output;
 			for (const vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
-				rasterize_one<Shader>(output, triangle, viewport, tile, args...);
+				rasterize_one(output, triangle, viewport, tile, args...);
 			}
 		}
 	};

@@ -3,10 +3,10 @@
 
 namespace rast::raster {
 	struct left_edge {
-		template <typename Shader, typename Callable, typename ...Args>
+		template <typename Callable, typename VertexT, typename ...Args>
 		inline static void rasterize_one(
 			Callable&& output,
-			const typename Shader::vertex::output* triangle,
+			const VertexT* triangle,
 			const viewport& viewport,
 			const tile& tile,
 			Args&&... args
@@ -66,7 +66,7 @@ namespace rast::raster {
 				}
 				Cx = Cy - E;
 				for (int x = X; x < max.x; ++x, E -= Dy) {
-					dispached_output<Shader>(output, x, y, triangle, partial_coefs<glm::vec3>(E, area), std::forward<Args>(args)...);
+					output(x, y, triangle, partial_coefs<glm::vec3>(E, area), std::forward<Args>(args)...);
 					if (E.x < 0 || E.y < 0 || E.z < 0) break;
 				}
 			}
@@ -82,7 +82,7 @@ namespace rast::raster {
 		) {
 			using vertex = typename Shader::vertex::output;
 			for (const vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
-				rasterize_one<Shader>(output, triangle, viewport, tile, args...);
+				rasterize_one(output, triangle, viewport, tile, args...);
 			}
 		}
 	};

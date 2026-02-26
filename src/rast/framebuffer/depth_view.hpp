@@ -1,12 +1,21 @@
 #pragma once
-#include "color_depth.hpp"
+#include "../sized2d_base.hpp"
+#include "../depth_test.hpp"
+#include "utils.hpp"
 
 namespace rast::framebuffer {
-	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest = depth_test::less>
-	class depth_view : public color_depth<ColorFormat, DepthFormat, alpha_blend::replace<ColorFormat>, DepthTest> {
-		using parent = color_depth<ColorFormat, DepthFormat, alpha_blend::replace<ColorFormat>, DepthTest>;
+	template<
+		typename ColorFormat, typename DepthFormat,
+		depth_test::function::type<DepthFormat> DepthTest = depth_test::less
+	> struct depth_view : public sized2d_base {
 		using color_format = ColorFormat;
 		using depth_format = DepthFormat;
+		using size_type = typename sized2d_base::size_type;
+
+	private:
+		color_format* _color_data;
+		depth_format* _depth_data;
+
 	public:
 		float near = 0.1f;
 		float far = 100.0f;
@@ -14,28 +23,38 @@ namespace rast::framebuffer {
 		float near_clip = 0.0f;
 		float far_clip = 1.0f;
 
+		inline constexpr color_format& color(size_type x, size_type y) {
+			return _color_data[data_offset(x, y)];
+		}
+		inline constexpr color_format& depth(size_type x, size_type y) {
+			return _depth_data[data_offset(x, y)];
+		}
+
 		inline depth_view(
 			color_format* ColorData, depth_format* DepthData, uint32_t Width, uint32_t Height, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) : parent(ColorData, DepthData, Width, Height), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) { }
+		) noexcept : sized2d_base(Width, Height), _color_data(ColorData), _depth_data(DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) { }
 		
+		template <typename ImageLike1, typename ImageLike2>
 		inline depth_view(
-			image<color_format>& ColorImage, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) : parent(ColorImage, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+			ImageLike1& ColorImage, ImageLike2& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : depth_view(ColorImage.data(), DepthImage.data(), ColorImage.width(), ColorImage.height(), Near, Far, NearClip, FarClip) { }
 
+		template <typename ImageLike>
 		inline depth_view(
-			color_format* ColorData, image<depth_format>& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) : parent(ColorData, DepthImage), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+			color_format* ColorData, ImageLike& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : depth_view(ColorData, DepthImage.data(), DepthImage.width(), DepthImage.height(), Near, Far, NearClip, FarClip) {}
 
+		template <typename ImageLike>
 		inline depth_view(
-			image<color_format>& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) : parent(ColorImage, DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
+			ImageLike& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : depth_view(ColorImage.data(), DepthData, ColorImage.width(), ColorImage.height(), Near, Far, NearClip, FarClip) { }
 
-		template <typename Shader>
-		void draw(
+		template <typename VertexT, typename ...Args>
+		inline constexpr void operator()(
 			uint32_t x, uint32_t y,
-			const typename Shader::vertex::output* triangle,
+			const VertexT* triangle,
 			glm::vec3 partial_coefs,
-			const typename Shader::fragment::uniform_buffer&
+			Args&&... args
 		) {
 			// depth test
 			depth_format& oldDepth = this->depth(x, y);
@@ -49,19 +68,5 @@ namespace rast::framebuffer {
 				this->color(x, y) = convert::f01_to_uint<float, uint8_t>(glm::vec4(glm::vec3((depth - near_clip) / far_clip), 1.0f));
 			}
 		}
-
-		template <typename Shader>
-		auto raster_adapter(const typename Shader::fragment::uniform_buffer& uniform_buffer) {
-			return [this, &uniform_buffer](
-				uint32_t x, uint32_t y, const typename Shader::vertex::output* triangle, glm::vec3 partial_coefs
-			) {
-				this->draw<Shader>(x, y, triangle, partial_coefs, uniform_buffer);
-			};
-		}
 	};
-}
-
-namespace rast::raster {
-	template<typename ColorFormat, typename DepthFormat, depth_test::function::type<DepthFormat> DepthTest>
-	inline constexpr output_interface output_interface_v<framebuffer::depth_view<ColorFormat, DepthFormat, DepthTest>> = output_interface::framebuffer;
 }

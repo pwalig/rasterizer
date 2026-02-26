@@ -185,5 +185,7 @@ namespace rast::shader {
 
 namespace rast {
 	template <> inline constexpr bool is_discardable_v<shader::outputs::discardable<color::rgba8>> = true;
+	template <> inline constexpr bool is_discardable_v<shader::outputs::discardable<glm::vec4>> = true;
 	template <> inline constexpr bool is_discardable_v<shader::outputs::alpha_discardable<color::rgba8>> = true;
+	template <> inline constexpr bool is_discardable_v<shader::outputs::alpha_discardable<glm::vec4>> = true;
 }

@@ -45,7 +45,7 @@ namespace rast::shader {
 					};
 				}
 			};
-			using output = outputs::discardable<color::rgba8>;
+			using output = outputs::discardable<glm::vec4>;
 			using output_x4 = math::vec4x4<uint8_t>;
 
 			inline static float alpha_clip_threshold = 0.25f;
@@ -67,9 +67,20 @@ namespace rast::shader {
 					(convert::uint_to_f01<uint8_t, float>(color2) * coef2) +
 					(convert::uint_to_f01<uint8_t, float>(color3) * coef3);
 			};
+			
+			inline static color::rgba8 blend(glm::vec4 src, color::rgba8 dst) {
+				float max_u8x = static_cast<float>(std::numeric_limits<uint8_t>::max());
+				glm::vec4 fdst = glm::vec4(
+					static_cast<float>(dst.r) / max_u8x,
+					static_cast<float>(dst.g) / max_u8x,
+					static_cast<float>(dst.b) / max_u8x,
+					static_cast<float>(dst.a) / max_u8x
+				);
+				glm::vec4 color = (src * src.a) + (fdst * (1.0f - src.a));
+				return convert::f01_to_uint<float, uint8_t>(color);
+			}
 
-
-			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
+			inline static output shade0(const input& frag, const uniform_buffer& uniforms) {
 				glm::vec3 N = glm::normalize(frag.normal);
 				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);
 				glm::vec4 color;
@@ -80,12 +91,16 @@ namespace rast::shader {
 					if (color.a <= alpha_clip_threshold) return output::discard();
 				}
 				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
-				return convert::f01_to_uint<float, uint8_t>(glm::vec4(
-					color.r * (nl * uniforms.light_color.r + uniforms.ambient.r),
-					color.g * (nl * uniforms.light_color.g + uniforms.ambient.g),
-					color.b * (nl * uniforms.light_color.b + uniforms.ambient.b),
-					color.a
-				));
+				color.r *= (nl * uniforms.light_color.r + uniforms.ambient.r);
+				color.g *= (nl * uniforms.light_color.g + uniforms.ambient.g);
+				color.b *= (nl * uniforms.light_color.b + uniforms.ambient.b);
+				return color;
+				//return convert::f01_to_uint<float, uint8_t>(glm::vec4(
+				//	color.r * (nl * uniforms.light_color.r + uniforms.ambient.r),
+				//	color.g * (nl * uniforms.light_color.g + uniforms.ambient.g),
+				//	color.b * (nl * uniforms.light_color.b + uniforms.ambient.b),
+				//	color.a
+				//));
 			}
 			template <size_t Count>
 			inline static constexpr math::f32vec4x<Count> shade(const input_x<Count>& frag, const uniform_buffer& uniforms) {

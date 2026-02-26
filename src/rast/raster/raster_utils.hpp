@@ -65,6 +65,16 @@ namespace rast::raster {
 		);
 	}
 
+	template <size_t Count>
+	inline constexpr math::i32vec3x<Count> fill_convention(math::i32vec3x<Count> Dx, math::i32vec3x<Count> Dy) {
+		auto zero = math::i32x<Count>(0);
+		return math::i32vec3x<Count>(
+			math::cast<int>(Dy[0] > zero || (Dy[0] == zero && (Dx[0] < zero))),
+			math::cast<int>(Dy[1] > zero || (Dy[1] == zero && (Dx[1] < zero))),
+			math::cast<int>(Dy[2] > zero || (Dy[2] == zero && (Dx[2] < zero)))
+		);
+	}
+
 	template <typename Rasterizer, typename Shader, typename Callable>
 	inline void execute(
 		Callable&& output,

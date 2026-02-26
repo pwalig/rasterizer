@@ -68,7 +68,7 @@ namespace rast::math {
 
 		friend inline constexpr _scalar<bool, Count> operator==(const _scalar& lhs, const _scalar& rhs) {
 			auto res = _scalar<bool, Count>();
-			for_count res[i] = (lhs[i] = rhs[i]);
+			for_count res[i] = (lhs[i] == rhs[i]);
 			return res;
 		}
 		friend inline constexpr _scalar<bool, Count> operator!=(const _scalar& lhs, const _scalar& rhs) {
