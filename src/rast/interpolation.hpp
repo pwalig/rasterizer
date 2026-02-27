@@ -1,4 +1,5 @@
 #pragma once
+#include "math/sse.hpp"
 
 namespace rast::interpol {
 	template <size_t Size, typename T>
@@ -18,6 +19,19 @@ namespace rast::interpol {
 		return (elems[0] * coefs[0]) + (elems[1] * coefs[1]) + (elems[2] * coefs[2]);
 	}
 
+	inline __m128 interpolate(
+		__m128 v0, __m128 v1, __m128 v2,
+		__m128 c0, __m128 c1, __m128 c2
+	) {
+		return _mm_add_ps(_mm_add_ps(_mm_mul_ps(v0, c0), _mm_mul_ps(v1, c1)), _mm_mul_ps(v2, c2));
+	}
+	inline __m128 interpolate(
+		__m128 v0, __m128 v1, __m128 v2,
+		math::sse::vec3 coefs
+	) {
+		return interpolate(v0, v1, v2, coefs.x, coefs.y, coefs.z);
+	}
+
 	namespace coefs {
 		template <typename T>
 		inline constexpr void normalize(T& coefs) {
@@ -27,6 +41,10 @@ namespace rast::interpol {
 		template <typename T>
 		inline constexpr T normalized(T coefs) {
 			auto sum = coefs[0] + coefs[1] + coefs[2];
+			return coefs / sum;
+		}
+		inline math::sse::vec3 normalized(math::sse::vec3 coefs) {
+			__m128 sum = _mm_add_ps(_mm_add_ps(coefs.x, coefs.y), coefs.z);
 			return coefs / sum;
 		}
 		template <typename T>
@@ -61,6 +79,13 @@ namespace rast::interpol {
 		template <typename T, typename VertexT>
 		inline constexpr T perspective(T partial_coefs, VertexT* triangle) {
 			return perspective(partial_coefs, triangle[0].rastPos.w, triangle[1].rastPos.w, triangle[2].rastPos.w);
+		}
+		inline math::sse::vec3 perspective(math::sse::vec3 coefs, math::sse::vec3 w) {
+			return {
+				_mm_div_ps(coefs.x, w.x),
+				_mm_div_ps(coefs.y, w.y),
+				_mm_div_ps(coefs.z, w.z)
+			};
 		}
 	}
 

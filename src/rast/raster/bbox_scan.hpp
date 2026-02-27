@@ -1,16 +1,8 @@
 #pragma once
 #include "raster_utils.hpp"
-#include "raster_output_interface.hpp"
 
 namespace rast::raster {
 	struct bbox_scan {
-		template <typename VertexT>
-		struct triangle {
-			const VertexT* vertices; // view<3> would be usefull here
-			glm::uvec3 min;
-			glm::uvec3 max;
-			int area;
-		};
 		template <typename Callable, typename VertexT, typename ...Args>
 		inline static void rasterize_one(
 			Callable&& output,
@@ -62,16 +54,15 @@ namespace rast::raster {
 			}
 		}
 
-		template <typename Shader, typename Callable, typename ...Args>
+		template <typename Callable, typename Vertex, typename ...Args>
 		inline static void rasterize(
 			Callable&& output,
-			const typename Shader::vertex::output* vertex_begin,
-			const typename Shader::vertex::output* vertex_end,
+			const Vertex* vertex_begin,
+			const Vertex* vertex_end,
 			const viewport& viewport, const tile& tile,
 			Args&&... args
 		) {
-			using vertex = typename Shader::vertex::output;
-			for (const vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
+			for (const Vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
 				rasterize_one(output, triangle, viewport, tile, args...);
 			}
 		}

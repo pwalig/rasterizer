@@ -1,10 +1,9 @@
 #pragma once
 #include "utils.hpp"
 #include "../sized2d_base.hpp"
-#include "../discard_fragment.hpp"
+#include "../is_discardable.hpp"
 #include "../alpha_blend.hpp"
 #include "../image.hpp"
-#include "../raster/raster_output_interface.hpp"
 
 namespace rast::framebuffer {
 	template <typename ColorFormat,

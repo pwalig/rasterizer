@@ -232,6 +232,11 @@ namespace rast::math {
 		for_count if (Mask[i]) Address[Offsets[i]] = Value[i];
 	}
 
+	using boolx1 = boolx<1>;
+	using boolx2 = boolx<2>;
+	using boolx4 = boolx<4>;
+	using boolx8 = boolx<8>;
+
 	using i8x1 = _scalar<int8_t, 1>;
 	using u8x1 = _scalar<uint8_t, 1>;
 	using i16x1 = _scalar<int16_t, 1>;

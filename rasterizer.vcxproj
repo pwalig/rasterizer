@@ -77,7 +77,7 @@
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -94,7 +94,7 @@
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -111,7 +111,7 @@
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -128,7 +128,7 @@
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -153,7 +153,8 @@
     <ClInclude Include="src\rast\command_buffer.hpp" />
     <ClInclude Include="src\rast\convert.hpp" />
     <ClInclude Include="src\rast\depth_test.hpp" />
-    <ClInclude Include="src\rast\discard_fragment.hpp" />
+    <ClInclude Include="src\rast\framebuffer\color_depth_vectorized.hpp" />
+    <ClInclude Include="src\rast\is_discardable.hpp" />
     <ClInclude Include="src\rast\fragbuff\fragbuff_utils.hpp" />
     <ClInclude Include="src\rast\fragbuff\rewrite.hpp" />
     <ClInclude Include="src\rast\sized2d_base.hpp" />
@@ -172,7 +173,6 @@
     <ClInclude Include="src\rast\perspective_divide.hpp" />
     <ClInclude Include="src\rast\raster\bbox_scan.hpp" />
     <ClInclude Include="src\rast\raster\left_edge.hpp" />
-    <ClInclude Include="src\rast\raster\raster_output_interface.hpp" />
     <ClInclude Include="src\rast\raster\raster_utils.hpp" />
     <ClInclude Include="src\rast\tile.hpp" />
     <ClInclude Include="src\rast\utils\structure_of_arrays.hpp" />

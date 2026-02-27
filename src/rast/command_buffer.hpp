@@ -4,7 +4,6 @@
 
 #include "mesh.hpp"
 #include "renderer.hpp"
-#include "raster/raster_output_interface.hpp"
 
 namespace rast {
 	template <typename Shader>
@@ -54,7 +53,13 @@ namespace rast {
 			for (command& cmd : commands) {
 				tp.enque([&cmd, intermediate_buffer_memory]() {
 					cmd.raster_range.begin = intermediate_buffer_memory;
-					cmd.raster_range.end = rast::renderer::run_vertex_shader_indexed<typename Shader::vertex, Clipper>(cmd.mesh, cmd.ubo.vertex, intermediate_buffer_memory);
+					cmd.raster_range.end = rast::renderer::run_vertex_shader_indexed<
+						static_cast<typename Shader::vertex::output(*)(
+							const typename Shader::vertex::input&,
+							const typename Shader::vertex::uniform_buffer&)
+						>(Shader::vertex::shade), Clipper::template clip<vertex_output>>(
+							cmd.mesh, intermediate_buffer_memory, cmd.ubo.vertex
+						);
 				});
 				intermediate_buffer_memory += cmd.mesh.index_buffer.size() * 2;
 			}
@@ -66,16 +71,10 @@ namespace rast {
 				tp.enque([&framebuffer, &cmds = (this->commands), i, stride]() {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 					for (const command& cmd : cmds) {
-						Rasterizer::template rasterize<Shader>(
+						Rasterizer::rasterize(
 							framebuffer,
-							//[&framebuffer](uint32_t x, uint32_t y,
-							//	const typename Shader::vertex::output* triangle,
-							//	glm::ivec3 equation_results, int area,
-							//	const typename Shader::fragment::uniform_buffer& ubo
-							//) {
-							//	framebuffer.template draw<Shader>(x, y, triangle, equation_results, area, ubo);
-							//},
-							cmd.raster_range.begin, cmd.raster_range.end, cmd.viewport, tile, cmd.ubo.fragment
+							cmd.raster_range.begin, cmd.raster_range.end,
+							cmd.viewport, tile, cmd.ubo.fragment
 						);
 					}
 				});
@@ -87,21 +86,20 @@ namespace rast {
 		}
 	};
 
-	template <typename FragmentShader, typename ImageView, typename ThreadPool>
+	template <auto FragmentShader, typename ImageView, typename ThreadPool, typename ...Args>
 	void shade_screen_quad(
-		typename FragmentShader::uniform_buffer ubo,
 		ImageView& framebuffer,
-		ThreadPool& tp
+		ThreadPool& tp,
+		const Args&... args
 	) {
-		float stride = (float)framebuffer.width / tp.thread_count();
-		for (int i = 0; i < tp.thread_count(); ++i) {
-			tp.enque([&framebuffer, &ubo, i, stride]() {
-				rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height);
+		float stride = (float)framebuffer.width() / tp.thread_count();
+		for (size_t i = 0; i < tp.thread_count(); ++i) {
+			tp.enque([&framebuffer, &args..., i, stride]() {
+				rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 				rast::renderer::draw_screen_quad<FragmentShader>(
 					framebuffer,
-					ubo,
-					rast::viewport(0, 0, framebuffer.width, framebuffer.height),
-					tile
+					rast::viewport(0, 0, framebuffer.width(), framebuffer.height()),
+					tile, args...
 				);
 			});
 		}

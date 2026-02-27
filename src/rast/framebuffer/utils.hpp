@@ -1,7 +1,7 @@
 #pragma once
 #include "../math/vec.hpp"
 #include "../interpolation.hpp"
-#include "../discard_fragment.hpp"
+#include "../is_discardable.hpp"
 #include "../alpha_blend.hpp"
 
 namespace rast::framebuffer {
@@ -64,6 +64,12 @@ namespace rast::framebuffer {
 			triangle[1].rastPos.z,
 			triangle[2].rastPos.z,
 			interpol::coefs::linear(partial_coefs)
+		);
+	}
+
+	inline __m128 get_float_depth(__m128 z0, __m128 z1, __m128 z2, math::sse::vec3 partial_coefs) {
+		return interpol::interpolate(
+			z0, z1, z2, interpol::coefs::linear(partial_coefs)
 		);
 	}
 	template <typename depth_format, typename vertex_output>

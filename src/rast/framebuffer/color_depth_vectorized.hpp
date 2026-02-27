@@ -2,8 +2,6 @@
 #include <algorithm>
 #include <type_traits>
 
-#include <glm/glm.hpp>
-
 #include "../interpolation.hpp"
 #include "../convert.hpp"
 #include "../alpha_blend.hpp"
@@ -21,7 +19,7 @@ namespace rast::framebuffer {
 	> class color_depth : public sized2d_base {
 	public:
 		using color_format = ColorFormat;
-		using depth_format = DepthFormat;
+		using depth_format = float;
 		using size_type = typename sized2d_base::size_type;
 
 	private:
@@ -110,20 +108,17 @@ namespace rast::framebuffer {
 		inline void operator()(
 			__m128i x, __m128i y,
 			const VertexT* triangle,
-			//glm::vec3,
 			math::sse::vec3 partial_coefs,
-			math::boolx4 mask,
 			Args&&... args
 		) {
 			__m128i off = data_offset(x, y);
 			alignas(16) int offsets[4];
-			_mm_store_si128(reinterpret_cast<__m128i*>(offsets), off);
-
+			_mm_store_si128(offsets, off);
 			alignas(16) float depths[4] = {
-				mask[0] ? _depth_data[offsets[0]] : std::numeric_limits<float>::min(),
-				mask[1] ? _depth_data[offsets[1]] : std::numeric_limits<float>::min(),
-				mask[2] ? _depth_data[offsets[2]] : std::numeric_limits<float>::min(),
-				mask[3] ? _depth_data[offsets[3]] : std::numeric_limits<float>::min()
+				_depth_data[offsets[0]],
+				_depth_data[offsets[1]],
+				_depth_data[offsets[2]],
+				_depth_data[offsets[3]]
 			};
 			__m128 old_depth = _mm_load_ps(depths);
 			__m128 new_depth = get_float_depth(
@@ -133,44 +128,27 @@ namespace rast::framebuffer {
 				partial_coefs
 			);
 			__m128 depth_mask = _mm_cmplt_ps(new_depth, old_depth);
-			alignas(16) float depth_mask_mem[4];
-			_mm_store_ps(depth_mask_mem, depth_mask);
-			mask[0] &= (depth_mask_mem[0] != 0.0f);
-			mask[1] &= (depth_mask_mem[1] != 0.0f);
-			mask[2] &= (depth_mask_mem[2] != 0.0f);
-			mask[3] &= (depth_mask_mem[3] != 0.0f);
-			if (math::or_accross(mask)) {
-				_mm_store_ps(depths, new_depth);
-				for (size_t i = 0; i < 4; ++i) {
-					if (!mask[0]) continue;
-					//if (offsets[i] > (int)area()) continue;
-					auto frag = FragmentShader(triangle[0].data,
-						//interpol::interpolate(
-						//	triangle[0].data, triangle[1].data, triangle[2].data,
-						//	interpol::coefs::perspective(
-						//		partial_coefs, math::sse::vec3(
-						//			_mm_set_ps1(triangle[0].rastPos.w),
-						//			_mm_set_ps1(triangle[1].rastPos.w),
-						//			_mm_set_ps1(triangle[2].rastPos.w)
-						//		))
-						std::forward<Args>(args)...
-					);
-					if constexpr (is_discardable_v<decltype(frag)>) {
-						if (frag) {
-							_color_data[offsets[i]] = AlphaBlend(*frag, _color_data[offsets[i]]);
-							_depth_data[offsets[i]] = depths[i];
-						}
-					}
-					else {
-						_color_data[offsets[i]] = AlphaBlend(frag, _color_data[offsets[i]]);
-						_depth_data[offsets[i]] = depths[i];
-					}
-				}
-				//if (mask[0]) _color_data[offsets[0]] = { static_cast<uint8_t>(depths[0] * 255.0f) , 0, 0, 255};
-				//if (mask[1]) _color_data[offsets[1]] = { 0, 0, 0, 255 };
-				//if (mask[2]) _color_data[offsets[2]] = { 0, 0, 0, 255 };
-				//if (mask[3]) _color_data[offsets[3]] = { 0, 0, 0, 255 };
+			_mm_store_ps(depths, depth_mask);
+			//__m128 depth_test = math::sse::or_accross(depth_mask);
+			if (depths[0] > 0.0f) {
+				color(x, y) = { 255, 0, 0, 255 };
 			}
+			//if (DepthTest(newDepth, oldDepth)) {
+			//	auto frag = FragmentShader(
+			//		interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::coefs::perspective(partial_coefs, triangle)),
+			//		std::forward<Args>(args)...
+			//	);
+			//	if constexpr (is_discardable_v<decltype(frag)>) {
+			//		if (frag) {
+			//			color(x, y) = AlphaBlend(*frag, color(x, y));
+			//			oldDepth = newDepth;
+			//		}
+			//	}
+			//	else {
+			//		color(x, y) = AlphaBlend(frag, color(x, y));
+			//		oldDepth = newDepth;
+			//	}
+			//}
 		}
 	};
 }

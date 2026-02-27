@@ -101,7 +101,7 @@
     <ClInclude Include="src\rast\alpha_blend.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\discard_fragment.hpp">
+    <ClInclude Include="src\rast\is_discardable.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\depth_test.hpp">
@@ -126,9 +126,6 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\fragbuff\rewrite.hpp">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rast\raster\raster_output_interface.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\perspective_divide.hpp">
@@ -168,6 +165,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\sized2d_base.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rast\framebuffer\color_depth_vectorized.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -13,6 +13,25 @@ namespace rast::raster {
 		);
 	}
 
+	inline math::sse::ivec2 to_screen_space(
+		__m128 x, __m128 y,
+		__m128i extent_x, __m128i extent_y,
+		__m128i offset_x, __m128i offset_y
+	) {
+		return {
+			_mm_cvtps_epi32(_mm_fmadd_ps(
+				_mm_add_ps(x, _mm_set_ps1(1.0f)),
+				_mm_mul_ps(_mm_cvtepi32_ps(extent_x), _mm_set_ps1(0.5f)),
+				_mm_cvtepi32_ps(offset_x)
+			)),
+			_mm_cvtps_epi32(_mm_fmadd_ps(
+				_mm_sub_ps(_mm_set_ps1(1.0f), y),
+				_mm_mul_ps(_mm_cvtepi32_ps(extent_y), _mm_set_ps1(0.5f)),
+				_mm_cvtepi32_ps(offset_y)
+			))
+		};
+	}
+
 	template <size_t Count>
 	inline constexpr math::i32vec2x<Count> to_screen_space(
 		const math::f32x<Count>& x,
@@ -43,6 +62,17 @@ namespace rast::raster {
 			static_cast<Float>(E.z) / area,
 			static_cast<Float>(E.x) / area
 		);
+	}
+
+	inline math::sse::vec3 partial_coefs(__m128i e0, __m128i e1, __m128i e2, __m128 area) {
+		return {
+			_mm_div_ps(_mm_cvtepi32_ps(e0), area),
+			_mm_div_ps(_mm_cvtepi32_ps(e1), area),
+			_mm_div_ps(_mm_cvtepi32_ps(e2), area)
+		};
+	}
+	inline math::sse::vec3 partial_coefs(__m128i e0, __m128i e1, __m128i e2, __m128i area) {
+		return partial_coefs(e0, e1, e2, _mm_cvtepi32_ps(area));
 	}
 
 	template <typename Shader, typename Callable>

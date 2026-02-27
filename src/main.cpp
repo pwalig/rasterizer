@@ -38,7 +38,9 @@
 #include "thread_pool.hpp"
 #include "game/fly_cam.hpp"
 #include "rast/raster/bbox_scan.hpp"
+#include "rast/raster/vbbox_scan.hpp"
 #include "rast/raster/left_edge.hpp"
+//#include "rast/framebuffer/color_depth_vectorized.hpp"
 
 //#include "rast/static_test.hpp"
 
@@ -235,7 +237,7 @@ struct scene {
 };
 
 struct application {
-	using depth_format = uint32_t;
+	using depth_format = float;
 	using DepthBuffer = rast::image<depth_format>;
 	//using color_format = rast::math::u8vec4x1;
 	using color_format = rast::color::rgba8;
@@ -427,7 +429,7 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 		// second pass
 		rast::shader::deferred::second_pass::fragment::uniform_buffer ubo;
 		ubo.texture = rast::sampler<application::g_format>(app.g_buffer);
-		rast::shade_screen_quad<rast::shader::deferred::second_pass::fragment>(ubo, out_framebuf, tp);
+		rast::shade_screen_quad<rast::shader::deferred::second_pass::fragment::shade>(out_framebuf, tp, ubo);
 	}
 	else {
 		// forward

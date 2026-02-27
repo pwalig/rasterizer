@@ -1,7 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include "../math/vec.hpp"
-#include "../discard_fragment.hpp"
+#include "../is_discardable.hpp"
 
 namespace rast::shader {
 	template <typename Shader>
@@ -149,10 +149,6 @@ namespace rast::shader {
 			inline discardable(output&& v) : value(std::forward<output>(v)), discarded(false) {}
 			static discardable discard() { return discardable(); }
 
-			inline value_type& get_value() { return value; }
-			inline const value_type& get_value() const { return value; }
-			inline bool is_discarded() const { return discarded; }
-
 			inline constexpr const_reference operator*() const { return value; }
 			inline constexpr reference operator*() { return value; }
 
@@ -184,8 +180,12 @@ namespace rast::shader {
 }
 
 namespace rast {
-	template <> inline constexpr bool is_discardable_v<shader::outputs::discardable<color::rgba8>> = true;
-	template <> inline constexpr bool is_discardable_v<shader::outputs::discardable<glm::vec4>> = true;
-	template <> inline constexpr bool is_discardable_v<shader::outputs::alpha_discardable<color::rgba8>> = true;
-	template <> inline constexpr bool is_discardable_v<shader::outputs::alpha_discardable<glm::vec4>> = true;
+	template <typename T>
+	struct is_discardable<shader::outputs::discardable<T>> {
+		inline static constexpr bool value = true;
+	};
+	template <typename T>
+	struct is_discardable<shader::outputs::alpha_discardable<T>> {
+		inline static constexpr bool value = true;
+	};
 }
