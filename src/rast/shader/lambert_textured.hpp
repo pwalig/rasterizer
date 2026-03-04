@@ -69,7 +69,7 @@ namespace rast::shader {
 			};
 			
 			inline static color::rgba8 blend(glm::vec4 src, color::rgba8 dst) {
-				float max_u8x = static_cast<float>(std::numeric_limits<uint8_t>::max());
+				constexpr float max_u8x = static_cast<float>(std::numeric_limits<uint8_t>::max());
 				glm::vec4 fdst = glm::vec4(
 					static_cast<float>(dst.r) / max_u8x,
 					static_cast<float>(dst.g) / max_u8x,
@@ -79,6 +79,17 @@ namespace rast::shader {
 				glm::vec4 color = (src * src.a) + (fdst * (1.0f - src.a));
 				return convert::f01_to_uint<float, uint8_t>(color);
 			}
+			//inline static color::rgba8 simd_blend(glm::vec<4, math::simd::f32x4> src, color::rgba8* dst) {
+			//	math::simd::f32x4 max_u8x = static_cast<math::simd::f32x4>(math::simd::i32x4(static_cast<int32_t>(std::numeric_limits<uint8_t>::max())));
+			//	auto fdst = glm::vec<4, math::simd::f32x4>(
+			//		math::simd::make_x4<float>(dst[0].r, dst[1].r, dst[2].r, dst[3].r) / max_u8x,
+			//		math::simd::make_x4<float>(dst[0].g, dst[1].g, dst[2].g, dst[3].g) / max_u8x,
+			//		math::simd::make_x4<float>(dst[0].b, dst[1].b, dst[2].b, dst[3].b) / max_u8x,
+			//		math::simd::make_x4<float>(dst[0].a, dst[1].a, dst[2].a, dst[3].a) / max_u8x
+			//	);
+			//	glm::vec<4, math::simd::f32x4> color = (src * src.a) + (fdst * (math::simd::f32x4(1.0f) - src.a));
+			//	return convert::f01_to_uint<math::simd::f32x4, uint8_t>(color);
+			//}
 
 			inline static output shade0(const input& frag, const uniform_buffer& uniforms) {
 				glm::vec3 N = glm::normalize(frag.normal);
@@ -95,12 +106,6 @@ namespace rast::shader {
 				color.g *= (nl * uniforms.light_color.g + uniforms.ambient.g);
 				color.b *= (nl * uniforms.light_color.b + uniforms.ambient.b);
 				return color;
-				//return convert::f01_to_uint<float, uint8_t>(glm::vec4(
-				//	color.r * (nl * uniforms.light_color.r + uniforms.ambient.r),
-				//	color.g * (nl * uniforms.light_color.g + uniforms.ambient.g),
-				//	color.b * (nl * uniforms.light_color.b + uniforms.ambient.b),
-				//	color.a
-				//));
 			}
 			template <size_t Count>
 			inline static constexpr math::f32vec4x<Count> shade(const input_x<Count>& frag, const uniform_buffer& uniforms) {

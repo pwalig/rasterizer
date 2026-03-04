@@ -15,9 +15,11 @@ add_executable(rasterizer)
 
 if (MSVC)
     target_compile_options(rasterizer PRIVATE /W4 /WX)
+    target_compile_options(rasterizer PRIVATE /arch:SSE4.1) #SIMD
 else()
     target_compile_options(rasterizer PRIVATE -Wall -Werror)
     # target_compile_options(rasterizer PRIVATE -Wall -Wextra -pedantic -Werror)
+    target_compile_options(rasterizer PRIVATE -march=native) #SIMD
 endif()
 
 target_include_directories(rasterizer PRIVATE $ENV{GLM_PATH})

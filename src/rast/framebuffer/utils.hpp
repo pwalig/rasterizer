@@ -34,9 +34,9 @@ namespace rast::framebuffer {
 		
 	}
 
-	template <typename Vec3>
-	inline constexpr float get_float_depth(
-		float z0, float z1, float z2,
+	template <typename Float, typename Vec3>
+	inline constexpr Float get_float_depth(
+		Float z0, Float z1, Float z2,
 		Vec3 partial_coefs
 	) {
 		return interpol::interpolate(

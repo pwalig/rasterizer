@@ -7,48 +7,16 @@ namespace rast::raster {
 		inline static void rasterize_one(
 			Callable&& output,
 			const VertexT* triangle,
-			const viewport& viewport,
-			const tile& tile,
-			Args&&... args
+			glm::ivec3 Cx, glm::ivec3 Cy,
+			glm::ivec3 Dx, glm::ivec3 Dy,
+			glm::ivec2 min, glm::ivec2 max,
+			const Args&... args
 		) {
-			glm::ivec2 a = to_screen_space(triangle[0].rastPos, viewport);
-			glm::ivec2 b = to_screen_space(triangle[1].rastPos, viewport);
-			glm::ivec2 c = to_screen_space(triangle[2].rastPos, viewport);
-
-			glm::ivec2 min = glm::ivec2(
-				std::max((int)std::min({ a.x, b.x, c.x }), std::max(tile.min.x, viewport.offset.x)),
-				std::max((int)std::min({ a.y, b.y, c.y }), std::max(tile.min.y, viewport.offset.y))
-			) / 16;
-			glm::ivec2 max = glm::ivec2(
-				std::min<int>({ std::max({ a.x, b.x, c.x }) + 16, tile.max.x, viewport.offset.x + viewport.extent.x }),
-				std::min<int>({ std::max({ a.y, b.y, c.y }) + 16, tile.max.y, viewport.offset.y + viewport.extent.y })
-			) / 16;
-
-			if (min.x >= max.x || min.y >= max.y) return;
-
-			glm::ivec3 x012 = glm::ivec3(a.x, b.x, c.x);
-			glm::ivec3 x120 = glm::ivec3(b.x, c.x, a.x);
-
-			glm::ivec3 y012 = glm::ivec3(a.y, b.y, c.y);
-			glm::ivec3 y120 = glm::ivec3(b.y, c.y, a.y);
-
-			glm::ivec3 Dx = x120 - x012;
-			glm::ivec3 Dy = y120 - y012;
-
-			int area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
-			if (area <= 0) return; // back face detected - early return
-
-			// Dx * Y - fill_convention
-			glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - y012) - fill_convention(Dx, Dy);
-			glm::ivec3 Cx = Dy * (glm::ivec3(min.x << 4) - x012);
-			Dx *= 16;
-			Dy *= 16;
-
 			for (int y = min.y; y < max.y; ++y, Cy += Dx) {
 				glm::ivec3 E = Cy - Cx;
 				for (int x = min.x; x < max.x; ++x, E -= Dy) {
 					if (E.x >= 0 && E.y >= 0 && E.z >= 0) {
-						output(x, y, triangle, partial_coefs<glm::vec3>(E, area), std::forward<Args>(args)...);
+						output(x, y, triangle, E, args...);
 					}
 				}
 			}
@@ -60,11 +28,9 @@ namespace rast::raster {
 			const Vertex* vertex_begin,
 			const Vertex* vertex_end,
 			const viewport& viewport, const tile& tile,
-			Args&&... args
+			const Args&... args
 		) {
-			for (const Vertex* triangle = vertex_begin; triangle != vertex_end; triangle += 3) {
-				rasterize_one(output, triangle, viewport, tile, args...);
-			}
+			filter_triangles_x4<rasterize_one<Callable, Vertex, Args...>>(output, vertex_begin, vertex_end, viewport, tile, args...);
 		}
 	};
 }
