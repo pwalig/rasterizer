@@ -33,13 +33,13 @@ namespace rast::interpol {
 	}
 
 	namespace coefs {
-		template <typename T>
-		inline constexpr void normalize(T& coefs) {
+		template <typename Vec3>
+		inline constexpr void normalize(Vec3& coefs) {
 			auto sum = coefs.x + coefs.y + coefs.z;
 			coefs /= sum;
 		}
-		template <typename T>
-		inline constexpr T normalized(T coefs) {
+		template <typename Vec3>
+		inline constexpr Vec3 normalized(Vec3 coefs) {
 			auto sum = coefs[0] + coefs[1] + coefs[2];
 			return coefs / sum;
 		}
@@ -47,9 +47,14 @@ namespace rast::interpol {
 			__m128 sum = _mm_add_ps(_mm_add_ps(coefs.x, coefs.y), coefs.z);
 			return coefs / sum;
 		}
-		template <typename T>
-		inline constexpr T average() {
-			return T(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f);
+		template <typename Vec3>
+		inline constexpr Vec3 average() {
+			using value_type = typename Vec3::value_type;
+			return Vec3(
+				value_type(1.0 / 3.0),
+				value_type(1.0 / 3.0),
+				value_type(1.0 / 3.0)
+			);
 		}
 		template <typename T>
 		inline constexpr T linear(T partial_coefs) {
@@ -79,13 +84,6 @@ namespace rast::interpol {
 		template <typename T, typename VertexT>
 		inline constexpr T perspective(T partial_coefs, VertexT* triangle) {
 			return perspective(partial_coefs, triangle[0].rastPos.w, triangle[1].rastPos.w, triangle[2].rastPos.w);
-		}
-		inline math::sse::vec3 perspective(math::sse::vec3 coefs, math::sse::vec3 w) {
-			return {
-				_mm_div_ps(coefs.x, w.x),
-				_mm_div_ps(coefs.y, w.y),
-				_mm_div_ps(coefs.z, w.z)
-			};
 		}
 	}
 

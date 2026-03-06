@@ -183,6 +183,16 @@ namespace rast::math {
 			return implementation_t<U, Count>::store(dst, a);
 		}
 
+		template <typename T, size_t Count>
+		inline _x_<T, Count> clamp(
+			_x_<T, Count> Value,
+			_x_<T, Count> Min,
+			_x_<T, Count> Max
+		) {
+			using impl = implementation_t<T, Count>;
+			return impl::max(impl::min(Value, Max), Min);
+		}
+
 		template <typename T> using _x2 = _x_<T, 2>;
 		template <typename T> using _x4 = _x_<T, 4>;
 		template <typename T> using _x8 = _x_<T, 8>;

@@ -10,6 +10,7 @@
 #include "../color.hpp"
 #include "../sampler.hpp"
 #include "../math/vec.hpp"
+#include "../math/sse.hpp"
 
 namespace rast::shader {
 	struct lambert_textured {
@@ -27,6 +28,17 @@ namespace rast::shader {
 					return { rhs.normal + lhs.normal, rhs.uv + lhs.uv };
 				}
 			};
+			template <size_t Count>
+			struct simd_input {
+				glm::vec<3, math::simd::f32x_<Count>> normal;
+				glm::vec<2, math::simd::f32x_<Count>> uv;
+				friend inline simd_input operator* (const simd_input& rhs, math::simd::f32x_<Count> lhs) {
+					return { rhs.normal * lhs, rhs.uv * lhs };
+				}
+				friend inline simd_input operator+ (const simd_input& rhs, const simd_input& lhs) {
+					return { rhs.normal + lhs.normal, rhs.uv + lhs.uv };
+				}
+			};
 			struct input {
 			public:
 				glm::vec3 normal;
@@ -38,10 +50,10 @@ namespace rast::shader {
 					return { rhs.normal + lhs.normal, rhs.uv + lhs.uv };
 				}
 				template <size_t Count>
-				inline constexpr input_x<Count> vectorize() const {
+				inline constexpr simd_input<Count> vectorize() const {
 					return {
-						math::vectorize<3, Count>(normal),
-						math::vectorize<2, Count>(uv)
+						glm::vec<3, math::simd::f32x_<Count>>(glm::normalize(normal)),
+						glm::vec<2, math::simd::f32x_<Count>>(uv)
 					};
 				}
 			};
@@ -56,6 +68,13 @@ namespace rast::shader {
 				glm::vec3 light_color = glm::vec3(1.0f);
 				glm::vec3 ambient = glm::vec3(0.1f);
 			};
+			template <size_t Count>
+			struct simd_uniform_buffer {
+				sampler<rast::color::rgba8> texture;
+				glm::vec<3, math::simd::f32x_<Count>> light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
+				glm::vec<3, math::simd::f32x_<Count>> light_color = glm::vec3(1.0f);
+				glm::vec<3, math::simd::f32x_<Count>> ambient = glm::vec3(0.1f);
+			};
 
 			inline static constexpr rast::color::rgba32f color_interpolator(
 				rast::color::rgba8 color0, rast::color::rgba8 color1, rast::color::rgba8 color2, rast::color::rgba8 color3,
@@ -69,27 +88,33 @@ namespace rast::shader {
 			};
 			
 			inline static color::rgba8 blend(glm::vec4 src, color::rgba8 dst) {
-				constexpr float max_u8x = static_cast<float>(std::numeric_limits<uint8_t>::max());
-				glm::vec4 fdst = glm::vec4(
-					static_cast<float>(dst.r) / max_u8x,
-					static_cast<float>(dst.g) / max_u8x,
-					static_cast<float>(dst.b) / max_u8x,
-					static_cast<float>(dst.a) / max_u8x
-				);
+				glm::vec4 fdst = convert::uint_to_f01<uint8_t, float>(dst);
 				glm::vec4 color = (src * src.a) + (fdst * (1.0f - src.a));
 				return convert::f01_to_uint<float, uint8_t>(color);
 			}
-			//inline static color::rgba8 simd_blend(glm::vec<4, math::simd::f32x4> src, color::rgba8* dst) {
-			//	math::simd::f32x4 max_u8x = static_cast<math::simd::f32x4>(math::simd::i32x4(static_cast<int32_t>(std::numeric_limits<uint8_t>::max())));
-			//	auto fdst = glm::vec<4, math::simd::f32x4>(
-			//		math::simd::make_x4<float>(dst[0].r, dst[1].r, dst[2].r, dst[3].r) / max_u8x,
-			//		math::simd::make_x4<float>(dst[0].g, dst[1].g, dst[2].g, dst[3].g) / max_u8x,
-			//		math::simd::make_x4<float>(dst[0].b, dst[1].b, dst[2].b, dst[3].b) / max_u8x,
-			//		math::simd::make_x4<float>(dst[0].a, dst[1].a, dst[2].a, dst[3].a) / max_u8x
-			//	);
-			//	glm::vec<4, math::simd::f32x4> color = (src * src.a) + (fdst * (math::simd::f32x4(1.0f) - src.a));
-			//	return convert::f01_to_uint<math::simd::f32x4, uint8_t>(color);
-			//}
+			template <size_t Count>
+			inline static std::array<color::rgba8, Count> simd_blend(
+				glm::vec<4, math::simd::f32x_<Count>> src,
+				std::array<color::rgba8, Count> dst
+			) {
+				math::simd::f32x_<Count> max_u8x = static_cast<math::simd::f32x_<Count>>(
+					math::simd::i32x_<Count>(static_cast<int32_t>(std::numeric_limits<uint8_t>::max()))
+				);
+				auto fdst = glm::vec<4, math::simd::f32x_<Count>>(
+					math::simd::make_x4<float>(dst[0].r, dst[1].r, dst[2].r, dst[3].r) / max_u8x,
+					math::simd::make_x4<float>(dst[0].g, dst[1].g, dst[2].g, dst[3].g) / max_u8x,
+					math::simd::make_x4<float>(dst[0].b, dst[1].b, dst[2].b, dst[3].b) / max_u8x,
+					math::simd::make_x4<float>(dst[0].a, dst[1].a, dst[2].a, dst[3].a) / max_u8x
+				);
+				glm::vec<4, math::simd::f32x_<Count>> color = (src * src.a) + (fdst * (math::simd::f32x_<Count>(1.0f) - src.a));
+				std::array<color::rgba8, Count> res = {
+					convert::f01_to_uint<float, uint8_t>(glm::vec4(color.r[0], color.g[0], color.b[0], color.a[0])),
+					convert::f01_to_uint<float, uint8_t>(glm::vec4(color.r[1], color.g[1], color.b[1], color.a[1])),
+					convert::f01_to_uint<float, uint8_t>(glm::vec4(color.r[2], color.g[2], color.b[2], color.a[2])),
+					convert::f01_to_uint<float, uint8_t>(glm::vec4(color.r[3], color.g[3], color.b[3], color.a[3]))
+				};
+				return res;
+			}
 
 			inline static output shade0(const input& frag, const uniform_buffer& uniforms) {
 				glm::vec3 N = glm::normalize(frag.normal);
@@ -102,6 +127,35 @@ namespace rast::shader {
 					if (color.a <= alpha_clip_threshold) return output::discard();
 				}
 				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+				color.r *= (nl * uniforms.light_color.r + uniforms.ambient.r);
+				color.g *= (nl * uniforms.light_color.g + uniforms.ambient.g);
+				color.b *= (nl * uniforms.light_color.b + uniforms.ambient.b);
+				return color;
+			}
+			template <size_t Count>
+			inline static glm::vec<4, math::simd::f32x4> simd_shade(
+				const simd_input<Count>& frag,
+				const simd_uniform_buffer<Count>& uniforms
+			) {
+				math::simd::f32x4 nl = math::simd::clamp(
+					(frag.normal.x * uniforms.light_direction.x) +
+					(frag.normal.y * uniforms.light_direction.y) +
+					(frag.normal.z * uniforms.light_direction.z), // dot(normal, light_direction)
+					math::simd::f32x4(0.0f), math::simd::f32x4(1.0f)
+				);
+				auto color = glm::vec<4, math::simd::f32x_<Count>>(
+					math::simd::f32x4(1.0f),
+					math::simd::f32x4(1.0f),
+					math::simd::f32x4(1.0f),
+					math::simd::f32x4(1.0f)
+				);
+				//if (uniforms.texture) {
+					//color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y));
+				//	if (linear) color = uniforms.texture.sample_linear<color_interpolator>(frag.uv.x, frag.uv.y, mip_to_sample);
+				//	else color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y, mip_to_sample));
+				//	if (color.a <= alpha_clip_threshold) return output::discard();
+				//}
+				//else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
 				color.r *= (nl * uniforms.light_color.r + uniforms.ambient.r);
 				color.g *= (nl * uniforms.light_color.g + uniforms.ambient.g);
 				color.b *= (nl * uniforms.light_color.b + uniforms.ambient.b);
@@ -143,7 +197,11 @@ namespace rast::shader {
 			}
 		};
 
-		using uniform_buffer = shader_uniform_buffer<lambert_textured>;
+		//using uniform_buffer = shader_uniform_buffer<lambert_textured>;
+		struct uniform_buffer {
+			typename fragment::simd_uniform_buffer<4> fragment;
+			typename vertex::uniform_buffer vertex;
+		};
 	};
 	namespace lambert_textured_test {
 		using color = rast::color::rgba8;

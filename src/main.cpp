@@ -243,7 +243,7 @@ struct application {
 	using color_format = rast::color::rgba8;
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 	//using Framebuffer = rast::framebuffer::vectorized<color_format, depth_format, rast::shader::lambert_textured::fragment::shade<4>, rast::depth_test::less<rast::math::u32x4>, rast::static_test::blend<4>>;
-	using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, rast::shader::lambert_textured::fragment::shade0, rast::shader::lambert_textured::fragment::blend, rast::depth_test::less>;
+	using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, rast::shader::lambert_textured::fragment::simd_shade<4>, rast::shader::lambert_textured::fragment::simd_blend<4>, rast::depth_test::less>;
 
 	using g_format = rast::shader::deferred::first_pass::fragment::output;
 	using GBuffer = rast::image<g_format>;
@@ -273,7 +273,7 @@ struct application {
 		ThreadPool& tp
 	) {
 		using clipper = rast::sutherland_hodgman;
-		using rasterizer = rast::raster::bbox_scan;
+		using rasterizer = rast::raster::vbbox_scan;
 		static rast::command_buffer<Shader> cmd_buffer;
 		cmd_buffer.reset();
 		glm::mat4 PV = P * V;

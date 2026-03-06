@@ -8,10 +8,10 @@ namespace rast::convert {
 	template <typename float_type, typename int_type>
 	inline constexpr glm::vec<4, int_type> f01_to_uint(const glm::vec<4, float_type>& in) {
 		return glm::vec<4, int_type>(
-			std::clamp(in.x, 0.0f, 1.0f) * std::numeric_limits<int_type>::max(),
-			std::clamp(in.y, 0.0f, 1.0f) * std::numeric_limits<int_type>::max(),
-			std::clamp(in.z, 0.0f, 1.0f) * std::numeric_limits<int_type>::max(),
-			std::clamp(in.w, 0.0f, 1.0f) * std::numeric_limits<int_type>::max()
+			std::clamp(in.x, float_type(0.0), float_type(1.0)) * std::numeric_limits<int_type>::max(),
+			std::clamp(in.y, float_type(0.0), float_type(1.0)) * std::numeric_limits<int_type>::max(),
+			std::clamp(in.z, float_type(0.0), float_type(1.0)) * std::numeric_limits<int_type>::max(),
+			std::clamp(in.w, float_type(0.0), float_type(1.0)) * std::numeric_limits<int_type>::max()
 		);
 	}
 

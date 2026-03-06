@@ -127,9 +127,9 @@ namespace rast::framebuffer {
 			};
 			math::simd::f32x4 old_depth = _mm_load_ps(depths);
 			math::simd::f32x4 new_depth = get_float_depth(
-				math::simd::f32x4(triangle[0].rastPos.z),
-				math::simd::f32x4(triangle[1].rastPos.z),
-				math::simd::f32x4(triangle[2].rastPos.z),
+				triangle[0].rastPos.z,
+				triangle[1].rastPos.z,
+				triangle[2].rastPos.z,
 				partial_coefs
 			);
 			math::simd::f32x4 depth_mask = _mm_cmplt_ps(new_depth, old_depth);
@@ -139,29 +139,31 @@ namespace rast::framebuffer {
 			mask[3] &= (depth_mask[3] != 0.0f);
 			if (math::or_accross(mask)) {
 				math::simd::store(depths, new_depth);
+				std::array<color_format, 4> colors = {
+					mask[0] ? _color_data[offsets[0]] : color_format(),
+					mask[1] ? _color_data[offsets[1]] : color_format(),
+					mask[2] ? _color_data[offsets[2]] : color_format(),
+					mask[3] ? _color_data[offsets[3]] : color_format()
+				};
+				auto frag = FragmentShader(
+					interpol::interpolate(
+						triangle[0].data, triangle[1].data, triangle[2].data,
+						interpol::coefs::perspective(
+							partial_coefs,
+							triangle[0].rastPos.w,
+							triangle[1].rastPos.w,
+							triangle[2].rastPos.w
+						)
+					), std::forward<Args>(args)...
+				);
+				if constexpr (is_discardable_v<decltype(frag)>) {
+					mask &= math::boolx4(frag);
+				}
+				colors = AlphaBlend(frag, colors);
 				for (size_t i = 0; i < 4; ++i) {
 					if (!mask[i]) continue;
-					auto frag = FragmentShader(triangle[0].data,
-						//interpol::interpolate(
-						//	triangle[0].data, triangle[1].data, triangle[2].data,
-						//	interpol::coefs::perspective(
-						//		partial_coefs,
-						//		math::simd::f32x4(triangle[0].rastPos.w),
-						//		math::simd::f32x4(triangle[1].rastPos.w),
-						//		math::simd::f32x4(triangle[2].rastPos.w)
-						//	)),
-						std::forward<Args>(args)...
-					);
-					if  constexpr (is_discardable_v<decltype(frag)>) {
-						if (frag) {
-							_color_data[offsets[i]] = AlphaBlend(*frag, _color_data[offsets[i]]);
-							_depth_data[offsets[i]] = depths[i];
-						}
-					}
-					else {
-						_color_data[off[i]] = frag;
-						_depth_data[off[i]] = depths[i];
-					}
+					_color_data[offsets[i]] = colors[i];
+					_depth_data[offsets[i]] = depths[i];
 				}
 			}
 		}
