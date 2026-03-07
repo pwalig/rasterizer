@@ -2,8 +2,9 @@
 #include <array>
 #include "color.hpp"
 #include "image.hpp"
-#include "math/fixed.hpp"
+#include "math/sse.hpp"
 #include "math/vec.hpp"
+#include "sized2d_base.hpp"
 
 namespace rast {
 	enum struct min_filter {
@@ -26,12 +27,50 @@ namespace rast {
 		};
 
 		template <typename T, typename U>
-		inline constexpr static U repeat(T pos, U limit) {
+		inline constexpr U repeat(T pos, U limit) {
 			return static_cast<U>((pos % static_cast<T>(limit)) + static_cast<T>(limit)) % limit;
+		}
+		inline __m128i simd_mod_epi32(__m128i a, __m128i b) {
+			// convert to float
+			__m128 af = _mm_cvtepi32_ps(a);
+			__m128 bf = _mm_cvtepi32_ps(b);
+
+			// divide
+			__m128 qf = _mm_div_ps(af, bf);
+
+			// truncate quotient
+			__m128i q = _mm_cvttps_epi32(_mm_floor_ps(qf));
+
+			// q * b
+			__m128i qb = _mm_mullo_epi32(q, b);
+
+			// remainder = a - q*b
+			return _mm_sub_epi32(a, qb);
+		}
+		template <size_t Count>
+		inline math::simd::u32x_<Count> repeat(
+			math::simd::f32x_<Count> pos,
+			math::simd::u32x_<Count> limit
+		) {
+			math::simd::u32x_<Count> x = simd_mod_epi32(math::simd::cast<int32_t>(pos), limit);
+			return math::simd::u32x_<Count>(simd_mod_epi32(x + limit, limit));
 		}
 		template <typename T>
 		inline constexpr static size_type clamp(T pos, size_type limit) {
 			return std::clamp<T>(pos, 0, limit);
+		}
+		template <typename T, size_t Count>
+		inline math::simd::_x_<size_type, Count> clamp(
+			math::simd::_x_<T, Count> pos,
+			math::simd::u32x_<Count> limit
+		) {
+			return math::simd::cast<size_type>(
+				math::simd::clamp(
+					pos,
+					math::simd::_x_<T, Count>(0),
+					math::simd::cast<T>(limit)
+				)
+			);
 		}
 		template <typename T, size_t Count>
 		inline constexpr static math::u32x<Count> clamp(
@@ -56,7 +95,7 @@ namespace rast {
 		static_assert(clamp<int>(11, 10) == 10);
 	}
 	template <typename ColorT = color::rgba8>
-	struct sampler {
+	struct sampler : public sized2d_base {
 		using size_type = uint32_t;
 		using color = ColorT;
 		using value_type = ColorT;
@@ -67,26 +106,21 @@ namespace rast {
 
 	private:
 		const color* data;
-		size_type width;
-		size_type height;
 
 		inline constexpr size_type valid_mip(size_type mip) const {
-			return mipmapped_image<color>::valid_mip_level(width, height, mip);
+			return mipmapped_image<color>::valid_mip_level(_width, _height, mip);
 		}
 		inline constexpr size_type mip_length(size_type Length, size_type mip) const {
 			return mipmapped_image<color>::length_at_mip_level(Length, mip);
 		}
-		template <size_t Count>
-		inline constexpr math::u32x<Count> mip_length(
-			math::u32x<Count> Length,
-			math::u32x<Count> mip
-		) const {
+		template <typename T>
+		inline constexpr T mip_length(T Length, T mip) const {
 			return Length >> mip;
 		}
 
 	public:
 		inline constexpr sampler(const color* Data, size_type Width, size_type Height) noexcept :
-			data(Data), width(Width), height(Height) { }
+			sized2d_base(Width, Height), data(Data) { }
 
 		inline constexpr sampler() noexcept : sampler(nullptr, 0, 0) {}
 
@@ -95,8 +129,41 @@ namespace rast {
 			sampler(img.data(), img.width(), img.height()) {}
 
 		inline constexpr const_reference sample(size_type x, size_type y, size_type mip = 0) const {
-			size_type off = mipmapped_image<color>::mip_offset(width, height, mip);
-			return (data + off)[y * mip_length(width, mip) + x];
+			size_type off = mipmapped_image<color>::mip_offset(_width, _height, mip);
+			return (data + off)[y * mip_length(_width, mip) + x];
+		}
+
+		template <size_t Count>
+		inline auto sample(
+			math::simd::u32x_<Count> x,
+			math::simd::u32x_<Count> y,
+			size_type mip = 0
+		) const {
+			size_type off = mipmapped_image<color>::mip_offset(_width, _height, mip);
+			auto w = math::simd::u32x_<Count>(mip_length(_width, mip));
+			auto offsets = (y * w) + x;
+			const_pointer d = data + off;
+			if constexpr (!std::is_class_v<value_type> && (Count == 4)) {
+				return math::simd::make_x4(d[offsets[0]], d[offsets[1]], d[offsets[2]], d[offsets[3]]);
+			}
+			if constexpr (!std::is_class_v<value_type> && (Count == 8)) {
+				return math::simd::make_x8(
+					d[offsets[0]], d[offsets[1]], d[offsets[2]], d[offsets[3]],
+					d[offsets[4]], d[offsets[5]], d[offsets[6]], d[offsets[7]]
+				);
+			}
+			else {
+				std::array<value_type, Count> res;
+#if _MSC_VER && !__INTEL_COMPILER
+#pragma warning( push )
+#pragma warning( disable : 4267 )
+#endif
+				for (size_t i = 0; i < Count; ++i) res[i] = d[offsets[i]];
+#if _MSC_VER && !__INTEL_COMPILER
+#pragma warning( pop )
+#endif
+				return res;
+			}
 		}
 
 		template <size_t Count>
@@ -106,10 +173,10 @@ namespace rast {
 		) const {
 			auto off = math::u32x<Count>();
 			for (size_t i = 0; i < Count; ++i)
-				off[i] = mipmapped_image<color>::mip_offset(width, height, mip[i]);
+				off[i] = mipmapped_image<color>::mip_offset(_width, _height, mip[i]);
 
 			using u32ptr = math::_scalar<const_pointer, Count>;
-			return u32ptr(data) + off + (y * mip_length(math::u32x<Count>(width), mip) + x);
+			return u32ptr(data) + off + (y * mip_length(math::u32x<Count>(_width), mip) + x);
 		}
 
 		template <size_t Count>
@@ -146,10 +213,29 @@ namespace rast {
 		template <wrapping::mode Mode = wrapping::mode::repeat>
 		inline constexpr const_reference sample_nearest(float u, float v, size_type mip = 0) const {
 			mip = valid_mip(mip);
-			size_type w = mip_length(width, mip);
-			size_type h = mip_length(height, mip);
+			size_type w = mip_length(_width, mip);
+			size_type h = mip_length(_height, mip);
 			size_type x = wrapping::wrap<Mode>(math::floor<int32_t>(u * w), w);
 			size_type y = wrapping::wrap<Mode>(math::floor<int32_t>(v * h), h);
+			return sample(x, y, mip);
+		}
+		template <wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
+		inline auto sample_nearest(
+			math::simd::f32x_<Count> u,
+			math::simd::f32x_<Count> v,
+			size_type mip = 0
+		) const {
+			mip = valid_mip(mip);
+			size_type w = mip_length(_width, mip);
+			size_type h = mip_length(_height, mip);
+			math::simd::u32x_<Count> x = wrapping::wrap<Mode>(
+				math::simd::floor(u * math::simd::f32x_<Count>(static_cast<float>(w))),
+				math::simd::u32x_<Count>(w)
+			);
+			math::simd::u32x_<Count> y = wrapping::wrap<Mode>(
+				math::simd::floor(v * math::simd::f32x_<Count>(static_cast<float>(h))),
+				math::simd::u32x_<Count>(h)
+			);
 			return sample(x, y, mip);
 		}
 
@@ -158,8 +244,8 @@ namespace rast {
 			math::f32x<Count> u, math::f32x<Count> v,
 			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
 		) const {
-			math::u32x<Count> w = mip_length(math::u32x<Count>(width), mip);
-			math::u32x<Count> h = mip_length(math::u32x<Count>(height), mip);
+			math::u32x<Count> w = mip_length(math::u32x<Count>(_width), mip);
+			math::u32x<Count> h = mip_length(math::u32x<Count>(_height), mip);
 			math::u32x<Count> x = wrapping::wrap<Mode>(math::floor<int32_t>(u * w), w);
 			math::u32x<Count> y = wrapping::wrap<Mode>(math::floor<int32_t>(v * h), h);
 			return sample(x, y, mip);
@@ -171,8 +257,8 @@ namespace rast {
 			math::f32x<Count> u, math::f32x<Count> v,
 			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
 		) const {
-			math::u32x<Count> w = mip_length(math::u32x<Count>(width), mip);
-			math::u32x<Count> h = mip_length(math::u32x<Count>(height), mip);
+			math::u32x<Count> w = mip_length(math::u32x<Count>(_width), mip);
+			math::u32x<Count> h = mip_length(math::u32x<Count>(_height), mip);
 			math::u32x<Count> x = wrapping::wrap<Mode>(math::floor<int32_t>(u * w), w);
 			math::u32x<Count> y = wrapping::wrap<Mode>(math::floor<int32_t>(v * h), h);
 			return sample_t<T, Dim, Count>(x, y, mip);
@@ -181,8 +267,8 @@ namespace rast {
 		template <auto Interpolate>
 		inline constexpr auto sample_linear(float u, float v, size_type mip = 0) const {
 			mip = valid_mip(mip);
-			size_type w = mip_length(width, mip);
-			size_type h = mip_length(height, mip);
+			size_type w = mip_length(_width, mip);
+			size_type h = mip_length(_height, mip);
 			u *= w;
 			v *= h;
 			float coefs[2] = {
@@ -214,8 +300,8 @@ namespace rast {
 			math::f32x<Count> u, math::f32x<Count> v,
 			math::u32x<Count> mip = math::u32x<Count>(static_cast<uint32_t>(0))
 		) const {
-			math::u32x<Count> w = mip_length(math::u32x<Count>(width), mip);
-			math::u32x<Count> h = mip_length(math::u32x<Count>(height), mip);
+			math::u32x<Count> w = mip_length(math::u32x<Count>(_width), mip);
+			math::u32x<Count> h = mip_length(math::u32x<Count>(_height), mip);
 			u *= w;
 			v *= h;
 			auto coefs = math::f32vec2x4(
@@ -262,8 +348,8 @@ namespace rast {
 
 		template <auto (sampler::*Sample)(float, float, size_type) const>
 		inline constexpr auto sample_nearest_mipmap(math::f32x4 u, math::f32x4 v) const {
-			math::f32x4 x = u * math::u32x4(width);
-			math::f32x4 y = v * math::u32x4(height);
+			math::f32x4 x = u * math::u32x4(_width);
+			math::f32x4 y = v * math::u32x4(_height);
 
 			float x_up = math::abs(x[0] - x[1]);
 			float x_down = math::abs(x[2] - x[3]);

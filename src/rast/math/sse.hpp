@@ -85,7 +85,15 @@ namespace rast::math {
 			inline static __m128 max(__m128 a, __m128 b) { return _mm_max_ps(a, b); }
 			inline static __m128 load(float* src) { return _mm_load_ps(src); }
 			inline static void store(float* dst, __m128 a) { return _mm_store_ps(dst, a); }
+
+			template <typename T>
+			inline static register_t<T, 4> cvt(__m128 a);
 		};
+
+		template <>
+		inline register_t<int32_t, 4> mm_ps::cvt<int32_t>(__m128 a) { return _mm_cvtps_epi32(a); }
+		template <>
+		inline register_t<uint32_t, 4> mm_ps::cvt<uint32_t>(__m128 a) { return _mm_cvtps_epi32(a); }
 
 		template <typename T, size_t Count>
 		struct implementation { };
@@ -184,6 +192,12 @@ namespace rast::math {
 		}
 
 		template <typename T, size_t Count>
+		inline _x_<T, Count> floor(_x_<T, Count> Value) {
+			using impl = implementation_t<T, Count>;
+			return impl::floor(Value);
+		}
+
+		template <typename T, size_t Count>
 		inline _x_<T, Count> clamp(
 			_x_<T, Count> Value,
 			_x_<T, Count> Min,
@@ -191,6 +205,18 @@ namespace rast::math {
 		) {
 			using impl = implementation_t<T, Count>;
 			return impl::max(impl::min(Value, Max), Min);
+		}
+
+		template <typename T, size_t Count>
+		inline _x_<T, Count> fmadd(
+			_x_<T, Count> A,
+			_x_<T, Count> B,
+			_x_<T, Count> C
+		) {
+			using impl = implementation_t<T, Count>;
+			if constexpr (std::is_floating_point_v<T>)
+				return impl::fmadd(A, B, C);
+			else return A * B + C;
 		}
 
 		template <typename T> using _x2 = _x_<T, 2>;

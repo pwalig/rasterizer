@@ -10,7 +10,7 @@ namespace rast {
 	struct sized2d_base {
 		using size_type = uint32_t;
 
-	private:
+	protected:
 		size_type _width;
 		size_type _height;
 
