@@ -158,7 +158,7 @@
     <ClInclude Include="src\rast\raster\vbbox_scan.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\math\sse.hpp">
+    <ClInclude Include="src\rast\simd.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\sized2d_base.hpp">

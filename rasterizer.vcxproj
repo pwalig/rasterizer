@@ -160,7 +160,7 @@
     <ClInclude Include="src\rast\sized2d_base.hpp" />
     <ClInclude Include="src\rast\framebuffer\color.hpp" />
     <ClInclude Include="src\rast\framebuffer\color_depth.hpp" />
-    <ClInclude Include="src\rast\math\sse.hpp" />
+    <ClInclude Include="src\rast\simd.hpp" />
     <ClInclude Include="src\rast\raster\vbbox_scan.hpp" />
     <ClInclude Include="src\rast\static_test.hpp" />
     <ClInclude Include="src\rast\framebuffer\utils.hpp" />

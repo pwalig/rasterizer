@@ -26,11 +26,9 @@ namespace rast {
 			__m128i Width = _mm_set1_epi32(_width);
 			return _mm_add_epi32(_mm_mullo_epi32(y, Width), x);
 		}
-#ifdef rast_avx
 		inline __m256i data_offset(__m256i x, __m256i y) const {
 			__m256i Width = _mm256_set1_epi32(_width);
-			return _mm256_add_epi32(_mm256_mul_epu32(y, Width), x);
+			return _mm256_add_epi32(_mm256_mullo_epi32(y, Width), x);
 		}
-#endif
 	};
 }

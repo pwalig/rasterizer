@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include "../math/vec.hpp"
+#include "../simd.hpp"
 
 #include "../viewport.hpp"
 #include "../tile.hpp"
@@ -18,22 +19,33 @@ namespace rast::raster {
 		);
 	}
 
-	inline glm::vec<2, math::simd::i32x4> to_screen_space(
-		__m128 x, __m128 y,
-		__m128i extent_x, __m128i extent_y,
-		__m128i offset_x, __m128i offset_y
+	template <size_t Count>
+	inline glm::vec<2, simd::i32x_<Count>> to_screen_space(
+		simd::f32x_<Count> x, simd::f32x_<Count> y,
+		simd::i32x_<Count> extent_x, simd::i32x_<Count> extent_y,
+		simd::i32x_<Count> offset_x, simd::i32x_<Count> offset_y
 	) {
 		return {
-			_mm_cvtps_epi32(_mm_fmadd_ps(
-				_mm_add_ps(x, _mm_set_ps1(1.0f)),
-				_mm_mul_ps(_mm_cvtepi32_ps(extent_x), _mm_set_ps1(0.5f)),
-				_mm_cvtepi32_ps(offset_x)
+			simd::cast<int32_t>(simd::fmadd(
+				x + simd::f32x_<Count>(1.0f),
+				simd::cast<float>(extent_x) * simd::f32x_<Count>(0.5f),
+				simd::cast<float>(offset_x)
 			)),
-			_mm_cvtps_epi32(_mm_fmadd_ps(
-				_mm_sub_ps(_mm_set_ps1(1.0f), y),
-				_mm_mul_ps(_mm_cvtepi32_ps(extent_y), _mm_set_ps1(0.5f)),
-				_mm_cvtepi32_ps(offset_y)
+			simd::cast<int32_t>(simd::fmadd(
+				simd::f32x_<Count>(1.0f) - y,
+				simd::cast<float>(extent_y) * simd::f32x_<Count>(0.5f),
+				simd::cast<float>(offset_y)
 			))
+			//_mm_cvtps_epi32(_mm_fmadd_ps(
+			//	_mm_add_ps(x, _mm_set_ps1(1.0f)),
+			//	_mm_mul_ps(_mm_cvtepi32_ps(extent_x), _mm_set_ps1(0.5f)),
+			//	_mm_cvtepi32_ps(offset_x)
+			//)),
+			//_mm_cvtps_epi32(_mm_fmadd_ps(
+			//	_mm_sub_ps(_mm_set_ps1(1.0f), y),
+			//	_mm_mul_ps(_mm_cvtepi32_ps(extent_y), _mm_set_ps1(0.5f)),
+			//	_mm_cvtepi32_ps(offset_y)
+			//))
 		};
 	}
 
@@ -68,37 +80,37 @@ namespace rast::raster {
 
 	template <typename T>
 	inline constexpr T fill_convention(T Dx, T Dy) {
-		static_assert(std::is_integral_v<typename T::value_type>);
+		static_assert(std::is_integral_v<T>);
 		return T(
-			(Dy.x > 0 || (Dy.x == 0 && Dx.x < 0)) ? 1 : 0,
-			(Dy.y > 0 || (Dy.y == 0 && Dx.y < 0)) ? 1 : 0,
-			(Dy.z > 0 || (Dy.z == 0 && Dx.z < 0)) ? 1 : 0
+			(Dy > 0 || (Dy == 0 && Dx < 0)) ? 1 : 0
 		);
 	}
 
-	inline math::simd::i32x4 fill_convention(
-		math::simd::i32x4 x,
-		math::simd::i32x4 y
+	template <size_t Count>
+	inline simd::i32x_<Count> fill_convention(
+		simd::i32x_<Count> x,
+		simd::i32x_<Count> y
 	) {
-		auto zero = _mm_setzero_si128();
+		simd::i32x_<Count> zero = simd::setzero<int, Count>();
 		// 0 - ((y > 0) | ((y == 0) & (x < 0)))
-		return _mm_sub_epi32( // subtracting from 0 to turn -1 into 1
+		return simd::sub<int, Count>( // subtracting from 0 to turn -1 into 1
 			zero, // because cmp instructions fill register with ones or zeroes
-			_mm_or_si128( // register of just ones is -1 if treated as signed
-				_mm_cmpgt_epi32(y, zero),
-				_mm_and_si128(
-					_mm_cmpeq_epi32(y, zero),
-					_mm_cmplt_epi32(x, zero)
+			simd::bit_or<int, Count>( // register of just ones is -1 if treated as signed
+				simd::cmpgt<int, Count>(y, zero),
+				simd::bit_and<int, Count>(
+					simd::cmpeq<int, Count>(y, zero),
+					simd::cmpgt<int, Count>(zero, x)
 				)
 			)
 		);
 	}
 
-	inline glm::vec<3, math::simd::i32x4> fill_convention(
-		glm::vec<3, math::simd::i32x4> Dx,
-		glm::vec<3, math::simd::i32x4> Dy
+	template <typename T>
+	inline glm::vec<3, T> fill_convention(
+		glm::vec<3, T> Dx,
+		glm::vec<3, T> Dy
 	) {
-		return glm::vec<3, math::simd::i32x4>(
+		return glm::vec<3, T>(
 			fill_convention(Dx.x, Dy.x),
 			fill_convention(Dx.y, Dy.y),
 			fill_convention(Dx.z, Dy.z)
@@ -135,7 +147,7 @@ namespace rast::raster {
 		const VertexT* vertex_end,
 		const viewport& viewport,
 		const tile& tile,
-		Args&&... args
+		const Args&... args
 	) {
 		for (const VertexT* vertices = vertex_begin; vertices + 3 <= vertex_end; vertices += 3) {
 			glm::ivec2 v0 = to_screen_space(vertices[0].rastPos, viewport);
@@ -174,17 +186,16 @@ namespace rast::raster {
 		}
 	}
 
-	template <auto RasterizeOne, typename Callable, typename VertexT, typename ...Args>
-	inline static void filter_triangles_x4(
+	template <size_t Count, auto RasterizeOne, typename Callable, typename VertexT, typename ...Args>
+	inline static void filter_triangles_x(
 		Callable&& output,
 		const VertexT* vertex_begin,
 		const VertexT* vertex_end,
 		const viewport& viewport,
 		const tile& tile,
-		Args&&... args
+		const Args&... args
 	) {
-		constexpr size_t Count = 4;
-		using i32 = math::simd::i32x_<Count>;
+		using i32 = simd::i32x_<Count>;
 
 		auto offset = glm::vec<2, i32>(
 			viewport.offset.x, viewport.offset.y
@@ -201,42 +212,80 @@ namespace rast::raster {
 		const VertexT* vertices = vertex_begin;
 		for (; vertices + (3 * Count) <= vertex_end; vertices += (3 * Count)) {
 
-			glm::vec<2, i32> v0 = to_screen_space(
-				math::simd::make_x4<float>(vertices[9].rastPos.x, vertices[6].rastPos.x, vertices[3].rastPos.x, vertices[0].rastPos.x),
-				math::simd::make_x4<float>(vertices[9].rastPos.y, vertices[6].rastPos.y, vertices[3].rastPos.y, vertices[0].rastPos.y),
-				extent.x, extent.y, offset.x, offset.y
-			);
-			glm::vec<2, i32> v1 = to_screen_space(
-				math::simd::make_x4<float>(vertices[10].rastPos.x, vertices[7].rastPos.x, vertices[4].rastPos.x, vertices[1].rastPos.x),
-				math::simd::make_x4<float>(vertices[10].rastPos.y, vertices[7].rastPos.y, vertices[4].rastPos.y, vertices[1].rastPos.y),
-				extent.x, extent.y, offset.x, offset.y
-			);
-			glm::vec<2, i32> v2 = to_screen_space(
-				math::simd::make_x4<float>(vertices[11].rastPos.x, vertices[8].rastPos.x, vertices[5].rastPos.x, vertices[2].rastPos.x),
-				math::simd::make_x4<float>(vertices[11].rastPos.y, vertices[8].rastPos.y, vertices[5].rastPos.y, vertices[2].rastPos.y),
-				extent.x, extent.y, offset.x, offset.y
-			);
-
+			glm::vec<2, i32> v0, v1, v2;
+			static_assert(Count == 4 || Count == 8);
+			if constexpr (Count == 4) {
+				v0 = to_screen_space(
+					simd::make_x4<float>(vertices[9].rastPos.x, vertices[6].rastPos.x, vertices[3].rastPos.x, vertices[0].rastPos.x),
+					simd::make_x4<float>(vertices[9].rastPos.y, vertices[6].rastPos.y, vertices[3].rastPos.y, vertices[0].rastPos.y),
+					extent.x, extent.y, offset.x, offset.y
+				);
+				v1 = to_screen_space(
+					simd::make_x4<float>(vertices[10].rastPos.x, vertices[7].rastPos.x, vertices[4].rastPos.x, vertices[1].rastPos.x),
+					simd::make_x4<float>(vertices[10].rastPos.y, vertices[7].rastPos.y, vertices[4].rastPos.y, vertices[1].rastPos.y),
+					extent.x, extent.y, offset.x, offset.y
+				);
+				v2 = to_screen_space(
+					simd::make_x4<float>(vertices[11].rastPos.x, vertices[8].rastPos.x, vertices[5].rastPos.x, vertices[2].rastPos.x),
+					simd::make_x4<float>(vertices[11].rastPos.y, vertices[8].rastPos.y, vertices[5].rastPos.y, vertices[2].rastPos.y),
+					extent.x, extent.y, offset.x, offset.y
+				);
+			}
+			if constexpr (Count == 8) {
+				v0 = to_screen_space(
+					simd::make_x8<float>(
+						vertices[21].rastPos.x, vertices[18].rastPos.x, vertices[15].rastPos.x, vertices[12].rastPos.x,
+						vertices[9].rastPos.x, vertices[6].rastPos.x, vertices[3].rastPos.x, vertices[0].rastPos.x
+					),
+					simd::make_x8<float>(
+						vertices[21].rastPos.y, vertices[18].rastPos.y, vertices[15].rastPos.y, vertices[12].rastPos.y,
+						vertices[9].rastPos.y, vertices[6].rastPos.y, vertices[3].rastPos.y, vertices[0].rastPos.y
+					),
+					extent.x, extent.y, offset.x, offset.y
+				);
+				v1 = to_screen_space(
+					simd::make_x8<float>(
+						vertices[22].rastPos.x, vertices[19].rastPos.x, vertices[16].rastPos.x, vertices[13].rastPos.x,
+						vertices[10].rastPos.x, vertices[7].rastPos.x, vertices[4].rastPos.x, vertices[1].rastPos.x
+					),
+					simd::make_x8<float>(
+						vertices[22].rastPos.y, vertices[19].rastPos.y, vertices[16].rastPos.y, vertices[13].rastPos.y,
+						vertices[10].rastPos.y, vertices[7].rastPos.y, vertices[4].rastPos.y, vertices[1].rastPos.y
+					),
+					extent.x, extent.y, offset.x, offset.y
+				);
+				v2 = to_screen_space(
+					simd::make_x8<float>(
+						vertices[23].rastPos.x, vertices[20].rastPos.x, vertices[17].rastPos.x, vertices[14].rastPos.x,
+						vertices[11].rastPos.x, vertices[8].rastPos.x, vertices[5].rastPos.x, vertices[2].rastPos.x
+					),
+					simd::make_x8<float>(
+						vertices[23].rastPos.y, vertices[20].rastPos.y, vertices[17].rastPos.y, vertices[14].rastPos.y,
+						vertices[11].rastPos.y, vertices[8].rastPos.y, vertices[5].rastPos.y, vertices[2].rastPos.y
+					),
+					extent.x, extent.y, offset.x, offset.y
+				);
+			}
 			auto min = glm::vec<2, i32>(
-				_mm_srai_epi32(_mm_max_epi32(_mm_min_epi32(v0.x, _mm_min_epi32(v1.x, v2.x)), _mm_max_epi32(tile_min.x, offset.x)), 4),
-				_mm_srai_epi32(_mm_max_epi32(_mm_min_epi32(v0.y, _mm_min_epi32(v1.y, v2.y)), _mm_max_epi32(tile_min.y, offset.y)), 4)
+				simd::max(simd::min(v0.x, simd::min(v1.x, v2.x)), simd::max(tile_min.x, offset.x)) >> 4,
+				simd::max(simd::min(v0.y, simd::min(v1.y, v2.y)), simd::max(tile_min.y, offset.y)) >> 4
 			);
 			auto max = glm::vec<2, i32>(
-				_mm_srai_epi32(_mm_min_epi32(
-					_mm_add_epi32(_mm_max_epi32(v0.x, _mm_max_epi32(v1.x, v2.x)), _mm_set1_epi32(16)),
-					_mm_min_epi32(tile_max.x, _mm_add_epi32(offset.x, extent.x))
-				), 4),
-				_mm_srai_epi32(_mm_min_epi32(
-					_mm_add_epi32(_mm_max_epi32(v0.y, _mm_max_epi32(v1.y, v2.y)), _mm_set1_epi32(16)),
-					_mm_min_epi32(tile_max.y, _mm_add_epi32(offset.y, extent.y))
-				), 4)
+				simd::min(
+					simd::max(v0.x, simd::max(v1.x, v2.x)) + i32(16),
+					simd::min(tile_max.x, offset.x + extent.x)
+				) >> 4,
+				simd::min(
+					simd::max(v0.y, simd::max(v1.y, v2.y)) + i32(16),
+					simd::min(tile_max.y, offset.y + extent.y)
+				) >> 4
 			);
 			alignas(Count * sizeof(int)) int min_mem[2][Count];
 			alignas(Count * sizeof(int)) int max_mem[2][Count];
-			math::simd::store(min_mem[0], min.x);
-			math::simd::store(min_mem[1], min.y);
-			math::simd::store(max_mem[0], max.x);
-			math::simd::store(max_mem[1], max.y);
+			simd::store(min_mem[0], min.x);
+			simd::store(min_mem[1], min.y);
+			simd::store(max_mem[0], max.x);
+			simd::store(max_mem[1], max.y);
 
 			auto Dx = glm::vec<3, i32>(
 				v2.x - v1.x,
@@ -251,29 +300,29 @@ namespace rast::raster {
 			i32 area = (Dy.x * Dx.z) - (Dx.x * Dy.z);
 			glm::vec<3, i32> Cy = Dx * (glm::vec<3, i32>(min.y << 4) - glm::vec<3, i32>(v1.y, v2.y, v0.y)) - fill_convention(Dx, Dy);
 			glm::vec<3, i32> Cx = Dy * (glm::vec<3, i32>(min.x << 4) - glm::vec<3, i32>(v1.x, v2.x, v0.x));
-			Dx *= math::simd::i32x_<Count>(16);
-			Dy *= math::simd::i32x_<Count>(16);
+			Dx *= simd::i32x_<Count>(16);
+			Dy *= simd::i32x_<Count>(16);
 
 			alignas(Count * sizeof(int)) int Dx_mem[3][Count];
 			alignas(Count * sizeof(int)) int Dy_mem[3][Count];
-			math::simd::store(Dx_mem[0], Dx.x);
-			math::simd::store(Dx_mem[1], Dx.y);
-			math::simd::store(Dx_mem[2], Dx.z);
-			math::simd::store(Dy_mem[0], Dy.x);
-			math::simd::store(Dy_mem[1], Dy.y);
-			math::simd::store(Dy_mem[2], Dy.z);
+			simd::store(Dx_mem[0], Dx.x);
+			simd::store(Dx_mem[1], Dx.y);
+			simd::store(Dx_mem[2], Dx.z);
+			simd::store(Dy_mem[0], Dy.x);
+			simd::store(Dy_mem[1], Dy.y);
+			simd::store(Dy_mem[2], Dy.z);
 
 			alignas(Count * sizeof(int)) int Cx_mem[3][Count];
 			alignas(Count * sizeof(int)) int Cy_mem[3][Count];
-			math::simd::store(Cx_mem[0], Cx.x);
-			math::simd::store(Cx_mem[1], Cx.y);
-			math::simd::store(Cx_mem[2], Cx.z);
-			math::simd::store(Cy_mem[0], Cy.x);
-			math::simd::store(Cy_mem[1], Cy.y);
-			math::simd::store(Cy_mem[2], Cy.z);
+			simd::store(Cx_mem[0], Cx.x);
+			simd::store(Cx_mem[1], Cx.y);
+			simd::store(Cx_mem[2], Cx.z);
+			simd::store(Cy_mem[0], Cy.x);
+			simd::store(Cy_mem[1], Cy.y);
+			simd::store(Cy_mem[2], Cy.z);
 
 			alignas(Count * sizeof(int)) int area_mem[Count];
-			math::simd::store(area_mem, area);
+			simd::store(area_mem, area);
 
 
 			// for some reason calculating comparisons for all 4 triangles at once produces slower executable,
@@ -284,7 +333,7 @@ namespace rast::raster {
 			//	_mm_cmpgt_epi32(max.y, min.y)
 			//), _mm_cmpgt_epi32(area, _mm_setzero_si128()));
 			//alignas(Count * sizeof(int)) int mask_mem[Count];
-			//math::simd::store(mask_mem, mask);
+			//simd::store(mask_mem, mask);
 
 			for (size_t i = 0; i < Count; ++i) {
 				//if (mask_mem[i]) // checking against the precalculated mask causes the slowdown

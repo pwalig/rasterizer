@@ -1,5 +1,5 @@
 #pragma once
-#include "math/sse.hpp"
+#include "simd.hpp"
 
 namespace rast::interpol {
 	template <size_t Size, typename T>

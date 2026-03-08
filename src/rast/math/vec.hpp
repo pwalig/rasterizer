@@ -125,6 +125,22 @@ namespace rast::math {
 		res[3] = std::move(a3);
 		return res;
 	}
+	template <typename T>
+	inline constexpr _scalar<T, 8> make_x8(
+		T a0, T a1, T a2, T a3,
+		T a4, T a5, T a6, T a7
+	) {
+		auto res = _scalar<T, 8>();
+		res[0] = std::move(a0);
+		res[1] = std::move(a1);
+		res[2] = std::move(a2);
+		res[3] = std::move(a3);
+		res[4] = std::move(a4);
+		res[5] = std::move(a5);
+		res[6] = std::move(a6);
+		res[7] = std::move(a7);
+		return res;
+	}
 
 	template <typename U, typename T, size_t Count>
 	inline constexpr _scalar<U, Count> floor(

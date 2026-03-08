@@ -30,7 +30,7 @@ namespace rast::raster {
 			const viewport& viewport, const tile& tile,
 			const Args&... args
 		) {
-			filter_triangles_x4<rasterize_one<Callable, Vertex, Args...>>(output, vertex_begin, vertex_end, viewport, tile, args...);
+			filter_triangles_x<4, rasterize_one<Callable, Vertex, Args...>>(output, vertex_begin, vertex_end, viewport, tile, args...);
 		}
 	};
 }

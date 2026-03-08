@@ -11,6 +11,7 @@
 #include "../depth_test.hpp"
 #include "utils.hpp"
 #include "../sized2d_base.hpp"
+#include "../simd.hpp"
 
 namespace rast::framebuffer {
 	template<
@@ -106,45 +107,34 @@ namespace rast::framebuffer {
 				}
 			}
 		}
-		template <typename VertexT, typename ...Args>
-		inline void operator()(
-			math::simd::i32x4 x, math::simd::i32x4 y,
+		template <size_t Count, typename VertexT, typename ...Args>
+		inline void draw(
+			simd::i32x_<Count> x, simd::i32x_<Count> y,
 			const VertexT* triangle,
-			glm::vec<3, math::simd::f32x4> partial_coefs,
-			math::boolx4 mask,
+			glm::vec<3, simd::f32x_<Count>> partial_coefs,
+			math::boolx<Count> mask,
 			Args&&... args
 		) {
-			math::simd::i32x4 off = data_offset(x, y);
+			simd::i32x_<Count> off = data_offset(x, y);
 
-			alignas(16) int offsets[4];
-			math::simd::store(offsets, off);
+			alignas(Count * sizeof(int)) int offsets[Count];
+			simd::store(offsets, off);
 
-			alignas(16) float depths[4] = {
-				mask[0] ? _depth_data[offsets[0]] : std::numeric_limits<float>::min(),
-				mask[1] ? _depth_data[offsets[1]] : std::numeric_limits<float>::min(),
-				mask[2] ? _depth_data[offsets[2]] : std::numeric_limits<float>::min(),
-				mask[3] ? _depth_data[offsets[3]] : std::numeric_limits<float>::min()
-			};
-			math::simd::f32x4 old_depth = _mm_load_ps(depths);
-			math::simd::f32x4 new_depth = get_float_depth(
+			alignas(Count * sizeof(int)) float depths[Count];
+			for (size_t i = 0; i < Count; ++i) if (mask[i]) depths[i] = _depth_data[offsets[i]];
+			simd::f32x_<Count> old_depth = simd::load<float, Count>(depths);
+			simd::f32x_<Count> new_depth = get_float_depth(
 				triangle[0].rastPos.z,
 				triangle[1].rastPos.z,
 				triangle[2].rastPos.z,
 				partial_coefs
 			);
-			math::simd::f32x4 depth_mask = _mm_cmplt_ps(new_depth, old_depth);
-			mask[0] &= (depth_mask[0] != 0.0f);
-			mask[1] &= (depth_mask[1] != 0.0f);
-			mask[2] &= (depth_mask[2] != 0.0f);
-			mask[3] &= (depth_mask[3] != 0.0f);
+			simd::f32x_<Count> depth_mask = new_depth < old_depth;
+			for (size_t i = 0; i < Count; ++i) mask[i] &= (depth_mask[static_cast<int>(i)] != 0.0f);
 			if (math::or_accross(mask)) {
-				math::simd::store(depths, new_depth);
-				std::array<color_format, 4> colors = {
-					mask[0] ? _color_data[offsets[0]] : color_format(),
-					mask[1] ? _color_data[offsets[1]] : color_format(),
-					mask[2] ? _color_data[offsets[2]] : color_format(),
-					mask[3] ? _color_data[offsets[3]] : color_format()
-				};
+				simd::store(depths, new_depth);
+				auto colors = std::array<color_format, Count>();
+				for (size_t i = 0; i < Count; ++i) if (mask[i]) colors[i] = _color_data[offsets[i]];
 				auto frag = FragmentShader(
 					interpol::interpolate(
 						triangle[0].data, triangle[1].data, triangle[2].data,
@@ -157,15 +147,35 @@ namespace rast::framebuffer {
 					), std::forward<Args>(args)...
 				);
 				if constexpr (is_discardable_v<decltype(frag)>) {
-					mask &= math::boolx4(frag);
+					mask &= math::boolx<Count>(frag);
 				}
 				colors = AlphaBlend(frag, colors);
-				for (size_t i = 0; i < 4; ++i) {
+				for (size_t i = 0; i < Count; ++i) {
 					if (!mask[i]) continue;
 					_color_data[offsets[i]] = colors[i];
 					_depth_data[offsets[i]] = depths[i];
 				}
 			}
+		}
+		template <typename VertexT, typename ...Args>
+		inline void operator()(
+			simd::i32x4 x, simd::i32x4 y,
+			const VertexT* triangle,
+			glm::vec<3, simd::f32x4> partial_coefs,
+			math::boolx4 mask,
+			Args&&... args
+		) {
+			draw<4>(x, y, triangle, partial_coefs, mask, std::forward<Args>(args)...);
+		}
+		template <typename VertexT, typename ...Args>
+		inline void operator()(
+			simd::i32x8 x, simd::i32x8 y,
+			const VertexT* triangle,
+			glm::vec<3, simd::f32x8> partial_coefs,
+			math::boolx8 mask,
+			Args&&... args
+		) {
+			draw<8>(x, y, triangle, partial_coefs, mask, std::forward<Args>(args)...);
 		}
 	};
 }

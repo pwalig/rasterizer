@@ -2,7 +2,7 @@
 #include <array>
 #include "color.hpp"
 #include "image.hpp"
-#include "math/sse.hpp"
+#include "simd.hpp"
 #include "math/vec.hpp"
 #include "sized2d_base.hpp"
 
@@ -30,45 +30,28 @@ namespace rast {
 		inline constexpr U repeat(T pos, U limit) {
 			return static_cast<U>((pos % static_cast<T>(limit)) + static_cast<T>(limit)) % limit;
 		}
-		inline __m128i simd_mod_epi32(__m128i a, __m128i b) {
-			// convert to float
-			__m128 af = _mm_cvtepi32_ps(a);
-			__m128 bf = _mm_cvtepi32_ps(b);
-
-			// divide
-			__m128 qf = _mm_div_ps(af, bf);
-
-			// truncate quotient
-			__m128i q = _mm_cvttps_epi32(_mm_floor_ps(qf));
-
-			// q * b
-			__m128i qb = _mm_mullo_epi32(q, b);
-
-			// remainder = a - q*b
-			return _mm_sub_epi32(a, qb);
-		}
 		template <size_t Count>
-		inline math::simd::u32x_<Count> repeat(
-			math::simd::f32x_<Count> pos,
-			math::simd::u32x_<Count> limit
+		inline simd::u32x_<Count> repeat(
+			simd::f32x_<Count> pos,
+			simd::u32x_<Count> limit
 		) {
-			math::simd::u32x_<Count> x = simd_mod_epi32(math::simd::cast<int32_t>(pos), limit);
-			return math::simd::u32x_<Count>(simd_mod_epi32(x + limit, limit));
+			simd::u32x_<Count> x = simd::mod<int32_t, Count>(simd::cast<int32_t>(pos), limit);
+			return simd::u32x_<Count>(simd::mod<int32_t, Count>(x + limit, limit));
 		}
 		template <typename T>
 		inline constexpr static size_type clamp(T pos, size_type limit) {
 			return std::clamp<T>(pos, 0, limit);
 		}
 		template <typename T, size_t Count>
-		inline math::simd::_x_<size_type, Count> clamp(
-			math::simd::_x_<T, Count> pos,
-			math::simd::u32x_<Count> limit
+		inline simd::_x_<size_type, Count> clamp(
+			simd::_x_<T, Count> pos,
+			simd::u32x_<Count> limit
 		) {
-			return math::simd::cast<size_type>(
-				math::simd::clamp(
+			return simd::cast<size_type>(
+				simd::clamp(
 					pos,
-					math::simd::_x_<T, Count>(0),
-					math::simd::cast<T>(limit)
+					simd::_x_<T, Count>(0),
+					simd::cast<T>(limit)
 				)
 			);
 		}
@@ -135,19 +118,19 @@ namespace rast {
 
 		template <size_t Count>
 		inline auto sample(
-			math::simd::u32x_<Count> x,
-			math::simd::u32x_<Count> y,
+			simd::u32x_<Count> x,
+			simd::u32x_<Count> y,
 			size_type mip = 0
 		) const {
 			size_type off = mipmapped_image<color>::mip_offset(_width, _height, mip);
-			auto w = math::simd::u32x_<Count>(mip_length(_width, mip));
+			auto w = simd::u32x_<Count>(mip_length(_width, mip));
 			auto offsets = (y * w) + x;
 			const_pointer d = data + off;
 			if constexpr (!std::is_class_v<value_type> && (Count == 4)) {
-				return math::simd::make_x4(d[offsets[0]], d[offsets[1]], d[offsets[2]], d[offsets[3]]);
+				return simd::make_x4(d[offsets[0]], d[offsets[1]], d[offsets[2]], d[offsets[3]]);
 			}
 			if constexpr (!std::is_class_v<value_type> && (Count == 8)) {
-				return math::simd::make_x8(
+				return simd::make_x8(
 					d[offsets[0]], d[offsets[1]], d[offsets[2]], d[offsets[3]],
 					d[offsets[4]], d[offsets[5]], d[offsets[6]], d[offsets[7]]
 				);
@@ -221,20 +204,20 @@ namespace rast {
 		}
 		template <wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
 		inline auto sample_nearest(
-			math::simd::f32x_<Count> u,
-			math::simd::f32x_<Count> v,
+			simd::f32x_<Count> u,
+			simd::f32x_<Count> v,
 			size_type mip = 0
 		) const {
 			mip = valid_mip(mip);
 			size_type w = mip_length(_width, mip);
 			size_type h = mip_length(_height, mip);
-			math::simd::u32x_<Count> x = wrapping::wrap<Mode>(
-				math::simd::floor(u * math::simd::f32x_<Count>(static_cast<float>(w))),
-				math::simd::u32x_<Count>(w)
+			simd::u32x_<Count> x = wrapping::wrap<Mode>(
+				simd::floor(u * simd::f32x_<Count>(static_cast<float>(w))),
+				simd::u32x_<Count>(w)
 			);
-			math::simd::u32x_<Count> y = wrapping::wrap<Mode>(
-				math::simd::floor(v * math::simd::f32x_<Count>(static_cast<float>(h))),
-				math::simd::u32x_<Count>(h)
+			simd::u32x_<Count> y = wrapping::wrap<Mode>(
+				simd::floor(v * simd::f32x_<Count>(static_cast<float>(h))),
+				simd::u32x_<Count>(h)
 			);
 			return sample(x, y, mip);
 		}
