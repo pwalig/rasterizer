@@ -25,12 +25,6 @@ namespace rast::interpol {
 	) {
 		return _mm_add_ps(_mm_add_ps(_mm_mul_ps(v0, c0), _mm_mul_ps(v1, c1)), _mm_mul_ps(v2, c2));
 	}
-	inline __m128 interpolate(
-		__m128 v0, __m128 v1, __m128 v2,
-		math::sse::vec3 coefs
-	) {
-		return interpolate(v0, v1, v2, coefs.x, coefs.y, coefs.z);
-	}
 
 	namespace coefs {
 		template <typename Vec3>
@@ -41,10 +35,6 @@ namespace rast::interpol {
 		template <typename Vec3>
 		inline constexpr Vec3 normalized(Vec3 coefs) {
 			auto sum = coefs[0] + coefs[1] + coefs[2];
-			return coefs / sum;
-		}
-		inline math::sse::vec3 normalized(math::sse::vec3 coefs) {
-			__m128 sum = _mm_add_ps(_mm_add_ps(coefs.x, coefs.y), coefs.z);
 			return coefs / sum;
 		}
 		template <typename Vec3>

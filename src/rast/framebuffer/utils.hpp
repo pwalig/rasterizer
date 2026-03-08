@@ -67,11 +67,6 @@ namespace rast::framebuffer {
 		);
 	}
 
-	inline __m128 get_float_depth(__m128 z0, __m128 z1, __m128 z2, math::sse::vec3 partial_coefs) {
-		return interpol::interpolate(
-			z0, z1, z2, interpol::coefs::linear(partial_coefs)
-		);
-	}
 	template <typename depth_format, typename vertex_output>
 	inline depth_format get_depth(const vertex_output* triangle, glm::vec3 partial_coefs) {
 		return float_depth_to_depth_format<depth_format>(get_float_depth(triangle, partial_coefs));
