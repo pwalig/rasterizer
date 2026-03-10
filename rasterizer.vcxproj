@@ -76,7 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/;./include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -93,7 +93,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/;./include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/;./include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -127,7 +127,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/;./include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -141,51 +141,50 @@
   <ItemGroup>
     <ClCompile Include="src\game\fly_cam.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\thread_pool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game\fly_cam.hpp" />
-    <ClInclude Include="src\rast\alpha_blend.hpp" />
-    <ClInclude Include="src\rast\clip\clip_vert.hpp" />
-    <ClInclude Include="src\rast\clip\near_clip_far_discard.hpp" />
-    <ClInclude Include="src\rast\command_buffer.hpp" />
-    <ClInclude Include="src\rast\convert.hpp" />
-    <ClInclude Include="src\rast\depth_test.hpp" />
-    <ClInclude Include="src\rast\framebuffer\color_depth_vectorized.hpp" />
-    <ClInclude Include="src\rast\is_discardable.hpp" />
-    <ClInclude Include="src\rast\fragbuff\fragbuff_utils.hpp" />
-    <ClInclude Include="src\rast\fragbuff\rewrite.hpp" />
-    <ClInclude Include="src\rast\sized2d_base.hpp" />
-    <ClInclude Include="src\rast\framebuffer\color.hpp" />
-    <ClInclude Include="src\rast\framebuffer\color_depth.hpp" />
-    <ClInclude Include="src\rast\simd.hpp" />
-    <ClInclude Include="src\rast\raster\vbbox_scan.hpp" />
-    <ClInclude Include="src\rast\static_test.hpp" />
-    <ClInclude Include="src\rast\framebuffer\utils.hpp" />
-    <ClInclude Include="src\rast\interpolation.hpp" />
-    <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp" />
-    <ClInclude Include="src\rast\math\fixed.hpp" />
-    <ClInclude Include="src\rast\math.hpp" />
-    <ClInclude Include="src\rast\math\vec.hpp" />
-    <ClInclude Include="src\rast\perspective_divide.hpp" />
-    <ClInclude Include="src\rast\raster\bbox_scan.hpp" />
-    <ClInclude Include="src\rast\raster\left_edge.hpp" />
-    <ClInclude Include="src\rast\raster\raster_utils.hpp" />
-    <ClInclude Include="src\rast\tile.hpp" />
-    <ClInclude Include="src\rast\viewport.hpp" />
-    <ClInclude Include="src\thread_pool.hpp" />
-    <ClInclude Include="src\rast\framebuffer\depth_view.hpp" />
-    <ClInclude Include="src\rast\mesh.hpp" />
-    <ClInclude Include="src\rast\color.hpp" />
-    <ClInclude Include="src\rast\image.hpp" />
-    <ClInclude Include="src\rast\renderer.hpp" />
-    <ClInclude Include="src\rast\shader\constant.hpp" />
-    <ClInclude Include="src\rast\shader\deferred.hpp" />
-    <ClInclude Include="src\rast\shader\lambert_textured.hpp" />
-    <ClInclude Include="src\rast\shader\textured.hpp" />
-    <ClInclude Include="src\rast\shader\vertex_colored.hpp" />
-    <ClInclude Include="src\rast\shader\shader_macros.hpp" />
-    <ClInclude Include="src\rast\sampler.hpp" />
+    <ClInclude Include="include\rast\alpha_blend.hpp" />
+    <ClInclude Include="include\rast\clip\clip_vert.hpp" />
+    <ClInclude Include="include\rast\clip\near_clip_far_discard.hpp" />
+    <ClInclude Include="include\rast\command_buffer.hpp" />
+    <ClInclude Include="include\rast\convert.hpp" />
+    <ClInclude Include="include\rast\depth_test.hpp" />
+    <ClInclude Include="include\rast\framebuffer\color_depth_vectorized.hpp" />
+    <ClInclude Include="include\rast\is_discardable.hpp" />
+    <ClInclude Include="include\rast\fragbuff\fragbuff_utils.hpp" />
+    <ClInclude Include="include\rast\fragbuff\rewrite.hpp" />
+    <ClInclude Include="include\rast\sized2d_base.hpp" />
+    <ClInclude Include="include\rast\framebuffer\color.hpp" />
+    <ClInclude Include="include\rast\framebuffer\color_depth.hpp" />
+    <ClInclude Include="include\rast\simd.hpp" />
+    <ClInclude Include="include\rast\raster\vbbox_scan.hpp" />
+    <ClInclude Include="include\rast\static_test.hpp" />
+    <ClInclude Include="include\rast\framebuffer\utils.hpp" />
+    <ClInclude Include="include\rast\interpolation.hpp" />
+    <ClInclude Include="include\rast\clip\sutherland_hodgman.hpp" />
+    <ClInclude Include="include\rast\math\fixed.hpp" />
+    <ClInclude Include="include\rast\math.hpp" />
+    <ClInclude Include="include\rast\math\vec.hpp" />
+    <ClInclude Include="include\rast\perspective_divide.hpp" />
+    <ClInclude Include="include\rast\raster\bbox_scan.hpp" />
+    <ClInclude Include="include\rast\raster\left_edge.hpp" />
+    <ClInclude Include="include\rast\raster\raster_utils.hpp" />
+    <ClInclude Include="include\rast\tile.hpp" />
+    <ClInclude Include="include\rast\viewport.hpp" />
+    <ClInclude Include="include\rast\thread_pool.hpp" />
+    <ClInclude Include="include\rast\framebuffer\depth_view.hpp" />
+    <ClInclude Include="include\rast\mesh.hpp" />
+    <ClInclude Include="include\rast\color.hpp" />
+    <ClInclude Include="include\rast\image.hpp" />
+    <ClInclude Include="include\rast\renderer.hpp" />
+    <ClInclude Include="include\rast\shader\constant.hpp" />
+    <ClInclude Include="include\rast\shader\deferred.hpp" />
+    <ClInclude Include="include\rast\shader\lambert_textured.hpp" />
+    <ClInclude Include="include\rast\shader\textured.hpp" />
+    <ClInclude Include="include\rast\shader\vertex_colored.hpp" />
+    <ClInclude Include="include\rast\shader\shader_macros.hpp" />
+    <ClInclude Include="include\rast\sampler.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="ext\SDL\VisualC\SDL\SDL.vcxproj">

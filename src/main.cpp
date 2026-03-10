@@ -36,17 +36,17 @@
 #include "rast/command_buffer.hpp"
 #include "rast/clip/sutherland_hodgman.hpp"
 #include "rast/clip/near_clip_far_discard.hpp"
-#include "thread_pool.hpp"
 #include "game/fly_cam.hpp"
 #include "rast/raster/bbox_scan.hpp"
 #include "rast/raster/vbbox_scan.hpp"
 #include "rast/raster/left_edge.hpp"
+#include <rast/thread_pool.hpp>
 //#include "rast/framebuffer/color_depth_vectorized.hpp"
 
 //#include "rast/static_test.hpp"
 
 //static thd::thread_pool tp(std::thread::hardware_concurrency());
-static thd::thread_pool tp(std::thread::hardware_concurrency() - 2);
+static rast::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
 static std::bitset<256> pressed;
 static glm::vec2 mouseDelta = glm::vec2(0.0f);

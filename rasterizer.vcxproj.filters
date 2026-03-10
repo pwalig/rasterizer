@@ -18,138 +18,135 @@
     <ClCompile Include="src\main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\thread_pool.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="src\game\fly_cam.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\rast\color.hpp">
+    <ClInclude Include="include\rast\color.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\image.hpp">
+    <ClInclude Include="include\rast\image.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\mesh.hpp">
+    <ClInclude Include="include\rast\mesh.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\renderer.hpp">
+    <ClInclude Include="include\rast\renderer.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\shader\constant.hpp">
+    <ClInclude Include="include\rast\shader\constant.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\shader\vertex_colored.hpp">
+    <ClInclude Include="include\rast\shader\vertex_colored.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\sampler.hpp">
+    <ClInclude Include="include\rast\sampler.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\shader\textured.hpp">
+    <ClInclude Include="include\rast\shader\textured.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\shader\lambert_textured.hpp">
+    <ClInclude Include="include\rast\shader\lambert_textured.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\shader\shader_macros.hpp">
+    <ClInclude Include="include\rast\shader\shader_macros.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\framebuffer\depth_view.hpp">
+    <ClInclude Include="include\rast\framebuffer\depth_view.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\shader\deferred.hpp">
+    <ClInclude Include="include\rast\shader\deferred.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\thread_pool.hpp">
+    <ClInclude Include="include\rast\thread_pool.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\interpolation.hpp">
+    <ClInclude Include="include\rast\interpolation.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\game\fly_cam.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\clip\sutherland_hodgman.hpp">
+    <ClInclude Include="include\rast\clip\sutherland_hodgman.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\clip\clip_vert.hpp">
+    <ClInclude Include="include\rast\clip\clip_vert.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\clip\near_clip_far_discard.hpp">
+    <ClInclude Include="include\rast\clip\near_clip_far_discard.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\command_buffer.hpp">
+    <ClInclude Include="include\rast\command_buffer.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\convert.hpp">
+    <ClInclude Include="include\rast\convert.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\alpha_blend.hpp">
+    <ClInclude Include="include\rast\alpha_blend.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\is_discardable.hpp">
+    <ClInclude Include="include\rast\is_discardable.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\depth_test.hpp">
+    <ClInclude Include="include\rast\depth_test.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\raster\bbox_scan.hpp">
+    <ClInclude Include="include\rast\raster\bbox_scan.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\raster\raster_utils.hpp">
+    <ClInclude Include="include\rast\raster\raster_utils.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\viewport.hpp">
+    <ClInclude Include="include\rast\viewport.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\tile.hpp">
+    <ClInclude Include="include\rast\tile.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\raster\left_edge.hpp">
+    <ClInclude Include="include\rast\raster\left_edge.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\fragbuff\fragbuff_utils.hpp">
+    <ClInclude Include="include\rast\fragbuff\fragbuff_utils.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\fragbuff\rewrite.hpp">
+    <ClInclude Include="include\rast\fragbuff\rewrite.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\perspective_divide.hpp">
+    <ClInclude Include="include\rast\perspective_divide.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\math\fixed.hpp">
+    <ClInclude Include="include\rast\math\fixed.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\math.hpp">
+    <ClInclude Include="include\rast\math.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\math\vec.hpp">
+    <ClInclude Include="include\rast\math\vec.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\framebuffer\utils.hpp">
+    <ClInclude Include="include\rast\framebuffer\utils.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\framebuffer\color_depth.hpp">
+    <ClInclude Include="include\rast\framebuffer\color_depth.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\framebuffer\color.hpp">
+    <ClInclude Include="include\rast\framebuffer\color.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\static_test.hpp">
+    <ClInclude Include="include\rast\static_test.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\raster\vbbox_scan.hpp">
+    <ClInclude Include="include\rast\raster\vbbox_scan.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\simd.hpp">
+    <ClInclude Include="include\rast\simd.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\sized2d_base.hpp">
+    <ClInclude Include="include\rast\sized2d_base.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\rast\framebuffer\color_depth_vectorized.hpp">
+    <ClInclude Include="include\rast\framebuffer\color_depth_vectorized.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
