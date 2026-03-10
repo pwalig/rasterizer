@@ -4,28 +4,14 @@
 
 #include <glm/glm.hpp>
 
-#include "../sa_vector.hpp"
-
 namespace rast::mesh {
-	namespace cube {
-		extern const float vertex_array [108];
-		extern const uint32_t indices [36];
-		extern const float vertices [72];
-		extern const float normals [72];
-		extern const float uv[48];
-	};
-	namespace screen_quad {
-		extern const float vertex_array[30];
-	}
-	std::vector<glm::vec3> grid(uint32_t x, uint32_t y, float siz);
-
 	template <typename VertexT>
 	class indexed {
 	public:
 		using vertex = VertexT;
 
-		sa_vector<uint32_t> index_buffer;
-		sa_vector<vertex> vertex_buffer;
+		std::vector<uint32_t> index_buffer;
+		std::vector<vertex> vertex_buffer;
 
 		inline indexed() = default;
 

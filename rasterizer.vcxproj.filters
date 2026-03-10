@@ -18,12 +18,6 @@
     <ClCompile Include="src\main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\rast\mesh.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
-    <ClCompile Include="src\stb_implementation.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="src\thread_pool.cpp">
       <Filter>sources</Filter>
     </ClCompile>
@@ -54,12 +48,6 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\textured.hpp">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="src\sa_vector.hpp">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="src\trivial_iterator.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\shader\lambert_textured.hpp">
@@ -135,9 +123,6 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\math.hpp">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="src\rast\utils\structure_of_arrays.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="src\rast\math\vec.hpp">

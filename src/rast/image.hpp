@@ -4,7 +4,6 @@
 
 #include <stb_image.h>
 
-#include "../sa_vector.hpp"
 #include "color.hpp"
 
 namespace rast {
@@ -74,7 +73,7 @@ namespace rast {
 		inline constexpr const_reference at(size_type x, size_type y) const { return _data[y * _width + x]; }
 		inline constexpr pointer data() noexcept { return _data; }
 		inline constexpr const_pointer data() const noexcept { return _data; }
-		inline constexpr bool empty() const noexcept { return _data != nullptr; }
+		inline constexpr bool empty() const noexcept { return _data == nullptr; }
 		inline constexpr explicit operator bool() { return _data != nullptr; }
 
 		template <resize_filter filter>

@@ -36,37 +36,7 @@ namespace rast::raster {
 				simd::cast<float>(extent_y) * simd::f32x_<Count>(0.5f),
 				simd::cast<float>(offset_y)
 			))
-			//_mm_cvtps_epi32(_mm_fmadd_ps(
-			//	_mm_add_ps(x, _mm_set_ps1(1.0f)),
-			//	_mm_mul_ps(_mm_cvtepi32_ps(extent_x), _mm_set_ps1(0.5f)),
-			//	_mm_cvtepi32_ps(offset_x)
-			//)),
-			//_mm_cvtps_epi32(_mm_fmadd_ps(
-			//	_mm_sub_ps(_mm_set_ps1(1.0f), y),
-			//	_mm_mul_ps(_mm_cvtepi32_ps(extent_y), _mm_set_ps1(0.5f)),
-			//	_mm_cvtepi32_ps(offset_y)
-			//))
 		};
-	}
-
-	template <size_t Count>
-	inline constexpr math::i32vec2x<Count> to_screen_space(
-		const math::f32x<Count>& x,
-		const math::f32x<Count>& y,
-		const viewport_x<Count>& Viewport
-	) {
-		return math::i32vec2x<Count>(
-			(x + math::f32x<Count>(1.0f)) * math::cast<float>(Viewport.extent[0]) * math::f32x<Count>(0.5f) + math::cast<float>(Viewport.offset[0]),
-			(-y + math::f32x<Count>(1.0f)) * math::cast<float>(Viewport.extent[1]) * math::f32x<Count>(0.5f) + math::cast<float>(Viewport.offset[1])
-		);
-	}
-	template <size_t Count>
-	inline constexpr math::i32vec2x<Count> to_screen_space(
-		const math::f32x<Count>& x,
-		const math::f32x<Count>& y,
-		const viewport& Viewport
-	) {
-		return to_screen_space(x, y, viewport_x<Count>(Viewport.offset.x, Viewport.offset.y, Viewport.extent.x, Viewport.extent.y));
 	}
 
 	template <typename Shader, typename Callable>
@@ -93,16 +63,10 @@ namespace rast::raster {
 	) {
 		simd::i32x_<Count> zero = simd::setzero<int, Count>();
 		// 0 - ((y > 0) | ((y == 0) & (x < 0)))
-		return simd::sub<int, Count>( // subtracting from 0 to turn -1 into 1
-			zero, // because cmp instructions fill register with ones or zeroes
-			simd::bit_or<int, Count>( // register of just ones is -1 if treated as signed
-				simd::cmpgt<int, Count>(y, zero),
-				simd::bit_and<int, Count>(
-					simd::cmpeq<int, Count>(y, zero),
-					simd::cmpgt<int, Count>(zero, x)
-				)
-			)
-		);
+		// subtracting from 0 to turn -1 into 1
+		// because cmp instructions fill register with ones or zeroes
+		// register of just ones is -1 if treated as signed
+		return zero - ((y > zero) | ((y == zero) & (x < zero)));
 	}
 
 	template <typename T>

@@ -141,8 +141,6 @@
   <ItemGroup>
     <ClCompile Include="src\game\fly_cam.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\rast\mesh.cpp" />
-    <ClCompile Include="src\stb_implementation.cpp" />
     <ClCompile Include="src\thread_pool.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -174,7 +172,6 @@
     <ClInclude Include="src\rast\raster\left_edge.hpp" />
     <ClInclude Include="src\rast\raster\raster_utils.hpp" />
     <ClInclude Include="src\rast\tile.hpp" />
-    <ClInclude Include="src\rast\utils\structure_of_arrays.hpp" />
     <ClInclude Include="src\rast\viewport.hpp" />
     <ClInclude Include="src\thread_pool.hpp" />
     <ClInclude Include="src\rast\framebuffer\depth_view.hpp" />
@@ -189,8 +186,6 @@
     <ClInclude Include="src\rast\shader\vertex_colored.hpp" />
     <ClInclude Include="src\rast\shader\shader_macros.hpp" />
     <ClInclude Include="src\rast\sampler.hpp" />
-    <ClInclude Include="src\sa_vector.hpp" />
-    <ClInclude Include="src\trivial_iterator.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="ext\SDL\VisualC\SDL\SDL.vcxproj">

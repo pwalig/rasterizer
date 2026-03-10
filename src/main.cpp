@@ -21,6 +21,7 @@
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 
+#define STB_IMAGE_IMPLEMENTATION
 #include "rast/color.hpp"
 #include "rast/mesh.hpp"
 #include "rast/shader/constant.hpp"
