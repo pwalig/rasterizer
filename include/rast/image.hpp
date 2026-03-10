@@ -1,6 +1,7 @@
 #pragma once
 #include <stdexcept>
 #include <type_traits>
+#include <cstring>
 
 #include <stb_image.h>
 

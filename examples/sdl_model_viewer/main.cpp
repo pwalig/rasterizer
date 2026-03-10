@@ -3,15 +3,11 @@
 #include <string>
 #include <chrono>
 #include <bitset>
-#include <filesystem>
 
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
 #define SDL_HINT_MOUSE_RELATIVE_WARP_MOTION  "SDL_MOUSE_RELATIVE_WARP_MOTION"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-
-#include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "rast/color.hpp"
@@ -68,15 +64,6 @@ struct scene {
 	std::vector<material<shader>> materials;
 	std::vector<object> objects;
 
-	static std::filesystem::path get_full_path(const char* path, const std::filesystem::path& root) {
-		std::filesystem::path res = path;
-		if (res.is_relative()) {
-			res = root;
-			res.append(path);
-		}
-		return res;
-	}
-
 	static void append_objects(const aiNode* node, std::vector<object>& objects, aiMatrix4x4 accTransform) {
 		std::cout << node->mName.C_Str() << '\n';
 		std::cout << "NumMeshes: " << node->mNumMeshes << '\n';
@@ -102,7 +89,7 @@ struct scene {
 	static scene assimp_load(const char* filename) {
 		scene res;
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate);
+		const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
 		if (scene == nullptr) throw std::runtime_error(std::string("could not read file ") + filename);
 		std::cout << "NumMeshes: " << scene->mNumMeshes << '\n';
 		std::vector<uint32_t> material_used_by_mesh(scene->mNumMeshes);
@@ -116,14 +103,14 @@ struct scene {
 				mesh.vertex_buffer.push_back({
 					glm::vec3(aimesh->mVertices[j].x, aimesh->mVertices[j].y, aimesh->mVertices[j].z),
 					glm::vec3(aimesh->mNormals[j].x, aimesh->mNormals[j].y, aimesh->mNormals[j].z),
-					glm::vec2(aimesh->mTextureCoords[0][j].x, 1.0f - aimesh->mTextureCoords[0][j].y)
+					glm::vec2(aimesh->mTextureCoords[0][j].x, aimesh->mTextureCoords[0][j].y)
 				});
 			}
 			for (size_t j = 0; j < aimesh->mNumFaces; ++j) {
 				assert(aimesh->mFaces[j].mNumIndices == 3);
-				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[2]);
-				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[1]);
 				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[0]);
+				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[1]);
+				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[2]);
 			}
 			res.meshes.push_back(mesh);
 		}
@@ -153,141 +140,7 @@ struct scene {
 		}
 		append_objects(scene->mRootNode, res.objects, aiMatrix4x4());
 		for (auto& obj : res.objects) for (auto& m : obj.models) m.material_id = material_used_by_mesh[m.mesh_id];
-
-		std::cout << "Success!\n";
 		return res;
-	}
-
-	void load(const char* filename) {
-		std::filesystem::path scene_file_path = filename;
-		if (!std::filesystem::exists(scene_file_path)) throw std::runtime_error("file does not exist");
-		scene_file_path.remove_filename();
-		std::ifstream ifs(filename);
-		rapidjson::IStreamWrapper isw(ifs);
-
-		rapidjson::Document document;
-		document.ParseStream(isw);
-		assert(document.IsObject());
-
-		// textures
-		if (document.HasMember("textures")) {
-			const rapidjson::Value& textures_node = document["textures"];
-			textures.reserve(textures_node.Size());
-			for (rapidjson::SizeType i = 0; i < textures_node.Size(); ++i) {
-				const rapidjson::Value& texture_node = textures_node[i];
-				std::filesystem::path texture_path = get_full_path(texture_node.GetString(), scene_file_path);
-				textures.emplace_back(rast::image<rast::color::rgba8>::load(
-					texture_path.string().c_str()
-				));
-			}
-		}
-		// texture packs
-		std::unordered_map<std::string, uint32_t> texture_pack_map;
-		if (document.HasMember("texture_packs")) {
-			const rapidjson::Value& texture_packs_node = document["texture_packs"];
-			for (rapidjson::Value::ConstMemberIterator texture_pack_iter = texture_packs_node.MemberBegin(); texture_pack_iter != texture_packs_node.MemberEnd(); ++texture_pack_iter) {
-				texture_pack_map.insert({ texture_pack_iter->name.GetString(), static_cast<uint32_t>(textures.size())});
-				const rapidjson::Value& texture_pack_node = texture_pack_iter->value;
-
-				std::filesystem::path texture_pack_path = get_full_path(
-					texture_pack_node["path"].GetString(),
-					scene_file_path
-				);
-
-				const rapidjson::Value& textures_node = texture_pack_node["textures"];
-				for (rapidjson::SizeType i = 0; i < textures_node.Size(); i++) {
-					std::filesystem::path tmp = texture_pack_path;
-					tmp.append(textures_node[i].GetString());
-					textures.push_back(rast::mipmapped_image<rast::color::rgba8>(rast::image<rast::color::rgba8>::load(
-						tmp.string().c_str()
-					)));
-				}
-
-			}
-		}
-
-		// meshes
-		{
-			const rapidjson::Value& meshes_node = document["meshes"];
-			for (rapidjson::SizeType i = 0; i < meshes_node.Size(); ++i) {
-				std::filesystem::path mesh_path = get_full_path(
-					meshes_node[i].GetString(),
-					scene_file_path
-				);
-				if (mesh_path.extension() == ".meshes") {
-					auto tmp_meshes = mesh_type::load_multiple(
-						mesh_path.string().c_str()
-					);
-					for (auto& mesh : tmp_meshes) meshes.push_back(mesh);
-				}
-				else if (mesh_path.extension() == ".mesh") {
-					auto tmp_mesh = mesh_type::load(
-						mesh_path.string().c_str()
-					);
-					meshes.push_back(tmp_mesh);
-				}
-				else throw std::runtime_error("wrong file extension");
-			}
-			for (auto& mesh : meshes) {
-				mesh.process<rast::shader::inputs::position_normal_uv::flip_uv>();
-			}
-		}
-
-
-		// materials
-		{
-			const rapidjson::Value& materials_node = document["materials"];
-			materials.reserve(materials_node.Size());
-			for (rapidjson::SizeType i = 0; i < materials_node.Size(); ++i) {
-				const rapidjson::Value& material_node = materials_node[i];
-				const rapidjson::Value& texture_node = material_node["texture"];
-				uint32_t texture_id = texture_node["index"].GetUint();
-				if (texture_node.HasMember("pack")) {
-					texture_id += texture_pack_map.at(texture_node["pack"].GetString());
-				}
-				materials.push_back({ texture_id });
-			}
-		}
-
-
-		// objects
-		{
-			const rapidjson::Value& objects_node = document["objects"];
-			objects.reserve(objects_node.Size());
-			for (rapidjson::SizeType i = 0; i < objects_node.Size(); ++i) {
-				const rapidjson::Value& object_node = objects_node[i];
-				object obj;
-
-				if (object_node.HasMember("M")) {
-					const rapidjson::Value& M_node = object_node["M"];
-					if (M_node.HasMember("position")) {
-						obj.M = glm::translate(obj.M, glm::vec3(
-							M_node["position"][0].GetFloat(),
-							M_node["position"][1].GetFloat(),
-							M_node["position"][2].GetFloat()
-						));
-					}
-					if (M_node.HasMember("scale")) {
-						obj.M = glm::scale(obj.M, glm::vec3(
-							M_node["scale"][0].GetFloat(),
-							M_node["scale"][1].GetFloat(),
-							M_node["scale"][2].GetFloat()
-						));
-					}
-				}
-
-				const rapidjson::Value& models_node = object_node["models"];
-				obj.models.reserve(models_node.Size());
-				for (rapidjson::SizeType j = 0; j < models_node.Size(); ++j) {
-					const rapidjson::Value& model_node = models_node[j];
-					object::model om;
-					om.mesh_id = model_node["mesh"]["index"].GetUint();
-					om.material_id = model_node["material"]["index"].GetUint();
-					obj.models.push_back(om);
-				}
-				objects.push_back(obj);
-			}
-		}
 	}
 
 	template <typename Shader = shader, typename Callable>
@@ -306,10 +159,8 @@ struct scene {
 struct application {
 	using depth_format = float;
 	using DepthBuffer = rast::image<depth_format>;
-	//using color_format = rast::math::u8vec4x1;
 	using color_format = rast::color::rgba8;
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
-	//using Framebuffer = rast::framebuffer::vectorized<color_format, depth_format, rast::shader::lambert_textured::fragment::shade<4>, rast::depth_test::less<rast::math::u32x4>, rast::static_test::blend<4>>;
 	using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, rast::shader::lambert_textured::fragment::simd_shade<4>, rast::shader::lambert_textured::fragment::simd_blend<4>, rast::depth_test::less>;
 
 	using g_format = rast::shader::deferred::first_pass::fragment::output;
@@ -357,7 +208,7 @@ static application app;
 
 
 /* This function runs once at startup. */
-SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int, char **)
+SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int argc, char ** argv)
 {
 	int width = 1280;
 	int height = 720;
@@ -382,14 +233,8 @@ SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int, char **)
 	app.depth_buffer = rast::image<application::depth_format>(width, height);
 	if constexpr(application::is_deffered) app.g_buffer = application::GBuffer(width, height);
 	
-	try {
-		app.scene.load("../../private/assets/scenes/sponza.json");
-		app.scene = scene::assimp_load("scene.gltf");
-		//app.scene.assimp_load("scene.gltf");
-	}
-	catch (std::runtime_error&) {
-		app.scene.load("../../assets/scenes/scene.json");
-	}
+	if (argc == 1) app.scene = scene::assimp_load("scene.gltf");
+	else scene::assimp_load(argv[1]);
 
 	return SDL_APP_CONTINUE;  /* carry on with the program! */
 }

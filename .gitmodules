@@ -2,10 +2,6 @@
 	path = ext/SDL
 	url = https://github.com/libsdl-org/SDL.git
 	shallow = true
-[submodule "ext/rapidjson"]
-	path = ext/rapidjson
-	url = https://github.com/Tencent/rapidjson.git
-	shallow = true
 [submodule "ext/glm"]
 	path = ext/glm
 	url = https://github.com/g-truc/glm
