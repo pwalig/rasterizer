@@ -76,7 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -93,7 +93,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -127,7 +127,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>./ext/SDL/include/;%GLM_PATH%;%STB_PATH%;./ext/rapidjson/include/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./ext/SDL/include/;./ext/glm/;./ext/stb/;./ext/rapidjson/include/</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>

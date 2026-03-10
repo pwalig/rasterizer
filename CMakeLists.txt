@@ -22,8 +22,8 @@ else()
     target_compile_options(rasterizer PRIVATE -march=native) #SIMD
 endif()
 
-target_include_directories(rasterizer PRIVATE $ENV{GLM_PATH})
-target_include_directories(rasterizer PRIVATE $ENV{STB_PATH})
+target_include_directories(rasterizer PRIVATE ext/glm)
+target_include_directories(rasterizer PRIVATE ext/stb)
 target_include_directories(rasterizer PRIVATE ext/rapidjson/include/)
 target_compile_definitions(rasterizer PRIVATE GLM_ENABLE_EXPERIMENTAL)
 target_sources(rasterizer PRIVATE src/main.cpp)

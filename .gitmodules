@@ -6,3 +6,9 @@
 	path = ext/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
 	shallow = true
+[submodule "ext/glm"]
+	path = ext/glm
+	url = https://github.com/g-truc/glm
+[submodule "ext/stb"]
+	path = ext/stb
+	url = https://github.com/nothings/stb
