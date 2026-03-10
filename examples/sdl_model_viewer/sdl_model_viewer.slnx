@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="../../ext/SDL/VisualC/SDL/SDL.vcxproj" Id="81ce8daf-ebb2-4761-8e45-b71abcca8c68" />
+  <Project Path="../../rast.vcxproj" Id="35ea3bdb-e7d8-4a45-9041-43b232f67be9" />
+  <Project Path="sdl_model_viewer.vcxproj" Id="ba597808-3fdd-45ea-b2a0-519c50a8557e" />
+</Solution>

@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="rast.vcxproj" Id="35ea3bdb-e7d8-4a45-9041-43b232f67be9" />
+</Solution>
