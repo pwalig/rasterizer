@@ -2,8 +2,6 @@
 #include <vector>
 #include <fstream>
 
-#include <glm/glm.hpp>
-
 namespace rast::mesh {
 	template <typename VertexT>
 	class indexed {
@@ -14,6 +12,10 @@ namespace rast::mesh {
 		std::vector<vertex> vertex_buffer;
 
 		inline indexed() = default;
+		inline indexed(std::vector<uint32_t> IndexBuffer,
+			std::vector<vertex> VertexBuffer
+		) : index_buffer(std::move(IndexBuffer)),
+			vertex_buffer(std::move(VertexBuffer)) { }
 
 		inline static indexed load(std::ifstream& file) {
 			const uint32_t max_alloc = 10485760; // 10 MB

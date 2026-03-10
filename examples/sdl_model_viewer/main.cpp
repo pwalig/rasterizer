@@ -26,6 +26,10 @@
 #include "rast/raster/vbbox_scan.hpp"
 #include <rast/thread_pool.hpp>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 //static thd::thread_pool tp(std::thread::hardware_concurrency());
 static rast::thread_pool tp(std::thread::hardware_concurrency() - 2);
 //static thd::thread_pool tp(1);
@@ -70,6 +74,87 @@ struct scene {
 			res = root;
 			res.append(path);
 		}
+		return res;
+	}
+
+	static void append_objects(const aiNode* node, std::vector<object>& objects, aiMatrix4x4 accTransform) {
+		std::cout << node->mName.C_Str() << '\n';
+		std::cout << "NumMeshes: " << node->mNumMeshes << '\n';
+		if (node->mNumMeshes > 0) {
+			objects.push_back(object());
+			for (size_t i = 0; i < node->mNumMeshes; ++i) {
+				objects.back().models.push_back({ node->mMeshes[i], 0 });
+				auto M = node->mTransformation * accTransform;
+				objects.back().M = glm::mat4(
+					M.a1, M.a2, M.a3, M.a4,
+					M.b1, M.b2, M.b3, M.b4,
+					M.c1, M.c2, M.c3, M.c4,
+					M.d1, M.d2, M.d3, M.d4
+				);
+			}
+		}
+		std::cout << "NumChildren: " << node->mNumChildren << '\n';
+		for (size_t i = 0; i < node->mNumChildren; ++i) {
+			append_objects(node->mChildren[i], objects, node->mTransformation * accTransform);
+		}
+	}
+
+	static scene assimp_load(const char* filename) {
+		scene res;
+		Assimp::Importer importer;
+		const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate);
+		if (scene == nullptr) throw std::runtime_error(std::string("could not read file ") + filename);
+		std::cout << "NumMeshes: " << scene->mNumMeshes << '\n';
+		std::vector<uint32_t> material_used_by_mesh(scene->mNumMeshes);
+		for (size_t i = 0; i < scene->mNumMeshes; ++i) {
+			const aiMesh* aimesh = scene->mMeshes[i];
+			material_used_by_mesh[i] = aimesh->mMaterialIndex;
+			mesh_type mesh;
+			mesh.vertex_buffer.reserve(aimesh->mNumVertices);
+			mesh.index_buffer.reserve(aimesh->mNumFaces);
+			for (size_t j = 0; j < aimesh->mNumVertices; ++j) {
+				mesh.vertex_buffer.push_back({
+					glm::vec3(aimesh->mVertices[j].x, aimesh->mVertices[j].y, aimesh->mVertices[j].z),
+					glm::vec3(aimesh->mNormals[j].x, aimesh->mNormals[j].y, aimesh->mNormals[j].z),
+					glm::vec2(aimesh->mTextureCoords[0][j].x, 1.0f - aimesh->mTextureCoords[0][j].y)
+				});
+			}
+			for (size_t j = 0; j < aimesh->mNumFaces; ++j) {
+				assert(aimesh->mFaces[j].mNumIndices == 3);
+				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[2]);
+				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[1]);
+				mesh.index_buffer.push_back(aimesh->mFaces[j].mIndices[0]);
+			}
+			res.meshes.push_back(mesh);
+		}
+		std::cout << "NumTextures: " << scene->mNumTextures << '\n';
+		for (size_t i = 0; i < scene->mNumTextures; ++i) {
+			res.textures.push_back(rast::mipmapped_image<rast::color::rgba8>(
+				rast::image<rast::color::rgba8>::load(
+					scene->mTextures[i]->mFilename.C_Str()
+				)));
+		}
+		std::cout << "NumMaterials: " << scene->mNumMaterials << '\n';
+		for (size_t i = 0; i < scene->mNumMaterials; ++i) {
+			const aiMaterial* aimaterial = scene->mMaterials[i];
+			aiString data;
+			aimaterial->Get(AI_MATKEY_NAME, data);
+			std::cout << '\t' << data.C_Str() << '\n';
+			if (aimaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), data) == AI_SUCCESS) {
+				std::cout << "\t\tdiffuse: " << data.C_Str() << '\n';
+				res.textures.push_back(rast::mipmapped_image<rast::color::rgba8>(
+					rast::image<rast::color::rgba8>::load(data.C_Str())
+				));
+			}
+			if (aimaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_BASE_COLOR, 0), data) == AI_SUCCESS) std::cout << "\t\tbase color: " << data.C_Str() << '\n';
+			if (aimaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), data) == AI_SUCCESS) std::cout << "\t\tnormal: " << data.C_Str() << '\n';
+			if (aimaterial->Get(AI_MATKEY_TEXTURE(aiTextureType_GLTF_METALLIC_ROUGHNESS, 0), data) == AI_SUCCESS) std::cout << "\t\tmetallic roughness: " << data.C_Str() << '\n';
+			res.materials.push_back({ static_cast<uint32_t>(res.textures.size() - 1) });
+		}
+		append_objects(scene->mRootNode, res.objects, aiMatrix4x4());
+		for (auto& obj : res.objects) for (auto& m : obj.models) m.material_id = material_used_by_mesh[m.mesh_id];
+
+		std::cout << "Success!\n";
 		return res;
 	}
 
@@ -299,6 +384,8 @@ SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int, char **)
 	
 	try {
 		app.scene.load("../../private/assets/scenes/sponza.json");
+		app.scene = scene::assimp_load("scene.gltf");
+		//app.scene.assimp_load("scene.gltf");
 	}
 	catch (std::runtime_error&) {
 		app.scene.load("../../assets/scenes/scene.json");

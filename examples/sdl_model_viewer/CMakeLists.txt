@@ -32,5 +32,8 @@ target_sources(sdl_model_viewer PRIVATE
 add_subdirectory(../../ rast)
 target_link_libraries(sdl_model_viewer PRIVATE rast)
 
+add_subdirectory(../../ext/assimp assimp)
+target_link_libraries(sdl_model_viewer PRIVATE assimp)
+
 # Link to the actual SDL3 library.
-target_link_libraries(sdl_model_viewer PRIVATE SDL3::SDL3)
+target_link_libraries(sdl_model_viewer PRIVATE rast assimp SDL3::SDL3)

@@ -130,7 +130,6 @@ namespace rast::shader {
 					simd::make_x8<float>(colors[7].b, colors[6].b, colors[5].b, colors[4].b, colors[3].b, colors[2].b, colors[1].b, colors[0].b) / max_u8x,
 					simd::make_x8<float>(colors[7].a, colors[6].a, colors[5].a, colors[4].a, colors[3].a, colors[2].a, colors[1].a, colors[0].a) / max_u8x
 				);
-				else return glm::vec<4, simd::f32x_<Count>>();
 			}
 			template <size_t Count>
 			inline static std::array<color::rgba8, Count> simd_blend(
