@@ -138,6 +138,7 @@
     <ClInclude Include="include\rast\color.hpp" />
     <ClInclude Include="include\rast\command_buffer.hpp" />
     <ClInclude Include="include\rast\convert.hpp" />
+    <ClInclude Include="include\rast\cull.hpp" />
     <ClInclude Include="include\rast\depth_test.hpp" />
     <ClInclude Include="include\rast\fragbuff\fragbuff_utils.hpp" />
     <ClInclude Include="include\rast\fragbuff\rewrite.hpp" />

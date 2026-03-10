@@ -1,9 +1,9 @@
 #pragma once
 #include <vector>
-#include <functional>
 
 #include "mesh.hpp"
 #include "renderer.hpp"
+#include "cull.hpp"
 
 namespace rast {
 	template <typename Shader>
@@ -40,7 +40,7 @@ namespace rast {
 			commands.push_back({ mesh, {}, uniform_buffer, viewport });
 		}
 
-		template <typename Rasterizer, typename Clipper, typename Framebuffer, typename ThreadPool>
+		template <typename Rasterizer, typename Clipper, cull Cull = cull_default, typename Framebuffer, typename ThreadPool>
 		void submit(
 			Framebuffer& framebuffer,
 			ThreadPool& tp
@@ -71,7 +71,7 @@ namespace rast {
 				tp.enque([&framebuffer, &cmds = (this->commands), i, stride]() {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
 					for (const command& cmd : cmds) {
-						Rasterizer::rasterize(
+						Rasterizer::template rasterize<Cull>(
 							framebuffer,
 							cmd.raster_range.begin, cmd.raster_range.end,
 							cmd.viewport, tile, cmd.ubo.fragment

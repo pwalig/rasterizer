@@ -138,6 +138,9 @@
     <ClInclude Include="include\rast\fragbuff\fragbuff_utils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\rast\cull.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tests.cpp">

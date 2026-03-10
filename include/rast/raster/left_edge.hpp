@@ -43,7 +43,7 @@ namespace rast::raster {
 			}
 		}
 
-		template <typename Callable, typename Vertex, typename ...Args>
+		template <cull Cull = cull_default, typename Callable, typename Vertex, typename ...Args>
 		inline static void rasterize(
 			Callable&& output,
 			const Vertex* vertex_begin,
@@ -51,7 +51,7 @@ namespace rast::raster {
 			const viewport& viewport, const tile& tile,
 			const Args&... args
 		) {
-			filter_triangles_x<4, rasterize_one<Callable, Vertex, Args...>>(output, vertex_begin, vertex_end, viewport, tile, args...);
+			filter_triangles_x<4, rasterize_one<Callable, Vertex, Args...>, Cull>(output, vertex_begin, vertex_end, viewport, tile, args...);
 		}
 	};
 }
