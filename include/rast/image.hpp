@@ -4,8 +4,7 @@
 #include <cstring>
 
 #include <stb_image.h>
-
-#include "color.hpp"
+#include "simd.hpp"
 
 namespace rast {
 	enum class resize_filter : uint8_t {
@@ -164,6 +163,20 @@ namespace rast {
 			return MipLevels;
 		}
 
+		template <size_t Count>
+		inline static simd::u32x_<Count> mip_levels(simd::u32x_<Count> Width, simd::u32x_<Count> Height) {
+			simd::u32x_<Count> zero = simd::setzero<uint32_t, Count>();
+			simd::u32x_<Count> MipLevels = zero;
+			simd::u32x_<Count> mask = (Width > zero) & (Height > zero);
+			while (simd::movemask(mask)) {
+				MipLevels += (zero - mask); // mask is all ones on success - meaning negative one in 2's complement
+				Width >>= 1;
+				Height >>= 1;
+				mask = (Width > zero) & (Height > zero);
+			}
+			return MipLevels;
+		}
+
 		inline static constexpr size_type size(size_type Width, size_type Height) noexcept {
 			size_type res = 0;
 			while (Width > 0 && Height > 0) {
@@ -176,6 +189,14 @@ namespace rast {
 		inline static constexpr size_type valid_mip_level(size_type Width, size_type Height, size_type mip) noexcept {
 			return std::min(mip, mip_levels(Width, Height) - 1);
 		}
+		template <size_t Count>
+		inline static simd::u32x_<Count> valid_mip_level(
+			simd::u32x_<Count> Width,
+			simd::u32x_<Count> Height,
+			simd::u32x_<Count> mip
+		) {
+			return simd::min(mip, mip_levels(Width, Height) - simd::u32x_<Count>(1));
+		}
 		inline static constexpr size_type mip_offset(size_type Width, size_type Height, size_type mip) noexcept {
 			size_type offset = 0;
 			while (mip > 0) {
@@ -183,6 +204,21 @@ namespace rast {
 				Width /= 2;
 				Height /= 2;
 				--mip;
+			}
+			return offset;
+		}
+		template <size_t Count>
+		inline static simd::u32x_<Count> mip_offset(simd::u32x_<Count> Width, simd::u32x_<Count> Height, simd::u32x_<Count> mip) {
+			simd::u32x_<Count> zero = simd::setzero<uint32_t, Count>();
+			auto one = simd::u32x_<Count>(1);
+			simd::u32x_<Count> offset = zero;
+			simd::u32x_<Count> mask = mip > zero;
+			while (simd::movemask(mask)) {
+				offset += Width * Height * (zero - mask);
+				Width >>= 1;
+				Height >>= 1;
+				mip -= one;
+				mask = mip > zero;
 			}
 			return offset;
 		}

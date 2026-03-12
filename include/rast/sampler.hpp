@@ -117,41 +117,32 @@ namespace rast {
 		}
 
 		template <size_t Count>
-		inline static std::array<value_type, Count> default_vectorizer(const_pointer ptr, simd::u32x_<Count> offsets) {
-			std::array<value_type, Count> res;
-#if _MSC_VER && !__INTEL_COMPILER
-#pragma warning( push )
-#pragma warning( disable : 4267 )
-#endif
-			for (size_t i = 0; i < Count; ++i) res[i] = ptr[offsets[i]];
-#if _MSC_VER && !__INTEL_COMPILER
-#pragma warning( pop )
-#endif
-			return res;
+		inline static auto default_vectorizer(const_pointer dptr, simd::u32x_<Count> off) {
+			static_assert(!std::is_class_v<value_type>);
+			static_assert((Count == 2) || (Count == 4) || (Count == 8));
+			if constexpr (Count == 2) return simd::make_x2(
+				dptr[off[0]], dptr[off[1]]
+			);
+			if constexpr (Count == 4) return simd::make_x4(
+				dptr[off[0]], dptr[off[1]], dptr[off[2]], dptr[off[3]]
+			);
+			if constexpr (Count == 8) return simd::make_x8(
+				dptr[off[0]], dptr[off[1]], dptr[off[2]], dptr[off[3]],
+				dptr[off[4]], dptr[off[5]], dptr[off[6]], dptr[off[7]]
+			);
 		}
 
 		template <auto Vectorizer, size_t Count>
 		inline auto sample(
 			simd::u32x_<Count> x,
 			simd::u32x_<Count> y,
-			size_type mip = 0
+			simd::u32x_<Count> mip = simd::setzero<size_type, Count>()
 		) const {
-			size_type off = mipmapped_image<color>::mip_offset(_width, _height, mip);
-			auto w = simd::u32x_<Count>(mip_length(_width, mip));
-			auto offsets = (y * w) + x;
-			const_pointer d = data + off;
-			if constexpr (!std::is_class_v<value_type> && (Count == 4)) {
-				return simd::make_x4(d[offsets[0]], d[offsets[1]], d[offsets[2]], d[offsets[3]]);
-			}
-			if constexpr (!std::is_class_v<value_type> && (Count == 8)) {
-				return simd::make_x8(
-					d[offsets[0]], d[offsets[1]], d[offsets[2]], d[offsets[3]],
-					d[offsets[4]], d[offsets[5]], d[offsets[6]], d[offsets[7]]
-				);
-			}
-			else {
-				return Vectorizer(d, offsets);
-			}
+			auto w = simd::u32x_<Count>(_width);
+			auto h = simd::u32x_<Count>(_height);
+			auto off = mipmapped_image<color>::mip_offset(w, h, mip);
+			w >>= mip;
+			return Vectorizer(data, y * w + x + off);
 		}
 
 		template <size_t Count>
@@ -211,18 +202,18 @@ namespace rast {
 		inline auto sample_nearest(
 			simd::f32x_<Count> u,
 			simd::f32x_<Count> v,
-			size_type mip = 0
+			simd::u32x_<Count> mip = simd::setzero<uint32_t, Count>()
 		) const {
-			mip = valid_mip(mip);
-			size_type w = mip_length(_width, mip);
-			size_type h = mip_length(_height, mip);
+			auto w = simd::u32x_<Count>(_width);
+			auto h = simd::u32x_<Count>(_height);
+			mip = mipmapped_image<color>::valid_mip_level(w, h, mip);
+			w >>= mip;
+			h >>= mip;
 			simd::u32x_<Count> x = wrapping::wrap<Mode>(
-				simd::floor(u * simd::f32x_<Count>(static_cast<float>(w))),
-				simd::u32x_<Count>(w)
+				simd::floor(u * simd::cast<float>(w)), w
 			);
 			simd::u32x_<Count> y = wrapping::wrap<Mode>(
-				simd::floor(v * simd::f32x_<Count>(static_cast<float>(h))),
-				simd::u32x_<Count>(h)
+				simd::floor(v * simd::cast<float>(h)), h
 			);
 			return sample<Vectorizer>(x, y, mip);
 		}
@@ -260,7 +251,7 @@ namespace rast {
 			return sample_t<T, Dim, Count>(x, y, mip);
 		}
 
-		template <auto Interpolate>
+		template <auto Interpolate, wrapping::mode Mode = wrapping::mode::repeat>
 		inline constexpr auto sample_linear(float u, float v, size_type mip = 0) const {
 			mip = valid_mip(mip);
 			size_type w = mip_length(_width, mip);
@@ -272,12 +263,12 @@ namespace rast {
 				v - 0.5f - math::floor<float>(v - 0.5f),
 			};
 			size_type x[2] = {
-				math::round<size_type>(u) % w,
-				math::round<size_type>(u - 1.0f) % w
+				wrapping::wrap<Mode>(math::round<size_type>(u), w),
+				wrapping::wrap<Mode>(math::round<size_type>(u - 1.0f), w)
 			};
 			size_type y[2] = {
-				math::round<size_type>(v) % h,
-				math::round<size_type>(v - 1.0f) % h
+				wrapping::wrap<Mode>(math::round<size_type>(v), h),
+				wrapping::wrap<Mode>(math::round<size_type>(v - 1.0f), h)
 			};
 			return Interpolate(
 				sample(x[0], y[0], mip),
@@ -289,6 +280,43 @@ namespace rast {
 				coefs[0] * (1.0f - coefs[1]),
 				(1.0f - coefs[0]) * (1.0f - coefs[1])
 			);
+		}
+		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
+		inline constexpr auto sample_linear(
+			simd::f32x_<Count> u,
+			simd::f32x_<Count> v,
+			simd::u32x_<Count> mip = simd::setzero<uint32_t, Count>()
+		) const {
+			auto w = simd::u32x_<Count>(_width);
+			auto h = simd::u32x_<Count>(_height);
+			mip = mipmapped_image<color>::valid_mip_level(w, h, mip);
+			w >>= mip;
+			h >>= mip;
+			u *= simd::cast<float>(w);
+			v *= simd::cast<float>(h);
+			auto one = simd::f32x_<Count>(1.0f);
+			auto half = simd::f32x_<Count>(0.5f);
+			simd::f32x_<Count> coefs[2] = {
+				u - half - simd::floor(u - half),
+				v - half - simd::floor(v - half),
+			};
+			simd::u32x_<Count> x[2] = {
+				wrapping::wrap<Mode>(simd::round(u), w),
+				wrapping::wrap<Mode>(simd::round(u - one), w)
+			};
+			simd::u32x_<Count> y[2] = {
+				wrapping::wrap<Mode>(simd::round(v), h),
+				wrapping::wrap<Mode>(simd::round(v - one), h)
+			};
+			simd::f32x_<Count> one_sub_coefs[2] = {
+				one - coefs[0],
+				one - coefs[1]
+			};
+			return
+				(sample<Vectorizer>(x[0], y[0], mip) * coefs[0] * coefs[1]) +
+				(sample<Vectorizer>(x[1], y[0], mip) * one_sub_coefs[0] * coefs[1]) +
+				(sample<Vectorizer>(x[0], y[1], mip) * coefs[0] * one_sub_coefs[1]) +
+				(sample<Vectorizer>(x[1], y[1], mip) * one_sub_coefs[0] * one_sub_coefs[1]);
 		}
 
 		template <typename T, size_t Dim, wrapping::mode Mode = wrapping::mode::repeat, size_t Count>

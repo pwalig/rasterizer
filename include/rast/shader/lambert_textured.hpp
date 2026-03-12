@@ -177,8 +177,9 @@ namespace rast::shader {
 					simd::glm::dot(frag.normal, uniforms.light_direction),
 					f32(0.0f), f32(1.0f)
 				);
-				auto color = uniforms.texture.template sample_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y, mip_to_sample);
-				//auto color = simd_u8_to_f32<Count>(samples);
+				simd::glm::vec4<Count> color;
+				if (linear) color = uniforms.texture.template sample_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y, simd::u32x_<Count>(mip_to_sample));
+				else color = uniforms.texture.template sample_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y, simd::u32x_<Count>(mip_to_sample));
 				color.r *= simd::fmadd(nl, uniforms.light_color.r, uniforms.ambient.r);
 				color.g *= simd::fmadd(nl, uniforms.light_color.g, uniforms.ambient.g);
 				color.b *= simd::fmadd(nl, uniforms.light_color.b, uniforms.ambient.b);

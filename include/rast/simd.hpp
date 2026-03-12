@@ -301,34 +301,34 @@ namespace rast::simd {
 	template <> inline __m256d fmadd<double, 4>(__m256d a, __m256d b, __m256d c) { return _mm256_fmadd_pd(a, b, c); }
 
 	template <typename T, size_t Count>
-	inline register_t<T, Count> sll(register_t<T, Count> lhs, register_t<T, Count> rhs);
-	template <> inline __m128i sll<int16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_sll_epi16(lhs, rhs); }
-	template <> inline __m128i sll<uint16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_sll_epi16(lhs, rhs); }
-	template <> inline __m128i sll<int32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_sll_epi32(lhs, rhs); }
-	template <> inline __m128i sll<uint32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_sll_epi32(lhs, rhs); }
-	template <> inline __m128i sll<int64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_sll_epi64(lhs, rhs); }
-	template <> inline __m128i sll<uint64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_sll_epi64(lhs, rhs); }
-	template <> inline __m256i sll<int16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi16(lhs, rhs); } // AVX512
-	template <> inline __m256i sll<uint16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi16(lhs, rhs); } // AVX512
-	template <> inline __m256i sll<int32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi32(lhs, rhs); }
-	template <> inline __m256i sll<uint32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi32(lhs, rhs); }
-	template <> inline __m256i sll<int64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi64(lhs, rhs); }
-	template <> inline __m256i sll<uint64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi64(lhs, rhs); }
+	inline register_t<T, Count> sllv(register_t<T, Count> lhs, register_t<T, Count> rhs);
+	template <> inline __m128i sllv<int16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_sllv_epi16(lhs, rhs); }
+	template <> inline __m128i sllv<uint16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_sllv_epi16(lhs, rhs); }
+	template <> inline __m128i sllv<int32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_sllv_epi32(lhs, rhs); }
+	template <> inline __m128i sllv<uint32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_sllv_epi32(lhs, rhs); }
+	template <> inline __m128i sllv<int64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_sllv_epi64(lhs, rhs); }
+	template <> inline __m128i sllv<uint64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_sllv_epi64(lhs, rhs); }
+	template <> inline __m256i sllv<int16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi16(lhs, rhs); } // AVX512
+	template <> inline __m256i sllv<uint16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi16(lhs, rhs); } // AVX512
+	template <> inline __m256i sllv<int32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi32(lhs, rhs); }
+	template <> inline __m256i sllv<uint32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi32(lhs, rhs); }
+	template <> inline __m256i sllv<int64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi64(lhs, rhs); }
+	template <> inline __m256i sllv<uint64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_sllv_epi64(lhs, rhs); }
 
 	template <typename T, size_t Count>
-	inline register_t<T, Count> sra(register_t<T, Count> lhs, register_t<T, Count> rhs);
-	template <> inline __m128i sra<int16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_sra_epi16(lhs, rhs); }
-	template <> inline __m128i sra<uint16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_sra_epi16(lhs, rhs); }
-	template <> inline __m128i sra<int32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_sra_epi32(lhs, rhs); }
-	template <> inline __m128i sra<uint32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_sra_epi32(lhs, rhs); }
-	template <> inline __m128i sra<int64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_sra_epi64(lhs, rhs); }
-	template <> inline __m128i sra<uint64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_sra_epi64(lhs, rhs); }
-	template <> inline __m256i sra<int16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi16(lhs, rhs); }
-	template <> inline __m256i sra<uint16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi16(lhs, rhs); }
-	template <> inline __m256i sra<int32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi32(lhs, rhs); }
-	template <> inline __m256i sra<uint32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi32(lhs, rhs); }
-	template <> inline __m256i sra<int64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi64(lhs, rhs); }
-	template <> inline __m256i sra<uint64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi64(lhs, rhs); }
+	inline register_t<T, Count> srav(register_t<T, Count> lhs, register_t<T, Count> rhs);
+	template <> inline __m128i srav<int16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_srav_epi16(lhs, rhs); }
+	template <> inline __m128i srav<uint16_t, 8>(__m128i lhs, __m128i rhs) { return _mm_srav_epi16(lhs, rhs); }
+	template <> inline __m128i srav<int32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_srav_epi32(lhs, rhs); }
+	template <> inline __m128i srav<uint32_t, 4>(__m128i lhs, __m128i rhs) { return _mm_srav_epi32(lhs, rhs); }
+	template <> inline __m128i srav<int64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_srav_epi64(lhs, rhs); }
+	template <> inline __m128i srav<uint64_t, 2>(__m128i lhs, __m128i rhs) { return _mm_srav_epi64(lhs, rhs); }
+	template <> inline __m256i srav<int16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi16(lhs, rhs); }
+	template <> inline __m256i srav<uint16_t, 16>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi16(lhs, rhs); }
+	template <> inline __m256i srav<int32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi32(lhs, rhs); }
+	template <> inline __m256i srav<uint32_t, 8>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi32(lhs, rhs); }
+	template <> inline __m256i srav<int64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi64(lhs, rhs); }
+	template <> inline __m256i srav<uint64_t, 4>(__m256i lhs, __m256i rhs) { return _mm256_srav_epi64(lhs, rhs); }
 
 	template <typename T, size_t Count>
 	inline register_t<T, Count> slli(register_t<T, Count> lhs, int rhs);
@@ -504,15 +504,25 @@ namespace rast::simd {
 	template <> inline __m256 sqrt<float, 8>(__m256 val) { return _mm256_sqrt_ps(val); }
 	template <> inline __m256d sqrt<double, 4>(__m256d val) { return _mm256_sqrt_pd(val); }
 
-	template <typename U, typename T, size_t Count> inline register_t<U, Count> cvt(register_t<T, Count>);
+	template <typename U, typename T, size_t Count> inline register_t<U, Count> cvt(register_t<T, Count>) = delete;
 	template <> inline __m128i cvt<int32_t, uint32_t, 4>(__m128i val) { return val; }
 	template <> inline __m128i cvt<uint32_t, int32_t, 4>(__m128i val) { return val; }
 	template <> inline __m128i cvt<int32_t, float, 4>(__m128 val) { return _mm_cvtps_epi32(val); }
 	template <> inline __m128 cvt<float, int32_t, 4>(__m128i val) { return _mm_cvtepi32_ps(val); }
+	template <> inline __m128i cvt<uint32_t, float, 4>(__m128 val) { return _mm_cvtps_epi32(val); }
+	template <> inline __m128 cvt<float, uint32_t, 4>(__m128i val) { return _mm_cvtepi32_ps(val); }
 	template <> inline __m256i cvt<int32_t, uint32_t, 8>(__m256i val) { return val; }
 	template <> inline __m256i cvt<uint32_t, int32_t, 8>(__m256i val) { return val; }
 	template <> inline __m256i cvt<int32_t, float, 8>(__m256 val) { return _mm256_cvtps_epi32(val); }
 	template <> inline __m256 cvt<float, int32_t, 8>(__m256i val) { return _mm256_cvtepi32_ps(val); }
+
+	template <typename RegT> inline int movemask(RegT);
+	template <> inline int movemask(__m128i val) { return _mm_movemask_epi8(val); }
+	template <> inline int movemask(__m128 val) { return _mm_movemask_ps(val); }
+	template <> inline int movemask(__m128d val) { return _mm_movemask_pd(val); }
+	template <> inline int movemask(__m256i val) { return _mm256_movemask_epi8(val); }
+	template <> inline int movemask(__m256 val) { return _mm256_movemask_ps(val); }
+	template <> inline int movemask(__m256d val) { return _mm256_movemask_pd(val); }
 
 	template <typename T, size_t Count>
 	inline register_t<T, Count> mod(register_t<T, Count> a, register_t<T, Count> b) {
@@ -547,8 +557,8 @@ namespace rast::simd {
 		friend inline _x_ operator-(_x_ lhs, _x_ rhs) { return sub<T, Count>(lhs, rhs); }
 		friend inline _x_ operator*(_x_ lhs, _x_ rhs) { return mul<T, Count>(lhs, rhs); }
 		friend inline _x_ operator/(_x_ lhs, _x_ rhs) { return div<T, Count>(lhs, rhs); }
-		friend inline _x_ operator<<(_x_ lhs, _x_ rhs) { return sll<T, Count>(lhs, rhs); }
-		friend inline _x_ operator>>(_x_ lhs, _x_ rhs) { return sra<T, Count>(lhs, rhs); }
+		friend inline _x_ operator<<(_x_ lhs, _x_ rhs) { return sllv<T, Count>(lhs, rhs); }
+		friend inline _x_ operator>>(_x_ lhs, _x_ rhs) { return srav<T, Count>(lhs, rhs); }
 		friend inline _x_ operator&(_x_ lhs, _x_ rhs) { return bit_and<T, Count>(lhs, rhs); }
 		friend inline _x_ operator|(_x_ lhs, _x_ rhs) { return bit_or<T, Count>(lhs, rhs); }
 		friend inline _x_ operator==(_x_ lhs, _x_ rhs) { return cmpeq<T, Count>(lhs, rhs); }
@@ -561,8 +571,8 @@ namespace rast::simd {
 		friend inline _x_ operator-(_x_ lhs, register_type rhs) { return sub<T, Count>(lhs, rhs); }
 		friend inline _x_ operator*(_x_ lhs, register_type rhs) { return mul<T, Count>(lhs, rhs); }
 		friend inline _x_ operator/(_x_ lhs, register_type rhs) { return div<T, Count>(lhs, rhs); }
-		friend inline _x_ operator<<(_x_ lhs, register_type rhs) { return sll<T, Count>(lhs, rhs); }
-		friend inline _x_ operator>>(_x_ lhs, register_type rhs) { return sra<T, Count>(lhs, rhs); }
+		friend inline _x_ operator<<(_x_ lhs, register_type rhs) { return sllv<T, Count>(lhs, rhs); }
+		friend inline _x_ operator>>(_x_ lhs, register_type rhs) { return srav<T, Count>(lhs, rhs); }
 		friend inline _x_ operator&(_x_ lhs, register_type rhs) { return bit_and<T, Count>(lhs, rhs); }
 		friend inline _x_ operator|(_x_ lhs, register_type rhs) { return bit_or<T, Count>(lhs, rhs); }
 		friend inline _x_ operator==(_x_ lhs, register_type rhs) { return cmpeq<T, Count>(lhs, rhs); }
@@ -577,8 +587,8 @@ namespace rast::simd {
 		inline _x_& operator-=(_x_ rhs) { m_value = sub<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator*=(_x_ rhs) { m_value = mul<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator/=(_x_ rhs) { m_value = div<T, Count>(m_value, rhs); return *this; }
-		inline _x_& operator<<=(_x_ rhs) { m_value = sll<T, Count>(m_value, rhs); return *this; }
-		inline _x_& operator>>=(_x_ rhs) { m_value = sra<T, Count>(m_value, rhs); return *this; }
+		inline _x_& operator<<=(_x_ rhs) { m_value = sllv<T, Count>(m_value, rhs); return *this; }
+		inline _x_& operator>>=(_x_ rhs) { m_value = srav<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator&=(_x_ rhs) { m_value = bit_and<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator|=(_x_ rhs) { m_value = bit_or<T, Count>(m_value, rhs); return *this; }
 
@@ -586,8 +596,8 @@ namespace rast::simd {
 		inline _x_& operator-=(register_type rhs) { m_value = sub<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator*=(register_type rhs) { m_value = mul<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator/=(register_type rhs) { m_value = div<T, Count>(m_value, rhs); return *this; }
-		inline _x_& operator<<=(register_type rhs) { m_value = sll<T, Count>(m_value, rhs); return *this; }
-		inline _x_& operator>>=(register_type rhs) { m_value = sra<T, Count>(m_value, rhs); return *this; }
+		inline _x_& operator<<=(register_type rhs) { m_value = sllv<T, Count>(m_value, rhs); return *this; }
+		inline _x_& operator>>=(register_type rhs) { m_value = srav<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator&=(register_type rhs) { m_value = bit_and<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator|=(register_type rhs) { m_value = bit_or<T, Count>(m_value, rhs); return *this; }
 
@@ -639,6 +649,10 @@ namespace rast::simd {
 	template <typename T, size_t Count>
 	inline _x_<T, Count> sqrt(_x_<T, Count> Value) {
 		return sqrt<T, Count>(Value.value());
+	}
+	template <typename T, size_t Count>
+	inline int movemask(_x_<T, Count> Value) {
+		return movemask(Value.value());
 	}
 
 	template <typename T, size_t Count>
