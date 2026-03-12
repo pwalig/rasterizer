@@ -117,6 +117,20 @@ namespace rast {
 		}
 
 		template <size_t Count>
+		inline static std::array<value_type, Count> default_vectorizer(const_pointer ptr, simd::u32x_<Count> offsets) {
+			std::array<value_type, Count> res;
+#if _MSC_VER && !__INTEL_COMPILER
+#pragma warning( push )
+#pragma warning( disable : 4267 )
+#endif
+			for (size_t i = 0; i < Count; ++i) res[i] = ptr[offsets[i]];
+#if _MSC_VER && !__INTEL_COMPILER
+#pragma warning( pop )
+#endif
+			return res;
+		}
+
+		template <auto Vectorizer, size_t Count>
 		inline auto sample(
 			simd::u32x_<Count> x,
 			simd::u32x_<Count> y,
@@ -136,16 +150,7 @@ namespace rast {
 				);
 			}
 			else {
-				std::array<value_type, Count> res;
-#if _MSC_VER && !__INTEL_COMPILER
-#pragma warning( push )
-#pragma warning( disable : 4267 )
-#endif
-				for (size_t i = 0; i < Count; ++i) res[i] = d[offsets[i]];
-#if _MSC_VER && !__INTEL_COMPILER
-#pragma warning( pop )
-#endif
-				return res;
+				return Vectorizer(d, offsets);
 			}
 		}
 
@@ -202,7 +207,7 @@ namespace rast {
 			size_type y = wrapping::wrap<Mode>(math::floor<int32_t>(v * h), h);
 			return sample(x, y, mip);
 		}
-		template <wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
+		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
 		inline auto sample_nearest(
 			simd::f32x_<Count> u,
 			simd::f32x_<Count> v,
@@ -219,7 +224,15 @@ namespace rast {
 				simd::floor(v * simd::f32x_<Count>(static_cast<float>(h))),
 				simd::u32x_<Count>(h)
 			);
-			return sample(x, y, mip);
+			return sample<Vectorizer>(x, y, mip);
+		}
+		template <wrapping::mode Mode = wrapping::mode::repeat, size_t Count>
+		inline auto sample_nearest(
+			simd::f32x_<Count> u,
+			simd::f32x_<Count> v,
+			size_type mip = 0
+		) {
+			return sample_nearest<default_vectorizer<Count>, Mode>(u, v, mip);
 		}
 
 		template <wrapping::mode Mode = wrapping::mode::repeat, size_t Count>

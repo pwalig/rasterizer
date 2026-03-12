@@ -138,7 +138,7 @@ namespace rast::shader {
 		class discardable {
 			output value;
 			bool discarded;
-			inline discardable() : value(), discarded(true) {}
+			inline constexpr discardable() : value(), discarded(true) {}
 		public:
 			using value_type = output;
 			using reference = std::add_lvalue_reference_t<value_type>;
@@ -146,14 +146,17 @@ namespace rast::shader {
 			using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
 			using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
 
-			inline discardable(output&& v) : value(std::forward<output>(v)), discarded(false) {}
-			static discardable discard() { return discardable(); }
+			inline constexpr discardable(output&& v) : value(std::forward<output>(v)), discarded(false) {}
+			static constexpr discardable discard() { return discardable(); }
 
 			inline constexpr const_reference operator*() const { return value; }
 			inline constexpr reference operator*() { return value; }
 
 			inline constexpr explicit operator bool() const { return !discarded; }
 		};
+		static_assert(discardable<int>(3));
+		static_assert(!discardable<int>::discard());
+		static_assert(discardable<glm::vec3>(glm::vec3()));
 
 		template <typename T>
 		struct alpha_discardable {

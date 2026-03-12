@@ -168,6 +168,7 @@
     <ClInclude Include="include\rast\shader\textured.hpp" />
     <ClInclude Include="include\rast\shader\vertex_colored.hpp" />
     <ClInclude Include="include\rast\simd.hpp" />
+    <ClInclude Include="include\rast\simd\glm.hpp" />
     <ClInclude Include="include\rast\sized2d_base.hpp" />
     <ClInclude Include="include\rast\static_test.hpp" />
     <ClInclude Include="include\rast\thread_pool.hpp" />

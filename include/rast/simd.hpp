@@ -494,6 +494,16 @@ namespace rast::simd {
 	template <> inline __m128 round<float, 4>(__m128 val) { return _mm_round_ps(val, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC); }
 	template <> inline __m128d round<double, 2>(__m128d val) { return _mm_round_pd(val, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC); }
 
+	template <typename T, size_t Count> inline register_t<T, Count> rsqrt(register_t<T, Count>);
+	template <> inline __m128 rsqrt<float, 4>(__m128 val) { return _mm_rsqrt_ps(val); }
+	template <> inline __m256 rsqrt<float, 8>(__m256 val) { return _mm256_rsqrt_ps(val); }
+
+	template <typename T, size_t Count> inline register_t<T, Count> sqrt(register_t<T, Count>);
+	template <> inline __m128 sqrt<float, 4>(__m128 val) { return _mm_sqrt_ps(val); }
+	template <> inline __m128d sqrt<double, 2>(__m128d val) { return _mm_sqrt_pd(val); }
+	template <> inline __m256 sqrt<float, 8>(__m256 val) { return _mm256_sqrt_ps(val); }
+	template <> inline __m256d sqrt<double, 4>(__m256d val) { return _mm256_sqrt_pd(val); }
+
 	template <typename U, typename T, size_t Count> inline register_t<U, Count> cvt(register_t<T, Count>);
 	template <> inline __m128i cvt<int32_t, uint32_t, 4>(__m128i val) { return val; }
 	template <> inline __m128i cvt<uint32_t, int32_t, 4>(__m128i val) { return val; }
@@ -625,6 +635,10 @@ namespace rast::simd {
 	template <typename T, size_t Count>
 	inline _x_<T, Count> round(_x_<T, Count> Value) {
 		return round<T, Count>(Value.value());
+	}
+	template <typename T, size_t Count>
+	inline _x_<T, Count> sqrt(_x_<T, Count> Value) {
+		return sqrt<T, Count>(Value.value());
 	}
 
 	template <typename T, size_t Count>
