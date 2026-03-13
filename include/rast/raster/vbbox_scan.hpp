@@ -18,10 +18,6 @@ namespace rast::raster {
 					simd::make_x8<int>(0, 1, 0, 1, 0, 1, 0, 1)
 				);
 			}
-			else {
-				assert(0);
-				return glm::vec<2, simd::i32x_<Count>>();
-			}
 		}
 		template <size_t Count, typename Callable, typename VertexT, typename ...Args>
 		inline static void rasterize_one(
@@ -70,13 +66,8 @@ namespace rast::raster {
 				glm::vec<3, i32> E = Cy - Cx;
 				for (i32 x = min.x; x[Count - 1] < max.x; x += increment.x, E -= Dy) {
 					i32 mask = (E.x >= zero) & (E.y >= zero) & (E.z >= zero);
-					alignas(Count * sizeof(int)) int mask_mem[Count];
-					simd::store(mask_mem, mask);
-					auto bmask = math::boolx<Count>();
-					if constexpr (Count == 4) bmask = math::make_x4<bool>(mask_mem[0], mask_mem[1], mask_mem[2], mask_mem[3]);
-					else if constexpr (Count == 8) bmask = math::make_x8<bool>(mask_mem[0], mask_mem[1], mask_mem[2], mask_mem[3], mask_mem[4], mask_mem[5], mask_mem[6], mask_mem[7]);
-					if (math::or_accross(bmask)) {
-						output(x, y, vtriangle, E, bmask, args...);
+					if (simd::movemask(mask)) {
+						output(x, y, vtriangle, E, mask, args...);
 					}
 				}
 			}

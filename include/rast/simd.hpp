@@ -516,7 +516,25 @@ namespace rast::simd {
 	template <> inline __m256i cvt<int32_t, float, 8>(__m256 val) { return _mm256_cvtps_epi32(val); }
 	template <> inline __m256 cvt<float, int32_t, 8>(__m256i val) { return _mm256_cvtepi32_ps(val); }
 
-	template <typename RegT> inline int movemask(RegT);
+	template <typename RegT, typename RegU> inline RegT cast(RegU) = delete;
+	template <> inline __m128 cast(__m128i val) { return _mm_castsi128_ps(val); }
+	template <> inline __m128d cast(__m128i val) { return _mm_castsi128_pd(val); }
+	template <> inline __m128i cast(__m128 val) { return _mm_castps_si128(val); }
+	template <> inline __m128i cast(__m128d val) { return _mm_castpd_si128(val); }
+	template <> inline __m128d cast(__m128 val) { return _mm_castps_pd(val); }
+	template <> inline __m128 cast(__m128d val) { return _mm_castpd_ps(val); }
+	template <> inline __m256 cast(__m256i val) { return _mm256_castsi256_ps(val); }
+	template <> inline __m256d cast(__m256i val) { return _mm256_castsi256_pd(val); }
+	template <> inline __m256i cast(__m256 val) { return _mm256_castps_si256(val); }
+	template <> inline __m256i cast(__m256d val) { return _mm256_castpd_si256(val); }
+	template <> inline __m256d cast(__m256 val) { return _mm256_castps_pd(val); }
+	template <> inline __m256 cast(__m256d val) { return _mm256_castpd_ps(val); }
+	template <typename DestT, size_t DestC, typename SrcT, size_t SrcC>
+	inline register_t<DestT, DestC> cast(register_t<SrcT, SrcC> val) {
+		return cast<register_t<DestT, DestC>, register_t<SrcT, SrcC>>(val);
+	}
+
+	template <typename RegT> inline int movemask(RegT) = delete;
 	template <> inline int movemask(__m128i val) { return _mm_movemask_epi8(val); }
 	template <> inline int movemask(__m128 val) { return _mm_movemask_ps(val); }
 	template <> inline int movemask(__m128d val) { return _mm_movemask_pd(val); }
@@ -613,8 +631,12 @@ namespace rast::simd {
 	}
 
 	template <typename T, typename U, size_t Count>
-	inline _x_<T, Count> cast(_x_<U, Count> a) {
+	inline _x_<T, Count> cvt(_x_<U, Count> a) {
 		return cvt<T, U, Count>(a.value());
+	}
+	template <typename DstT, size_t DstC, typename SrcT, size_t SrcC>
+	inline _x_<DstT, DstC> reinterpret(_x_<SrcT, SrcC> a) {
+		return cast<DstT, DstC, SrcT, SrcC>(a.value());
 	}
 	template <typename T, size_t Count>
 	inline void store(T* dst, _x_<T, Count> a) {

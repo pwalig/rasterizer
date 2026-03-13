@@ -26,9 +26,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-//static thd::thread_pool tp(std::thread::hardware_concurrency());
 static rast::thread_pool tp(std::thread::hardware_concurrency() - 2);
-//static thd::thread_pool tp(1);
 static std::bitset<256> pressed;
 static glm::vec2 mouseDelta = glm::vec2(0.0f);
 

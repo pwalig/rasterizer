@@ -36,7 +36,7 @@ namespace rast {
 			simd::f32x_<Count> pos,
 			simd::u32x_<Count> limit
 		) {
-			simd::u32x_<Count> x = simd::mod<int32_t, Count>(simd::cast<int32_t>(pos), limit);
+			simd::u32x_<Count> x = simd::mod<int32_t, Count>(simd::cvt<int32_t>(pos), limit);
 			return simd::u32x_<Count>(simd::mod<int32_t, Count>(x + limit, limit));
 		}
 		template <typename T>
@@ -48,11 +48,11 @@ namespace rast {
 			simd::_x_<T, Count> pos,
 			simd::u32x_<Count> limit
 		) {
-			return simd::cast<size_type>(
+			return simd::cvt<size_type>(
 				simd::clamp(
 					pos,
 					simd::_x_<T, Count>(0),
-					simd::cast<T>(limit)
+					simd::cvt<T>(limit)
 				)
 			);
 		}
@@ -211,10 +211,10 @@ namespace rast {
 			w >>= mip;
 			h >>= mip;
 			simd::u32x_<Count> x = wrapping::wrap<Mode>(
-				simd::floor(u * simd::cast<float>(w)), w
+				simd::floor(u * simd::cvt<float>(w)), w
 			);
 			simd::u32x_<Count> y = wrapping::wrap<Mode>(
-				simd::floor(v * simd::cast<float>(h)), h
+				simd::floor(v * simd::cvt<float>(h)), h
 			);
 			return sample<Vectorizer>(x, y, mip);
 		}
@@ -293,8 +293,8 @@ namespace rast {
 			mip = mipmapped_image<color>::valid_mip_level(w, h, mip);
 			w >>= mip;
 			h >>= mip;
-			u *= simd::cast<float>(w);
-			v *= simd::cast<float>(h);
+			u *= simd::cvt<float>(w);
+			v *= simd::cvt<float>(h);
 			auto one = simd::f32x_<Count>(1.0f);
 			auto half = simd::f32x_<Count>(0.5f);
 			simd::f32x_<Count> coefs[2] = {
@@ -378,17 +378,15 @@ namespace rast {
 
 			// shuffles explained:
 			//    --- fp3 - fp2 - fp1 - fp0
-			//  x,y   0,0   0,1   1,0   1,1  order:   3, 2, 1, 0
-			// x2,y2  1,0   0,0   1,1   0,1  shuffle: 1, 3, 0, 2
-			// dx,dy  3-1   2-3   1-0   0-2  order:   3, 2, 1, 0
-			// d +=   2-3   0-2   3-1   1-0  shuffle: 2, 0, 3, 1
+			//  x,y   0,0   0,1   1,0   1,1  order:   3, 2, 1, 0    // this is set in rasterizer (see: vbbox_scan::pixel_pattern)
+			// x2,y2  1,0   0,0   1,1   0,1  shuffle: 1, 3, 0, 2    // neighbouring pixel
+			// dx,dy  3-1   2-3   1-0   0-2  order:   3, 2, 1, 0    // delta between neighbours
+			// mip+=  2-3   0-2   3-1   1-0  shuffle: 2, 0, 3, 1    // average out with second neighbour
 			simd::f32x4 x2 = _mm_shuffle_ps(x, x, _MM_SHUFFLE(1, 3, 0, 2));
 			simd::f32x4 y2 = _mm_shuffle_ps(y, y, _MM_SHUFFLE(1, 3, 0, 2));
 			simd::f32x4 deltas = simd::glm::length(simd::glm::vec2<4>(x, y) - simd::glm::vec2<4>(x2, y2));
-			deltas += _mm_shuffle_ps(deltas, deltas, _MM_SHUFFLE(2, 0, 3, 1));
-			deltas /= simd::f32x4(2.0f);
 			simd::i32x4 zero = simd::setzero<int, 4>();
-			simd::i32x4 delta = simd::cast<int>(deltas) >> 1;
+			simd::i32x4 delta = simd::cvt<int>(deltas) >> 1; // floor(delta) / 2; Delta is always positive, so cast works as floor. Delta = 1 coresponds to mip0, bit shit so that delta = 0 -> mip0.
 			simd::i32x4 mip_levels = zero;
 			simd::i32x4 mask = delta > zero;
 			while (simd::movemask(mask)) {
@@ -396,7 +394,9 @@ namespace rast {
 				mip_levels += (zero - mask);
 				mask = delta > zero;
 			}
-			return (this->*Sample)(u, v, simd::cast<uint32_t>(mip_levels));
+			mip_levels += _mm_shuffle_epi32(mip_levels, _MM_SHUFFLE(2, 0, 3, 1));
+			mip_levels >>= 1;
+			return (this->*Sample)(u, v, simd::cvt<uint32_t>(mip_levels));
 		}
 		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat>
 		inline constexpr auto sample_nearest_mipmap_nearest(simd::f32x4 u, simd::f32x4 v) const {

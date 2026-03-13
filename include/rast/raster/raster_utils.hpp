@@ -27,15 +27,15 @@ namespace rast::raster {
 		simd::i32x_<Count> offset_x, simd::i32x_<Count> offset_y
 	) {
 		return {
-			simd::cast<int32_t>(simd::fmadd(
+			simd::cvt<int32_t>(simd::fmadd(
 				x + simd::f32x_<Count>(1.0f),
-				simd::cast<float>(extent_x) * simd::f32x_<Count>(0.5f),
-				simd::cast<float>(offset_x)
+				simd::cvt<float>(extent_x) * simd::f32x_<Count>(0.5f),
+				simd::cvt<float>(offset_x)
 			)),
-			simd::cast<int32_t>(simd::fmadd(
+			simd::cvt<int32_t>(simd::fmadd(
 				simd::f32x_<Count>(1.0f) - y,
-				simd::cast<float>(extent_y) * simd::f32x_<Count>(0.5f),
-				simd::cast<float>(offset_y)
+				simd::cvt<float>(extent_y) * simd::f32x_<Count>(0.5f),
+				simd::cvt<float>(offset_y)
 			))
 		};
 	}

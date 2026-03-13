@@ -108,7 +108,7 @@ namespace rast::shader {
 				simd::glm::vec4<Count> colors
 			) {
 				using f32 = simd::f32x_<Count>;
-				f32 max_u8x = simd::cast<float>(simd::i32x_<Count>(
+				f32 max_u8x = simd::cvt<float>(simd::i32x_<Count>(
 					static_cast<int32_t>(std::numeric_limits<uint8_t>::max())
 				));
 				colors = glm::vec<4, f32>(
@@ -125,7 +125,7 @@ namespace rast::shader {
 			inline static simd::glm::vec4<Count> simd_u8_to_f32(
 				std::array<color::rgba8, Count> colors
 			) {
-				simd::f32x_<Count> max_u8x = simd::cast<float>(simd::i32x_<Count>(
+				simd::f32x_<Count> max_u8x = simd::cvt<float>(simd::i32x_<Count>(
 					static_cast<int32_t>(std::numeric_limits<uint8_t>::max())
 				));
 				static_assert((Count == 4) || (Count == 8));
