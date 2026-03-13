@@ -121,7 +121,7 @@ namespace rast::framebuffer {
 			simd::store(offsets, off);
 
 			alignas(Count * sizeof(int)) float depths[Count];
-			for (size_t i = 0; i < Count; ++i) if (mask[i]) depths[i] = _depth_data[offsets[i]];
+		for (size_t i = 0; i < Count; ++i) if (mask[i]) depths[i] = _depth_data[offsets[i]];
 			simd::f32x_<Count> old_depth = simd::load<float, Count>(depths);
 			simd::f32x_<Count> new_depth = get_float_depth(
 				triangle[0].rastPos.z,

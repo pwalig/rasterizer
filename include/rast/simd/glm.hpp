@@ -13,7 +13,15 @@ namespace rast::simd::glm {
 	template<size_t Count> using ivec4 = ::glm::vec<4, i32x_<Count>>;
 
 	template <size_t Count>
+	inline f32x_<Count> dot(vec2<Count> a, vec2<Count> b) {
+		return (a.x * b.x) + (a.y * b.y);
+	}
+	template <size_t Count>
 	inline f32x_<Count> dot(vec3<Count> a, vec3<Count> b) {
 		return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+	}
+	template <size_t Dim, size_t Count>
+	inline f32x_<Count> length(::glm::vec<Dim, f32x_<Count>> a) {
+		return simd::sqrt(dot(a, a));
 	}
 }

@@ -15,7 +15,8 @@
 namespace rast::shader {
 	struct lambert_textured {
 		struct fragment {
-			inline static bool linear = false;
+			inline static bool linear = true;
+			inline static bool mipmap = true;
 			inline static uint32_t mip_to_sample = 0;
 			template <size_t Count>
 			struct simd_input {
@@ -178,8 +179,14 @@ namespace rast::shader {
 					f32(0.0f), f32(1.0f)
 				);
 				simd::glm::vec4<Count> color;
-				if (linear) color = uniforms.texture.template sample_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y, simd::u32x_<Count>(mip_to_sample));
-				else color = uniforms.texture.template sample_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y, simd::u32x_<Count>(mip_to_sample));
+				if (mipmap) {
+					if (linear) color = uniforms.texture.template sample_nearest_mipmap_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+					else color = uniforms.texture.template sample_nearest_mipmap_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+				}
+				else {
+					if (linear) color = uniforms.texture.template sample_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+					else color = uniforms.texture.template sample_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+				}
 				color.r *= simd::fmadd(nl, uniforms.light_color.r, uniforms.ambient.r);
 				color.g *= simd::fmadd(nl, uniforms.light_color.g, uniforms.ambient.g);
 				color.b *= simd::fmadd(nl, uniforms.light_color.b, uniforms.ambient.b);

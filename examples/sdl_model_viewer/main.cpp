@@ -268,11 +268,15 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 	if (event->type == SDL_EVENT_KEY_UP) {
 		if (event->key.scancode < pressed.size())
 			pressed.reset(event->key.scancode);
-		if (event->key.scancode == SDL_SCANCODE_0) {
+		if (event->key.scancode == SDL_SCANCODE_L) {
 			rast::shader::lambert_textured::fragment::linear = !rast::shader::lambert_textured::fragment::linear;
 			app.request_frame = true;
 		}
-		if (event->key.scancode >= SDL_SCANCODE_1 && event->key.scancode <= SDL_SCANCODE_9) {
+		else if (event->key.scancode == SDL_SCANCODE_M) {
+			rast::shader::lambert_textured::fragment::mipmap = !rast::shader::lambert_textured::fragment::mipmap;
+			app.request_frame = true;
+		}
+		else if (event->key.scancode >= SDL_SCANCODE_1 && event->key.scancode <= SDL_SCANCODE_9) {
 			rast::shader::lambert_textured::fragment::mip_to_sample = event->key.scancode - SDL_SCANCODE_1;
 			app.request_frame = true;
 		}
