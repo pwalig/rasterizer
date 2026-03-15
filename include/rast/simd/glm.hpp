@@ -24,4 +24,8 @@ namespace rast::simd::glm {
 	inline f32x_<Count> length(::glm::vec<Dim, f32x_<Count>> a) {
 		return simd::sqrt(dot(a, a));
 	}
+	template <size_t Dim, size_t Count>
+	inline ::glm::vec<Dim, f32x_<Count>> normalize(::glm::vec<Dim, f32x_<Count>> a) {
+		return a / length(a);
+	}
 }

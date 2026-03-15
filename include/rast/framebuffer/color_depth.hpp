@@ -148,8 +148,9 @@ namespace rast::framebuffer {
 				);
 				if constexpr (is_discardable_v<decltype(frag)>) {
 					mask &= simd::i32x_<Count>(frag);
+					colors = AlphaBlend(*frag, colors);
 				}
-				colors = AlphaBlend(frag, colors);
+				else colors = AlphaBlend(frag, colors);
 				for (size_t i = 0; i < Count; ++i) {
 					if (!mask[static_cast<int>(i)]) continue;
 					_color_data[offsets[i]] = colors[i];

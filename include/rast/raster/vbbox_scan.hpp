@@ -81,7 +81,9 @@ namespace rast::raster {
 			const viewport& viewport, const tile& tile,
 			const Args&... args
 		) {
-			filter_triangles_x<4, rasterize_one<4, Callable, Vertex, Args...>, Cull>(output, vertex_begin, vertex_end, viewport, tile, args...);
+			filter_triangles_x<4, rasterize_one<4, Callable, Vertex, Args...>, Cull>(
+				output, vertex_begin, vertex_end, viewport, tile, args...
+			);
 		}
 	};
 }

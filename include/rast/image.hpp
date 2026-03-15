@@ -79,8 +79,10 @@ namespace rast {
 		template <resize_filter filter>
 		inline void resize(size_type Width, size_type Height) {
 			if constexpr (filter == resize_filter::dont_care) {
-				if (_data != nullptr) delete[] _data;
-				_data = new color[Width * Height];
+				if (area() != Width * Height) {
+					if (_data != nullptr) delete[] _data;
+					_data = new color[Width * Height];
+				}
 				_width = Width;
 				_height = Height;
 			}
@@ -132,9 +134,10 @@ namespace rast {
 
 		inline view get_view() { return view(_data, _width, _height); }
 
+		template <int DesiredChannels = STBI_rgb_alpha>
 		inline static image load(const char* filename) {
 			int imgWidth, imgHeight, channels;
-			stbi_uc* data = stbi_load(filename, &imgWidth, &imgHeight, &channels, STBI_rgb_alpha);
+			stbi_uc* data = stbi_load(filename, &imgWidth, &imgHeight, &channels, DesiredChannels);
 			if (!data) throw std::runtime_error("failed to load texture image!");
 			image res(imgWidth, imgHeight);
 			std::memcpy((void*)res.data(), (void*)data, imgWidth * imgHeight * sizeof(color));

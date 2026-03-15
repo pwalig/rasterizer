@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include "../math/vec.hpp"
 #include "../is_discardable.hpp"
+#include "../simd.hpp"
 
 namespace rast::shader {
 	template <typename Shader>
@@ -179,6 +180,27 @@ namespace rast::shader {
 
 			inline constexpr explicit operator bool() const { return _value[4] != U(0); }
 		};
+
+		template <typename output, size_t Count, typename MaskT = int>
+		class simd_discardable {
+			using mask_t = simd::_x_<MaskT, Count>;
+			output m_value;
+			mask_t m_mask;
+		public:
+			using value_type = output;
+			using reference = std::add_lvalue_reference_t<value_type>;
+			using pointer = std::add_pointer_t<value_type>;
+			using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
+			using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
+
+			inline constexpr simd_discardable(value_type&& Value, mask_t Mask) :
+				m_value(std::forward<value_type>(Value)), m_mask(Mask) {}
+
+			inline constexpr const_reference operator*() const { return m_value; }
+			inline constexpr reference operator*() { return m_value; }
+
+			inline constexpr explicit operator mask_t() const { return m_mask; }
+		};
 	}
 }
 
@@ -189,6 +211,10 @@ namespace rast {
 	};
 	template <typename T>
 	struct is_discardable<shader::outputs::alpha_discardable<T>> {
+		inline static constexpr bool value = true;
+	};
+	template <typename T, size_t Count, typename MaskT>
+	struct is_discardable<shader::outputs::simd_discardable<T, Count, MaskT>> {
 		inline static constexpr bool value = true;
 	};
 }

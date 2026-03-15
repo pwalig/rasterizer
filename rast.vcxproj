@@ -161,6 +161,7 @@
     <ClInclude Include="include\rast\raster\vbbox_scan.hpp" />
     <ClInclude Include="include\rast\renderer.hpp" />
     <ClInclude Include="include\rast\sampler.hpp" />
+    <ClInclude Include="include\rast\shaderlib\fersnel.hpp" />
     <ClInclude Include="include\rast\shader\constant.hpp" />
     <ClInclude Include="include\rast\shader\deferred.hpp" />
     <ClInclude Include="include\rast\shader\lambert_textured.hpp" />

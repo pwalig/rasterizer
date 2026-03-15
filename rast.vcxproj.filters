@@ -144,6 +144,9 @@
     <ClInclude Include="include\rast\simd\glm.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\rast\shaderlib\fersnel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tests.cpp">
