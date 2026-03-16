@@ -25,7 +25,7 @@ namespace rast::raster {
 			const VertexT* triangle,
 			glm::vec<3, simd::i32x_<Count>> Cx, glm::vec<3, simd::i32x_<Count>> Cy,
 			glm::vec<3, simd::i32x_<Count>> Dx, glm::vec<3, simd::i32x_<Count>> Dy,
-			glm::vec<2, simd::i32x_<Count>> min, glm::ivec2 max,
+			glm::vec<2, simd::i32x_<Count>> min, glm::vec<2, simd::i32x_<Count>> max,
 			const Args&... args
 		) {
 			using i32 = simd::i32x_<Count>;
@@ -62,10 +62,10 @@ namespace rast::raster {
 			Dx *= increment.y;
 			Dy *= increment.x;
 			i32 zero = simd::setzero<int, Count>();
-			for (i32 y = min.y; y[Count - 1] < max.y; y += increment.y, Cy += Dx) {
+			for (i32 y = min.y; simd::movemask(y < max.y); y += increment.y, Cy += Dx) {
 				glm::vec<3, i32> E = Cy - Cx;
-				for (i32 x = min.x; x[Count - 1] < max.x; x += increment.x, E -= Dy) {
-					i32 mask = (E.x >= zero) & (E.y >= zero) & (E.z >= zero);
+				for (i32 x = min.x; simd::movemask(x < max.x); x += increment.x, E -= Dy) {
+					i32 mask = (E.x >= zero) & (E.y >= zero) & (E.z >= zero) & (y < max.y) & (x < max.x);
 					if (simd::movemask(mask)) {
 						output(x, y, vtriangle, E, mask, args...);
 					}
@@ -81,7 +81,7 @@ namespace rast::raster {
 			const viewport& viewport, const tile& tile,
 			const Args&... args
 		) {
-			filter_triangles_x<4, rasterize_one<4, Callable, Vertex, Args...>, Cull>(
+			filter_triangles<rasterize_one<4, Callable, Vertex, Args...>, Cull>(
 				output, vertex_begin, vertex_end, viewport, tile, args...
 			);
 		}
