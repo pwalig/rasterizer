@@ -263,9 +263,10 @@ namespace rast {
 		inline constexpr auto sample_linear(float u, float v, size_type mip = 0) const {
 			return sample_linear<default_interpolator>(u, v, mip);
 		}
-
-		template <auto (sampler::*Sample)(simd::f32x4, simd::f32x4, simd::u32x4) const>
-		inline auto sample_nearest_mipmap(simd::f32x4 u, simd::f32x4 v) const {
+		
+		template <auto (sampler::*MagSample)(simd::f32x4, simd::f32x4, simd::u32x4) const,
+			auto (sampler::*MipSample)(simd::f32x4, simd::f32x4, simd::f32x4) const>
+		inline auto sample_min_mag_dispatch(simd::f32x4 u, simd::f32x4 v) const {
 			simd::f32x4 x = u * simd::f32x4(static_cast<float>(_width));
 			simd::f32x4 y = v * simd::f32x4(static_cast<float>(_height));
 
@@ -277,7 +278,19 @@ namespace rast {
 			// mip+=  2-3   0-2   3-1   1-0  shuffle: 2, 0, 3, 1    // average out with second neighbour
 			simd::f32x4 x2 = _mm_shuffle_ps(x, x, _MM_SHUFFLE(1, 3, 0, 2));
 			simd::f32x4 y2 = _mm_shuffle_ps(y, y, _MM_SHUFFLE(1, 3, 0, 2));
-			simd::f32x4 deltas = simd::glm::length(simd::glm::vec2<4>(x, y) - simd::glm::vec2<4>(x2, y2));
+			simd::f32x4 deltas = simd::glm::length<2, 4>(simd::glm::vec2<4>(x, y) - simd::glm::vec2<4>(x2, y2));
+			simd::f32x4 one = simd::f32x4(1.0f);
+			if (simd::movemask(deltas > one)) {
+				return (this->*MipSample)(u, v, deltas);
+			} else return (this->*MagSample)(u, v, simd::setzero<uint32_t, 4>());
+		}
+
+		template <auto (sampler::*Sample)(simd::f32x4, simd::f32x4, simd::u32x4) const>
+		inline auto sample_no_mipmap(simd::f32x4 u, simd::f32x4 v, simd::f32x4) const {
+			return (this->*Sample)(u, v, simd::setzero<uint32_t, 4>());
+		}
+		template <auto (sampler::*Sample)(simd::f32x4, simd::f32x4, simd::u32x4) const>
+		inline auto sample_nearest_mipmap(simd::f32x4 u, simd::f32x4 v, simd::f32x4 deltas) const {
 			simd::i32x4 zero = simd::setzero<int, 4>();
 			simd::i32x4 delta = simd::cvt<int>(deltas) >> 1; // floor(delta) / 2; Delta is always positive, so cast works as floor. Delta = 1 coresponds to mip0, bit shit so that delta = 0 -> mip0.
 			simd::i32x4 mip_levels = zero;
@@ -291,29 +304,9 @@ namespace rast {
 			mip_levels >>= 1;
 			return (this->*Sample)(u, v, simd::cvt<uint32_t>(mip_levels));
 		}
-		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat>
-		inline auto sample_nearest_mipmap_nearest(simd::f32x4 u, simd::f32x4 v) const {
-			return sample_nearest_mipmap<&rast::sampler<color>::sample_nearest<Vectorizer, Mode, 4>>(u, v);
-		}
-		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat>
-		inline auto sample_nearest_mipmap_linear(simd::f32x4 u, simd::f32x4 v) const {
-			return sample_nearest_mipmap<&rast::sampler<color>::sample_linear<Vectorizer, Mode, 4>>(u, v);
-		}
 
 		template <auto (sampler::*Sample)(simd::f32x4, simd::f32x4, simd::u32x4) const>
-		inline auto sample_linear_mipmap(simd::f32x4 u, simd::f32x4 v) const {
-			simd::f32x4 x = u * simd::f32x4(static_cast<float>(_width));
-			simd::f32x4 y = v * simd::f32x4(static_cast<float>(_height));
-
-			// shuffles explained:
-			//    --- fp3 - fp2 - fp1 - fp0
-			//  x,y   0,0   0,1   1,0   1,1  order:   3, 2, 1, 0    // this is set in rasterizer (see: vbbox_scan::pixel_pattern)
-			// x2,y2  1,0   0,0   1,1   0,1  shuffle: 1, 3, 0, 2    // neighbouring pixel
-			// dx,dy  3-1   2-3   1-0   0-2  order:   3, 2, 1, 0    // delta between neighbours
-			// mip+=  2-3   0-2   3-1   1-0  shuffle: 2, 0, 3, 1    // average out with second neighbour
-			simd::f32x4 x2 = _mm_shuffle_ps(x, x, _MM_SHUFFLE(1, 3, 0, 2));
-			simd::f32x4 y2 = _mm_shuffle_ps(y, y, _MM_SHUFFLE(1, 3, 0, 2));
-			simd::f32x4 deltas = simd::glm::length(simd::glm::vec2<4>(x, y) - simd::glm::vec2<4>(x2, y2));
+		inline auto sample_linear_mipmap(simd::f32x4 u, simd::f32x4 v, simd::f32x4 deltas) const {
 			simd::f32x4 one = simd::f32x4(1.0f);
 			deltas = simd::max(deltas, one);
 			alignas(16) float deltas_mem[4];
@@ -331,13 +324,62 @@ namespace rast {
 			return ((this->*Sample)(u, v, mip_levels + simd::i32x4(1)) * coef) +
 				((this->*Sample)(u, v, mip_levels) * (one - coef));
 		}
-		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat>
-		inline auto sample_linear_mipmap_nearest(simd::f32x4 u, simd::f32x4 v) const {
-			return sample_linear_mipmap<&rast::sampler<color>::sample_nearest<Vectorizer, Mode, 4>>(u, v);
-		}
-		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat>
-		inline auto sample_linear_mipmap_linear(simd::f32x4 u, simd::f32x4 v) const {
-			return sample_linear_mipmap<&rast::sampler<color>::sample_linear<Vectorizer, Mode, 4>>(u, v);
+		template <auto Vectorizer, mag_filter MagFilter, min_filter MinFilter, wrapping::mode Mode = wrapping::mode::repeat>
+		inline auto sample(simd::f32x4 u, simd::f32x4 v) const {
+			if constexpr (MinFilter == min_filter::nearest) {
+				if constexpr (MagFilter == mag_filter::nearest) return sample_nearest<Vectorizer, Mode, 4>(u, v);
+				else return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_no_mipmap<&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>>
+				>(u, v);
+			}
+			else if constexpr (MinFilter == min_filter::linear) {
+				if constexpr (MagFilter == mag_filter::linear) return sample_linear<Vectorizer, Mode, 4>(u, v);
+				else return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_no_mipmap<&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>>
+				>(u, v);
+			}
+			else if constexpr (MinFilter == min_filter::nearest_mipmap_nearest) {
+				if constexpr (MagFilter == mag_filter::nearest) return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_nearest_mipmap<&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>>
+				>(u, v);
+				else return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_nearest_mipmap<&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>>
+				>(u, v);
+			}
+			else if constexpr (MinFilter == min_filter::nearest_mipmap_linear) {
+				if constexpr (MagFilter == mag_filter::nearest) return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_nearest_mipmap<&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>>
+				>(u, v);
+				else return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_nearest_mipmap<&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>>
+				>(u, v);
+			}
+			else if constexpr (MinFilter == min_filter::linear_mipmap_nearest) {
+				if constexpr (MagFilter == mag_filter::nearest) return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_linear_mipmap<&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>>
+				>(u, v);
+				else return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_linear_mipmap<&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>>
+				>(u, v);
+			}
+			else if constexpr (MinFilter == min_filter::linear_mipmap_linear) {
+				if constexpr (MagFilter == mag_filter::nearest) return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_nearest<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_linear_mipmap<&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>>
+				>(u, v);
+				else return sample_min_mag_dispatch<
+					&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>,
+					&rast::sampler<color>::template sample_linear_mipmap<&rast::sampler<color>::template sample_linear<Vectorizer, Mode, 4>>
+				>(u, v);
+			}
 		}
 
 		inline constexpr explicit operator bool() const { return data != nullptr; }

@@ -26,6 +26,6 @@ namespace rast::simd::glm {
 	}
 	template <size_t Dim, size_t Count>
 	inline ::glm::vec<Dim, f32x_<Count>> normalize(::glm::vec<Dim, f32x_<Count>> a) {
-		return a / length(a);
+		return a / length<Dim, Count>(a); // had to specify for gcc
 	}
 }

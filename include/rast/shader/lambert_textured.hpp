@@ -189,7 +189,7 @@ namespace rast::shader {
 				const simd_uniform_buffer<Count>& uniforms
 			) {
 				using f32 = simd::f32x_<Count>;
-				simd::glm::vec3<Count> N = simd::glm::normalize(frag.normal);
+				simd::glm::vec3<Count> N = simd::glm::normalize<3, Count>(frag.normal);
 				f32 nl = simd::clamp(
 					simd::glm::dot(N, uniforms.light_direction),
 					f32(0.0f), f32(1.0f)
@@ -197,17 +197,17 @@ namespace rast::shader {
 				simd::glm::vec4<Count> color;
 				if (mipmap) {
 					if (linear_mipmap) {
-						if (linear) color = uniforms.texture.template sample_linear_mipmap_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
-						else color = uniforms.texture.template sample_linear_mipmap_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+						if (linear) color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::linear, rast::min_filter::linear_mipmap_linear>(frag.uv.x, frag.uv.y);
+						else color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::nearest, rast::min_filter::linear_mipmap_nearest>(frag.uv.x, frag.uv.y);
 					}
 					else {
-						if (linear) color = uniforms.texture.template sample_nearest_mipmap_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
-						else color = uniforms.texture.template sample_nearest_mipmap_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+						if (linear) color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::linear, rast::min_filter::nearest_mipmap_linear>(frag.uv.x, frag.uv.y);
+						else color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::nearest, rast::min_filter::nearest_mipmap_nearest>(frag.uv.x, frag.uv.y);
 					}
 				}
 				else {
-					if (linear) color = uniforms.texture.template sample_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
-					else color = uniforms.texture.template sample_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+					if (linear) color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::linear, rast::min_filter::linear>(frag.uv.x, frag.uv.y);
+					else color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::nearest, rast::min_filter::nearest>(frag.uv.x, frag.uv.y);
 				}
 				color.r *= simd::fmadd(nl, uniforms.light_color.r, uniforms.ambient.r);
 				color.g *= simd::fmadd(nl, uniforms.light_color.g, uniforms.ambient.g);
