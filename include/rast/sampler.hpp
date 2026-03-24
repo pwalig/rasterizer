@@ -9,15 +9,27 @@
 #include <algorithm>
 
 namespace rast {
-	enum struct min_filter {
-		nearest, linear,
-		nearest_mipmap_nearest,
-		nearest_mipmap_linear,
-		linear_mipmap_nearest,
-		linear_mipmap_linear,
+	enum struct min_filter : uint8_t {
+		nearest = 0, linear = 1,
+		nearest_mipmap_nearest = 0b0010,
+		nearest_mipmap_linear = 0b0011,
+		linear_mipmap_nearest = 0b0110,
+		linear_mipmap_linear = 0b0111,
 		bilinear = linear,
 		trilinear = linear_mipmap_linear
 	};
+	enum struct texel_filter : uint8_t {
+		nearest = 0, linear = 1,
+		linear_bit = 1
+	};
+	enum struct mipmap_filter : uint8_t {
+		none = 0, nearest = 2, linear = 6,
+		use_mip_bit = 2, linear_bit = 4
+	};
+	template <texel_filter Texel, mipmap_filter MipMap>
+	inline constexpr min_filter min_filter_v = static_cast<min_filter>(
+		static_cast<uint8_t>(Texel) | static_cast<uint8_t>(MipMap));
+
 	enum struct mag_filter {
 		nearest, linear, bilinear = linear
 	};
@@ -104,9 +116,13 @@ namespace rast {
 		inline constexpr sampler(const ImageLike& img) :
 			sampler(img.data(), img.width(), img.height()) {}
 
-		inline constexpr const_reference sample(size_type x, size_type y, size_type mip = 0) const {
+		inline constexpr const_reference sample(size_type x, size_type y, size_type mip) const {
 			size_type off = mipmapped_image<color>::mip_offset(_width, _height, mip);
 			return (data + off)[y * mip_length(_width, mip) + x];
+		}
+
+		inline constexpr const_reference sample(size_type x, size_type y) const {
+			return data[data_offset(x, y)];
 		}
 
 		template <size_t Count>
@@ -136,6 +152,13 @@ namespace rast {
 			auto off = mipmapped_image<color>::mip_offset(w, h, mip);
 			w >>= mip;
 			return Vectorizer(data, y * w + x + off);
+		}
+		template <auto Vectorizer, size_t Count>
+		inline auto sample(
+			simd::u32x_<Count> x,
+			simd::u32x_<Count> y
+		) const {
+			return Vectorizer(data, y * simd::u32x_<Count>(_width) + x);
 		}
 
 		template <wrapping::mode Mode = wrapping::mode::repeat>
@@ -311,7 +334,7 @@ namespace rast {
 			deltas = simd::max(deltas, one);
 			alignas(16) float deltas_mem[4];
 			simd::store(deltas_mem, deltas);
-			deltas_mem[0] = std::log2(deltas_mem[0]); // sadly no log instruction
+			deltas_mem[0] = std::log2(deltas_mem[0]); // sadly no log simd instruction
 			deltas_mem[1] = std::log2(deltas_mem[1]);
 			deltas_mem[2] = std::log2(deltas_mem[2]);
 			deltas_mem[3] = std::log2(deltas_mem[3]);

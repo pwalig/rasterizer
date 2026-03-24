@@ -18,7 +18,9 @@ Above scene (~35k triangles) renders in 60fps at 1920 x 1080 resolution on AMD R
 * loading meshes and textures
 * sutherland-hodgman and front triangle clipping
 * configurable alpha blending
-* configurable depth test
+* configurable depth test (less, more, never, always, ...)
+* configurable texture sampling (wrapping mode, minification and magnification filters)
+* configurable face culling (clockwise, counter clockwise, both, none)
 * deffered rendering is possible and accelerated with specialized method for screen quad rendering
 * rendering to screen or texture
 
@@ -33,19 +35,12 @@ cd rasterizer
 
 ## Dependencies
 
-### SDL and Rapidjson
+### SDL GLM, STB and Rapidjson
 
 ```
 git submodule init
 git submodule update --depth 1
 ```
-
-### STB and GLM
-Project depends on:
-* [glm](https://github.com/g-truc/glm) - for math.
-* [stb](https://github.com/nothings/stb) - for image loading.
-
-Download both libraries and set envirionment variables `GLM_PATH` and `STB_PATH` to point to downloaded / cloned source code.
 
 ## Build
 
@@ -56,6 +51,7 @@ Project can be built with [CMake](https://cmake.org).
 Run the following.
 
 ```
+cd examples/sdl_model_viewer/
 mkdir build
 cmake -S . -B build
 cmake --build build 
@@ -66,10 +62,10 @@ to get release build with MSVC on Windows use:
 cmake --build build --config Release
 ```
 
-### Visual Studio 2022
+### Visual Studio 2026
 
 Project can be built with [Visual Studio](https://visualstudio.microsoft.com/).
 
-Just open rasterizer.sln and run.
+Just open `examples/sdl_model_viewer/sdl_model_viewer.slnx` and run.
 
-Tested only on Visual Studio 2022 other versions might not work.
+Tested only on Visual Studio 2026 other versions might not work.
