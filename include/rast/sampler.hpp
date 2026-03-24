@@ -300,6 +300,46 @@ namespace rast {
 			return sample_nearest_mipmap<&rast::sampler<color>::sample_linear<Vectorizer, Mode, 4>>(u, v);
 		}
 
+		template <auto (sampler::*Sample)(simd::f32x4, simd::f32x4, simd::u32x4) const>
+		inline auto sample_linear_mipmap(simd::f32x4 u, simd::f32x4 v) const {
+			simd::f32x4 x = u * simd::f32x4(static_cast<float>(_width));
+			simd::f32x4 y = v * simd::f32x4(static_cast<float>(_height));
+
+			// shuffles explained:
+			//    --- fp3 - fp2 - fp1 - fp0
+			//  x,y   0,0   0,1   1,0   1,1  order:   3, 2, 1, 0    // this is set in rasterizer (see: vbbox_scan::pixel_pattern)
+			// x2,y2  1,0   0,0   1,1   0,1  shuffle: 1, 3, 0, 2    // neighbouring pixel
+			// dx,dy  3-1   2-3   1-0   0-2  order:   3, 2, 1, 0    // delta between neighbours
+			// mip+=  2-3   0-2   3-1   1-0  shuffle: 2, 0, 3, 1    // average out with second neighbour
+			simd::f32x4 x2 = _mm_shuffle_ps(x, x, _MM_SHUFFLE(1, 3, 0, 2));
+			simd::f32x4 y2 = _mm_shuffle_ps(y, y, _MM_SHUFFLE(1, 3, 0, 2));
+			simd::f32x4 deltas = simd::glm::length(simd::glm::vec2<4>(x, y) - simd::glm::vec2<4>(x2, y2));
+			simd::f32x4 one = simd::f32x4(1.0f);
+			deltas = simd::max(deltas, one);
+			alignas(16) float deltas_mem[4];
+			simd::store(deltas_mem, deltas);
+			deltas_mem[0] = std::log2(deltas_mem[0]); // sadly no log instruction
+			deltas_mem[1] = std::log2(deltas_mem[1]);
+			deltas_mem[2] = std::log2(deltas_mem[2]);
+			deltas_mem[3] = std::log2(deltas_mem[3]);
+			deltas = simd::load<float, 4>(deltas_mem);
+			simd::f32x4 fmip_leves = simd::floor(deltas);
+			simd::f32x4 coef = deltas - fmip_leves;
+			simd::u32x4 mip_levels = simd::cvt<uint32_t>(fmip_leves);
+			mip_levels += _mm_shuffle_epi32(mip_levels, _MM_SHUFFLE(2, 0, 3, 1));
+			mip_levels >>= 1;
+			return ((this->*Sample)(u, v, mip_levels + simd::i32x4(1)) * coef) +
+				((this->*Sample)(u, v, mip_levels) * (one - coef));
+		}
+		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat>
+		inline auto sample_linear_mipmap_nearest(simd::f32x4 u, simd::f32x4 v) const {
+			return sample_linear_mipmap<&rast::sampler<color>::sample_nearest<Vectorizer, Mode, 4>>(u, v);
+		}
+		template <auto Vectorizer, wrapping::mode Mode = wrapping::mode::repeat>
+		inline auto sample_linear_mipmap_linear(simd::f32x4 u, simd::f32x4 v) const {
+			return sample_linear_mipmap<&rast::sampler<color>::sample_linear<Vectorizer, Mode, 4>>(u, v);
+		}
+
 		inline constexpr explicit operator bool() const { return data != nullptr; }
 	};
 }

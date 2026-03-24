@@ -16,6 +16,7 @@ namespace rast::shader {
 	struct lambert_textured {
 		struct fragment {
 			inline static bool linear = true;
+			inline static bool linear_mipmap = true;
 			inline static bool mipmap = true;
 			inline static uint32_t mip_to_sample = 0;
 			template <size_t Count>
@@ -195,8 +196,14 @@ namespace rast::shader {
 				);
 				simd::glm::vec4<Count> color;
 				if (mipmap) {
-					if (linear) color = uniforms.texture.template sample_nearest_mipmap_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
-					else color = uniforms.texture.template sample_nearest_mipmap_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+					if (linear_mipmap) {
+						if (linear) color = uniforms.texture.template sample_linear_mipmap_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+						else color = uniforms.texture.template sample_linear_mipmap_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+					}
+					else {
+						if (linear) color = uniforms.texture.template sample_nearest_mipmap_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+						else color = uniforms.texture.template sample_nearest_mipmap_nearest<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);
+					}
 				}
 				else {
 					if (linear) color = uniforms.texture.template sample_linear<color_vectorizer<Count>>(frag.uv.x, frag.uv.y);

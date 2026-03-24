@@ -274,6 +274,10 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 			rast::shader::lambert_textured::fragment::mipmap = !rast::shader::lambert_textured::fragment::mipmap;
 			app.request_frame = true;
 		}
+		else if (event->key.scancode == SDL_SCANCODE_K) {
+			rast::shader::lambert_textured::fragment::linear_mipmap = !rast::shader::lambert_textured::fragment::linear_mipmap;
+			app.request_frame = true;
+		}
 		else if (event->key.scancode >= SDL_SCANCODE_1 && event->key.scancode <= SDL_SCANCODE_9) {
 			rast::shader::lambert_textured::fragment::mip_to_sample = event->key.scancode - SDL_SCANCODE_1;
 			app.request_frame = true;

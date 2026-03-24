@@ -153,7 +153,7 @@ namespace rast::simd {
 		float v3, float v2, float v1, float v0
 	) { return _mm256_set_ps(v7, v6, v5, v4, v3, v2, v1, v0); }
 
-	template <typename T, size_t Count> inline T extract(register_t<T, Count>, int);
+	template <typename T, size_t Count> inline T extract(register_t<T, Count>, int) = delete;
 	template <> inline int extract<int, 4>(__m128i a, int i) {
 		switch (i) {
 		case 0: return _mm_extract_epi32(a, 0);
@@ -622,6 +622,11 @@ namespace rast::simd {
 		inline _x_& operator<<=(int rhs) { m_value = slli<T, Count>(m_value, rhs); return *this; }
 		inline _x_& operator>>=(int rhs) { m_value = srai<T, Count>(m_value, rhs); return *this; }
 	};
+
+	template <int i3, int i2, int i1, int i0, typename T, size_t Count>
+	_x_<T, Count> shuffle(_x_<T, Count> A) {
+		return shuffle<i3, i2, i1, i0>(A.value());
+	}
 
 	template <typename T, size_t Count>
 	inline _x_<T, Count> fmadd(
