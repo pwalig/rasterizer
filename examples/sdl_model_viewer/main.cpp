@@ -142,7 +142,7 @@ struct scene {
 	}
 
 	template <typename Shader = shader, typename Callable>
-	void draw(const glm::mat4& PV, Callable&& draw_call) const {
+	void draw(const glm::mat4& PV, Callable draw_call) const {
 		typename Shader::uniform_buffer ubo;
 		for (const auto& object : objects) {
 			ubo.vertex.PVM = PV * object.M;

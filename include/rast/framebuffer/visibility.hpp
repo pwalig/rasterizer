@@ -7,34 +7,34 @@
 #include "../interpolation.hpp"
 #include "../depth_test.hpp"
 #include "utils.hpp"
-#include "../sized2d_base.hpp"
+#include "basic_depth.hpp"
 #include "../simd.hpp"
 
 namespace rast::framebuffer {
 	template <depth_test::function::type<float> DepthTest = depth_test::less>
-	class visibility : public sized2d_base {
+	class visibility : public basic_depth<float> {
 	public:
-		using visibility_format = size_t;
+		struct visibility_format {
+			size_t primitive_id;
+			uint32_t draw_call_id;
+			glm::vec3 interpolation_coefs;
+		};
 		using depth_format = float;
 		using size_type = typename sized2d_base::size_type;
 
 	private:
 		visibility_format* _visibility_data;
-		depth_format* _depth_data;
 
 	protected:
 		inline constexpr visibility_format& visibility_(size_type x, size_type y) {
 			return _visibility_data[data_offset(x, y)];
-		}
-		inline constexpr depth_format& depth(size_type x, size_type y) {
-			return _depth_data[data_offset(x, y)];
 		}
 
 	public:
 		inline constexpr visibility(
 			visibility_format* ColorData, depth_format* DepthData,
 			size_type Width, size_type Height
-		) noexcept : sized2d_base(Width, Height), _visibility_data(ColorData), _depth_data(DepthData) { }
+		) noexcept : basic_depth<float>(DepthData, Width, Height), _visibility_data(ColorData) { }
 
 		template <typename ImageLike1, typename ImageLike2>
 		inline constexpr visibility(ImageLike1& VisibilityImage, ImageLike2& DepthImage) :
@@ -60,12 +60,8 @@ namespace rast::framebuffer {
 			static_assert(std::is_same_v<typename ImageLike::value_type, visibility_format>);
 		}
 
-		void clear_visibility(visibility_format clear_value = std::numeric_limits<visibility_format>::max()) {
+		inline void clear_visibility(visibility_format clear_value = std::numeric_limits<visibility_format>::max()) {
 			std::fill_n(_visibility_data, area(), clear_value);
-		}
-
-		void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
-			std::fill_n(_depth_data, area(), clear_value);
 		}
 
 		template <typename VertexT, typename ...Args>
@@ -73,13 +69,14 @@ namespace rast::framebuffer {
 			size_type x, size_type y,
 			const VertexT* triangle,
 			glm::vec3 partial_coefs,
+			uint32_t draw_call_id,
 			size_t primitive_id
 		) {
 			depth_format& oldDepth = depth(x, y);
 			depth_format newDepth = get_depth<depth_format>(triangle, partial_coefs);
 			if (DepthTest(newDepth, oldDepth)) {
-				visibility_(x, y) = primitive_id;
-				depth(x, y) = newDepth;
+				visibility_(x, y) = visibility_format{ primitive_id, draw_call_id, partial_coefs };
+				oldDepth = newDepth;
 			}
 		}
 		template <size_t Count, typename VertexT, typename ...Args>
@@ -88,6 +85,7 @@ namespace rast::framebuffer {
 			const VertexT* triangle,
 			glm::vec<3, simd::f32x_<Count>> partial_coefs,
 			simd::i32x_<Count> mask,
+			uint32_t draw_call_id,
 			size_t primitive_id
 		) {
 			simd::i32x_<Count> off = data_offset(x, y);
@@ -110,7 +108,10 @@ namespace rast::framebuffer {
 				simd::store(depths, new_depth);
 				for (size_t i = 0; i < Count; ++i) {
 					if (mask[static_cast<int>(i)]) {
-						_visibility_data[offsets[i]] = primitive_id;
+						_visibility_data[offsets[i]] = visibility_format{
+							primitive_id, draw_call_id,
+							glm::vec3(partial_coefs.x[i], partial_coefs.y[i], partial_coefs.z[i])
+						};
 						_depth_data[offsets[i]] = depths[i];
 					}
 				}
@@ -122,9 +123,10 @@ namespace rast::framebuffer {
 			const VertexT* triangle,
 			glm::vec<3, simd::f32x4> partial_coefs,
 			simd::i32x4 mask,
+			uint32_t draw_call_id,
 			size_t primitive_id
 		) {
-			draw<4>(x, y, triangle, partial_coefs, mask, primitive_id);
+			draw<4>(x, y, triangle, partial_coefs, mask, draw_call_id, primitive_id);
 		}
 		template <typename VertexT, typename ...Args>
 		inline void operator()(
@@ -132,9 +134,10 @@ namespace rast::framebuffer {
 			const VertexT* triangle,
 			glm::vec<3, simd::f32x8> partial_coefs,
 			simd::i32x8 mask,
+			uint32_t draw_call_id,
 			size_t primitive_id
 		) {
-			draw<8>(x, y, triangle, partial_coefs, mask, primitive_id);
+			draw<8>(x, y, triangle, partial_coefs, mask, draw_call_id, primitive_id);
 		}
 	};
 }

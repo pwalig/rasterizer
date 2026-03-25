@@ -145,6 +145,7 @@
     <ClInclude Include="include\rast\framebuffer\color.hpp" />
     <ClInclude Include="include\rast\framebuffer\color_depth.hpp" />
     <ClInclude Include="include\rast\framebuffer\color_depth_vectorized.hpp" />
+    <ClInclude Include="include\rast\framebuffer\basic_depth.hpp" />
     <ClInclude Include="include\rast\framebuffer\depth_view.hpp" />
     <ClInclude Include="include\rast\framebuffer\utils.hpp" />
     <ClInclude Include="include\rast\framebuffer\visibility.hpp" />
