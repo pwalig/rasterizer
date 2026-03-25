@@ -4,9 +4,10 @@
 #include "mesh.hpp"
 #include "renderer.hpp"
 #include "cull.hpp"
+#include "raster/raster_utils.hpp"
 
 namespace rast {
-	template <typename Shader>
+	template <typename Shader, uint8_t Extensions = raster::extensions::none>
 	class command_buffer {
 		using vertex_output = typename Shader::vertex::output;
 		struct command {
@@ -54,12 +55,10 @@ namespace rast {
 				tp.enque([&cmd, intermediate_buffer_memory]() {
 					cmd.raster_range.begin = intermediate_buffer_memory;
 					cmd.raster_range.end = rast::renderer::run_vertex_shader_indexed<
-						static_cast<typename Shader::vertex::output(*)(
-							const typename Shader::vertex::input&,
-							const typename Shader::vertex::uniform_buffer&)
-						>(Shader::vertex::shade), Clipper::template clip<vertex_output>>(
-							cmd.mesh, intermediate_buffer_memory, cmd.ubo.vertex
-						);
+						Shader::vertex::shade, Clipper::template clip<vertex_output>
+					>(
+						cmd.mesh, intermediate_buffer_memory, cmd.ubo.vertex
+					);
 				});
 				intermediate_buffer_memory += cmd.mesh.index_buffer.size() * 2;
 			}
@@ -70,13 +69,19 @@ namespace rast {
 			for (size_t i = 0; i < tp.thread_count(); ++i) {
 				tp.enque([&framebuffer, &cmds = (this->commands), i, stride]() {
 					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
-					for (const command& cmd : cmds) {
-						Rasterizer::template rasterize<Cull>(
-							framebuffer,
-							cmd.raster_range.begin, cmd.raster_range.end,
-							cmd.viewport, tile, cmd.ubo.fragment
-						);
+					if constexpr (Extensions & raster::extensions::draw_call_id) {
+						size_t draw_call_id = 0;
+						for (const command& cmd : cmds)
+							Rasterizer::template rasterize<Cull, Extensions>(
+								framebuffer, cmd.raster_range.begin, cmd.raster_range.end,
+								cmd.viewport, tile, cmd.ubo.fragment, draw_call_id++
+							);
 					}
+					else for (const command& cmd : cmds)
+							Rasterizer::template rasterize<Cull, Extensions>(
+								framebuffer, cmd.raster_range.begin, cmd.raster_range.end,
+								cmd.viewport, tile, cmd.ubo.fragment
+							);
 				});
 			}
 		}

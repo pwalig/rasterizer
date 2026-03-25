@@ -92,7 +92,16 @@ namespace rast::raster {
 		);
 	}
 
-	template <auto RasterizeOne, cull Cull = cull_default, typename Callable, typename VertexT, typename ...Args>
+	namespace extensions {
+		inline constexpr uint8_t none = 0;
+		inline constexpr uint8_t backface = 1;
+		inline constexpr uint8_t clockwise = 2;
+		inline constexpr uint8_t primitive_id = 4;
+		inline constexpr uint8_t draw_call_id = 8;
+	}
+
+	template <auto RasterizeOne, cull Cull = cull_default, uint8_t Extensions = extensions::none,
+		typename Callable, typename VertexT, typename ...Args>
 	inline static constexpr void filter_triangles(
 		Callable&& output,
 		const VertexT* vertex_begin,
@@ -101,56 +110,72 @@ namespace rast::raster {
 		const tile& tile,
 		const Args&... args
 	) {
-		if constexpr (Cull != cull::both)
-		for (const VertexT* vertices = vertex_begin; vertices + 3 <= vertex_end; vertices += 3) {
-			glm::ivec2 v0 = to_screen_space(vertices[0].rastPos, viewport);
-			glm::ivec2 v1 = to_screen_space(vertices[1].rastPos, viewport);
-			glm::ivec2 v2 = to_screen_space(vertices[2].rastPos, viewport);
+		static_assert(!(Extensions & extensions::backface), "backface extension is not yet implemented");
+		if constexpr (Cull != cull::both) {
+			size_t primitive_id = static_cast<size_t>(-1);
+			bool clockwise = true;
+			for (const VertexT* vertices = vertex_begin; vertices + 3 <= vertex_end; vertices += 3) {
+				++primitive_id;
+				glm::ivec2 v0 = to_screen_space(vertices[0].rastPos, viewport);
+				glm::ivec2 v1 = to_screen_space(vertices[1].rastPos, viewport);
+				glm::ivec2 v2 = to_screen_space(vertices[2].rastPos, viewport);
 
-			glm::ivec2 min = glm::ivec2(
-				std::max((int)std::min({ v0.x, v1.x, v2.x }), std::max(tile.min.x, viewport.offset.x)),
-				std::max((int)std::min({ v0.y, v1.y, v2.y }), std::max(tile.min.y, viewport.offset.y))
-			) / 16;
-			glm::ivec2 max = glm::ivec2(
-				std::min<int>({ std::max({ v0.x, v1.x, v2.x }) + 16, tile.max.x, viewport.offset.x + viewport.extent.x }),
-				std::min<int>({ std::max({ v0.y, v1.y, v2.y }) + 16, tile.max.y, viewport.offset.y + viewport.extent.y })
-			) / 16;
+				glm::ivec2 min = glm::ivec2(
+					std::max((int)std::min({ v0.x, v1.x, v2.x }), std::max(tile.min.x, viewport.offset.x)),
+					std::max((int)std::min({ v0.y, v1.y, v2.y }), std::max(tile.min.y, viewport.offset.y))
+				) / 16;
+				glm::ivec2 max = glm::ivec2(
+					std::min<int>({ std::max({ v0.x, v1.x, v2.x }) + 16, tile.max.x, viewport.offset.x + viewport.extent.x }),
+					std::min<int>({ std::max({ v0.y, v1.y, v2.y }) + 16, tile.max.y, viewport.offset.y + viewport.extent.y })
+				) / 16;
 
-			if (min.x >= max.x || min.y >= max.y) continue;
+				if (min.x >= max.x || min.y >= max.y) continue;
 
-			glm::ivec3 Dx, Dy, xSrc, ySrc;
-			if constexpr (Cull == cull::clockwise) {
-				xSrc = glm::ivec3(v2.x, v0.x, v1.x);
-				ySrc = glm::ivec3(v2.y, v0.y, v1.y);
-				Dx = glm::ivec3(v1.x, v2.x, v0.x) - xSrc;
-				Dy = glm::ivec3(v1.y, v2.y, v0.y) - ySrc;
-				int area = (Dy.x * Dx.y) - (Dx.x * Dy.y);
-				if (area <= 0) continue; // back face detected - early return
-			}
-			else {
-				xSrc = glm::ivec3(v1.x, v2.x, v0.x);
-				ySrc = glm::ivec3(v1.y, v2.y, v0.y);
-				Dx = glm::ivec3(v2.x, v0.x, v1.x) - xSrc;
-				Dy = glm::ivec3(v2.y, v0.y, v1.y) - ySrc;
-				int area = (Dx.x * Dy.y) - (Dy.x * Dx.y);
-				if constexpr (Cull == cull::none) {
-					if (area == 0) continue;
-					else if (area < 0) {
-						Dx *= -1;
-						Dy *= -1;
-						xSrc = glm::ivec3(v2.x, v0.x, v1.x);
-						ySrc = glm::ivec3(v2.y, v0.y, v1.y);
-					}
+				glm::ivec3 Dx, Dy, xSrc, ySrc;
+				if constexpr (Cull == cull::clockwise) {
+					xSrc = glm::ivec3(v2.x, v0.x, v1.x);
+					ySrc = glm::ivec3(v2.y, v0.y, v1.y);
+					Dx = glm::ivec3(v1.x, v2.x, v0.x) - xSrc;
+					Dy = glm::ivec3(v1.y, v2.y, v0.y) - ySrc;
+					int area = (Dy.x * Dx.y) - (Dx.x * Dy.y);
+					if (area <= 0) continue; // back face detected - early return
+					clockwise = false;
 				}
-				else if (area <= 0) continue; // back face detected - early return
+				else {
+					xSrc = glm::ivec3(v1.x, v2.x, v0.x);
+					ySrc = glm::ivec3(v1.y, v2.y, v0.y);
+					Dx = glm::ivec3(v2.x, v0.x, v1.x) - xSrc;
+					Dy = glm::ivec3(v2.y, v0.y, v1.y) - ySrc;
+					int area = (Dx.x * Dy.y) - (Dy.x * Dx.y);
+					if constexpr (Cull == cull::none) {
+						if (area == 0) continue;
+						else if (area < 0) {
+							Dx *= -1;
+							Dy *= -1;
+							xSrc = glm::ivec3(v2.x, v0.x, v1.x);
+							ySrc = glm::ivec3(v2.y, v0.y, v1.y);
+							clockwise = false;
+						}
+					}
+					else if (area <= 0) continue; // back face detected - early return
+				}
+				glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - ySrc) - fill_convention(Dx, Dy);
+				glm::ivec3 Cx = Dy * (glm::ivec3(min.x << 4) - xSrc);
+				if constexpr (Extensions & extensions::primitive_id) {
+					if constexpr (Extensions & extensions::clockwise)
+						RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args..., primitive_id, clockwise);
+					else RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args..., primitive_id);
+				} else {
+					if constexpr (Extensions & extensions::clockwise)
+						RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args..., clockwise);
+					else RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args...);
+				}
 			}
-			glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - ySrc) - fill_convention(Dx, Dy);
-			glm::ivec3 Cx = Dy * (glm::ivec3(min.x << 4) - xSrc);
-			RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args...);
 		}
 	}
 
-	template <size_t Count, auto RasterizeOne, cull Cull = cull_default, typename Callable, typename VertexT, typename ...Args>
+	template <size_t Count, auto RasterizeOne, cull Cull = cull_default, uint8_t Extensions = extensions::none,
+		typename Callable, typename VertexT, typename ...Args>
 	inline static void filter_triangles_x(
 		Callable&& output,
 		const VertexT* vertex_begin,
@@ -159,6 +184,7 @@ namespace rast::raster {
 		const tile& tile,
 		const Args&... args
 	) {
+		static_assert(Extensions == extensions::none, "Extensions are not yet implemented for filter_triangles_x, if you want extensions use filter_triangles instead");
 		static_assert(Cull != cull::none, "rast::cull::none is not yet implemented for filter_triangles_x, if you want to use cull::none use filter_triangles instead");
 		if constexpr (Cull != cull::both) {
 			using i32 = simd::i32x_<Count>;

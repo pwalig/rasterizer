@@ -228,9 +228,6 @@ namespace rast::shader {
 			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
 				return { uniforms.PVM * glm::vec4(vert.position, 1.0f), {vert.normal, vert.uv} };
 			}
-			inline static output shade(const input& vert, const uniforms::MVP& uniforms) {
-				return { uniforms.P * uniforms.V * uniforms.M * glm::vec4(vert.position, 1.0f), {vert.normal, vert.uv} };
-			}
 		};
 
 		//using uniform_buffer = shader_uniform_buffer<lambert_textured>;

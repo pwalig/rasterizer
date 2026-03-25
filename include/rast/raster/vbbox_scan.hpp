@@ -73,7 +73,22 @@ namespace rast::raster {
 			}
 		}
 
-		template <cull Cull = cull_default, typename Callable, typename Vertex, typename ...Args>
+		template <uint8_t Extensions, typename Callable, typename Vertex, typename ...Args>
+		inline constexpr static auto get_rasterize_one_based_on_extensions() {
+			if constexpr (Extensions & extensions::primitive_id) {
+				if constexpr (Extensions & extensions::clockwise)
+					return rasterize_one<4, Callable, Vertex, Args..., size_t, bool>;
+				else return rasterize_one<4, Callable, Vertex, Args..., size_t>;
+			}
+			else {
+				if constexpr (Extensions & extensions::clockwise)
+					return rasterize_one<4, Callable, Vertex, Args..., bool>;
+				else return rasterize_one<4, Callable, Vertex, Args...>;
+			}
+		}
+
+		template <cull Cull = cull_default, uint8_t Extensions = extensions::none,
+			typename Callable, typename Vertex, typename ...Args>
 		inline static void rasterize(
 			Callable&& output,
 			const Vertex* vertex_begin,
@@ -81,7 +96,7 @@ namespace rast::raster {
 			const viewport& viewport, const tile& tile,
 			const Args&... args
 		) {
-			filter_triangles<rasterize_one<4, Callable, Vertex, Args...>, Cull>(
+			filter_triangles<get_rasterize_one_based_on_extensions<Extensions, Callable, Vertex, Args...>(), Cull, Extensions>(
 				output, vertex_begin, vertex_end, viewport, tile, args...
 			);
 		}
