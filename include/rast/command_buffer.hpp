@@ -33,7 +33,7 @@ namespace rast {
 		}
 
 	public:
-		void draw_indexed(
+		inline void draw_indexed(
 			const mesh::indexed<typename Shader::vertex::input>& mesh,
 			const typename Shader::uniform_buffer& uniform_buffer,
 			const viewport& viewport
@@ -42,7 +42,7 @@ namespace rast {
 		}
 
 		template <typename Rasterizer, typename Clipper, cull Cull = cull_default, typename Framebuffer, typename ThreadPool>
-		void submit(
+		inline void submit(
 			Framebuffer& framebuffer,
 			ThreadPool& tp
 		) {
@@ -92,7 +92,7 @@ namespace rast {
 	};
 
 	template <auto FragmentShader, typename ImageView, typename ThreadPool, typename ...Args>
-	void shade_screen_quad(
+	inline void shade_screen_quad(
 		ImageView& framebuffer,
 		ThreadPool& tp,
 		const Args&... args

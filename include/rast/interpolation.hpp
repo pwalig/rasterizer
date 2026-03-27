@@ -72,13 +72,13 @@ namespace rast::interpol {
 			));
 		}
 		template <typename T, typename VertexT>
-		inline constexpr T perspective(T partial_coefs, VertexT* triangle) {
+		inline constexpr T perspective(T partial_coefs, const VertexT* triangle) {
 			return perspective(partial_coefs, triangle[0].rastPos.w, triangle[1].rastPos.w, triangle[2].rastPos.w);
 		}
 	}
 
 	template <typename VertexT, typename Vec3>
-	inline constexpr VertexT perspective(Vec3 partial_coefs, VertexT* triangle) {
+	inline constexpr VertexT perspective(Vec3 partial_coefs, const VertexT* triangle) {
 		return interpolate(triangle[0].data, triangle[1].data, triangle[2].data, coefs::perspective(partial_coefs, triangle));
 	}
 }

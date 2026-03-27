@@ -115,9 +115,9 @@ namespace rast::framebuffer {
 			simd::i32x_<Count> mask,
 			Args&&... args
 		) {
-			simd::i32x_<Count> off = data_offset(x, y);
+			simd::u32x_<Count> off = data_offset<Count>(simd::cvt<size_type>(x), simd::cvt<size_type>(y));
 
-			alignas(Count * sizeof(int)) int offsets[Count];
+			alignas(Count * sizeof(size_type)) size_type offsets[Count];
 			simd::store(offsets, off);
 
 			alignas(Count * sizeof(int)) float depths[Count];

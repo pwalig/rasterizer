@@ -79,6 +79,21 @@ namespace rast::framebuffer {
 				oldDepth = newDepth;
 			}
 		}
+		template <auto FragmentShader, typename ImageLike, typename VertexT, typename ...Args>
+		inline void resolve(
+			ImageLike& image,
+			size_type x, size_type y,
+			const VertexT* triangles,
+			const Args*... args
+		) {
+			size_type off = y * _width + x;
+			visibility_format vd = _visibility_data[off];
+			const VertexT* triangle = triangles + (3 * vd.primitive_id);
+			image.data()[off] = FragmentShader(
+				interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::coefs::perspective(vd.interpolation_coefs, triangle)),
+				(args[vd.draw_call_id] , ...)
+			);
+		}
 		template <size_t Count, typename VertexT, typename ...Args>
 		inline void draw(
 			simd::i32x_<Count> x, simd::i32x_<Count> y,
@@ -88,12 +103,12 @@ namespace rast::framebuffer {
 			uint32_t draw_call_id,
 			size_t primitive_id
 		) {
-			simd::i32x_<Count> off = data_offset(x, y);
+			simd::u32x_<Count> off = data_offset(simd::cvt<size_type>(x), simd::cvt<size_type>(y));
 
-			alignas(Count * sizeof(int)) int offsets[Count];
+			alignas(Count * sizeof(size_type)) size_type offsets[Count];
 			simd::store(offsets, off);
 
-			alignas(Count * sizeof(int)) float depths[Count];
+			alignas(Count * sizeof(float)) float depths[Count];
 			for (size_t i = 0; i < Count; ++i) if (mask[static_cast<int>(i)]) depths[i] = _depth_data[offsets[i]];
 			simd::f32x_<Count> old_depth = simd::load<float, Count>(depths);
 			simd::f32x_<Count> new_depth = get_float_depth(
