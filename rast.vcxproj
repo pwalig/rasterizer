@@ -149,6 +149,7 @@
     <ClInclude Include="include\rast\framebuffer\depth_view.hpp" />
     <ClInclude Include="include\rast\framebuffer\utils.hpp" />
     <ClInclude Include="include\rast\framebuffer\visibility.hpp" />
+    <ClInclude Include="include\rast\function_traits.hpp" />
     <ClInclude Include="include\rast\image.hpp" />
     <ClInclude Include="include\rast\interpolation.hpp" />
     <ClInclude Include="include\rast\is_discardable.hpp" />

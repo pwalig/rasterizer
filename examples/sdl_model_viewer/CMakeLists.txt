@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(sdl_model_viewer CXX)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Set the output directory for built objects. (Required by SDL)
 # This makes sure that the dynamic library goes into the build directory automatically.

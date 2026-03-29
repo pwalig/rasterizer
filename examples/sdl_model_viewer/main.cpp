@@ -145,9 +145,9 @@ struct scene {
 	void draw(const glm::mat4& PV, Callable draw_call) const {
 		typename Shader::uniform_buffer ubo;
 		for (const auto& object : objects) {
-			ubo.vertex.PVM = PV * object.M;
-			for (const auto model : object.models) {
-				ubo.fragment.texture = textures[materials[model.material_id].texture_id];
+			ubo.PVM = PV * object.M;
+			for (const auto& model : object.models) {
+				ubo.texture = textures[materials[model.material_id].texture_id];
 				draw_call(meshes[model.mesh_id], ubo);
 			}
 		}

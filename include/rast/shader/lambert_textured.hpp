@@ -2,18 +2,33 @@
 #include <algorithm>
 
 #include <glm/glm.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
 
 #include "shader_macros.hpp"
 #include "../convert.hpp"
 #include "../color.hpp"
 #include "../sampler.hpp"
-#include "../math/vec.hpp"
 #include "../simd/glm.hpp"
 
 namespace rast::shader {
 	struct lambert_textured {
+		struct uniform_buffer {
+			glm::mat4 PVM;
+			sampler<rast::color::rgba8> texture;
+			sampler<rast::color::rgba8> normal;
+		};
+
+		template <size_t Count>
+		struct simd_global_uniforms {
+			inline static simd::glm::vec3<Count> light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
+			inline static simd::glm::vec3<Count> light_color = glm::vec3(1.0f);
+			inline static simd::glm::vec3<Count> ambient = glm::vec3(0.1f);
+		};
+		struct global_uniforms {
+			inline static glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
+			inline static glm::vec3 light_color = glm::vec3(1.0f);
+			inline static glm::vec3 ambient = glm::vec3(0.1f);
+		};
+
 		struct fragment {
 			inline static bool linear = true;
 			inline static bool linear_mipmap = true;
@@ -53,22 +68,6 @@ namespace rast::shader {
 			using simd_output = outputs::simd_discardable<simd::glm::vec4<Count>, Count>;
 
 			inline static float alpha_clip_threshold = 0.25f;
-
-			struct uniform_buffer {
-				sampler<rast::color::rgba8> texture;
-				sampler<rast::color::rgba8> normal;
-				glm::vec3 light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
-				glm::vec3 light_color = glm::vec3(1.0f);
-				glm::vec3 ambient = glm::vec3(0.1f);
-			};
-			template <size_t Count>
-			struct simd_uniform_buffer {
-				sampler<rast::color::rgba8> texture;
-				sampler<rast::color::rgba8> normal;
-				simd::glm::vec3<Count> light_direction = glm::normalize(glm::vec3(1.0f, 3.0f, 2.0f));
-				simd::glm::vec3<Count> light_color = glm::vec3(1.0f);
-				simd::glm::vec3<Count> ambient = glm::vec3(0.1f);
-			};
 
 			inline static constexpr rast::color::rgba32f color_interpolator(
 				rast::color::rgba8 color0, rast::color::rgba8 color1, rast::color::rgba8 color2, rast::color::rgba8 color3,
@@ -168,30 +167,32 @@ namespace rast::shader {
 			}
 
 			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
+				using world = global_uniforms;
 				glm::vec3 N = glm::normalize(frag.normal);
-				float nl = std::clamp(glm::dot(N, uniforms.light_direction), 0.0f, 1.0f);
+				float nl = std::clamp(glm::dot(N, world::light_direction), 0.0f, 1.0f);
 				glm::vec4 color;
 				if (uniforms.texture) {
 					//color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y));
-					if (linear) color = uniforms.texture.sample_linear<color_interpolator>(frag.uv.x, frag.uv.y, mip_to_sample);
+					if (linear) color = uniforms.texture.template sample_linear<color_interpolator>(frag.uv.x, frag.uv.y, mip_to_sample);
 					else color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y, mip_to_sample));
 					if (color.a <= alpha_clip_threshold) return output::discard();
 				}
 				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
-				color.r *= (nl * uniforms.light_color.r + uniforms.ambient.r);
-				color.g *= (nl * uniforms.light_color.g + uniforms.ambient.g);
-				color.b *= (nl * uniforms.light_color.b + uniforms.ambient.b);
+				color.r *= (nl * world::light_color.r + world::ambient.r);
+				color.g *= (nl * world::light_color.g + world::ambient.g);
+				color.b *= (nl * world::light_color.b + world::ambient.b);
 				return color;
 			}
 			template <size_t Count>
 			inline static simd_output<Count> simd_shade(
 				const simd_input<Count>& frag,
-				const simd_uniform_buffer<Count>& uniforms
+				const uniform_buffer& uniforms
 			) {
 				using f32 = simd::f32x_<Count>;
+				using world = simd_global_uniforms<Count>;
 				simd::glm::vec3<Count> N = simd::glm::normalize<3, Count>(frag.normal);
 				f32 nl = simd::clamp(
-					simd::glm::dot(N, uniforms.light_direction),
+					simd::glm::dot(N, world::light_direction),
 					f32(0.0f), f32(1.0f)
 				);
 				simd::glm::vec4<Count> color;
@@ -209,71 +210,22 @@ namespace rast::shader {
 					if (linear) color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::linear, rast::min_filter::linear>(frag.uv.x, frag.uv.y);
 					else color = uniforms.texture.template sample<&color_vectorizer<Count, 4>, rast::mag_filter::nearest, rast::min_filter::nearest>(frag.uv.x, frag.uv.y);
 				}
-				color.r *= simd::fmadd(nl, uniforms.light_color.r, uniforms.ambient.r);
-				color.g *= simd::fmadd(nl, uniforms.light_color.g, uniforms.ambient.g);
-				color.b *= simd::fmadd(nl, uniforms.light_color.b, uniforms.ambient.b);
+				color.r *= simd::fmadd(nl, world::light_color.r, world::ambient.r);
+				color.g *= simd::fmadd(nl, world::light_color.g, world::ambient.g);
+				color.b *= simd::fmadd(nl, world::light_color.b, world::ambient.b);
 				auto discard_mask = simd::reinterpret<int, Count>(color.a > simd::f32x_<Count>(0.8f));
 				color.a = simd::f32x_<Count>(1.0f);
 				return simd_output<Count>(std::move(color), discard_mask);
 			}
 		};
 
-
 		struct vertex {
 			using input = inputs::position_normal_uv;
 			using output = vertex_shader_output<lambert_textured>;
-
-			using uniform_buffer = uniforms::PVM_struct;
 
 			inline static output shade(const input& vert, const uniform_buffer& uniforms) {
 				return { uniforms.PVM * glm::vec4(vert.position, 1.0f), {vert.normal, vert.uv} };
 			}
 		};
-
-		//using uniform_buffer = shader_uniform_buffer<lambert_textured>;
-		struct uniform_buffer {
-			typename fragment::simd_uniform_buffer<4> fragment;
-			typename vertex::uniform_buffer vertex;
-		};
 	};
-	namespace lambert_textured_test {
-		using color = rast::color::rgba8;
-		constexpr color mip_data[16 + 4 + 1] = {
-			color(0, 0, 0, 255), color(64, 0, 0, 255), color(128, 0, 0, 255), color(192, 0, 0, 255),
-			color(0, 64, 0, 255), color(64, 64, 0, 255), color(128, 64, 0, 255), color(192, 64, 0, 255),
-			color(0, 128, 0, 255), color(64, 128, 0, 255), color(128, 128, 0, 255), color(192, 128, 0, 255),
-			color(0, 192, 0, 255), color(64, 192, 0, 255), color(128, 192, 0, 255), color(192, 192, 0, 255),
-			color(0, 0, 0, 255), color(0, 0, 0, 255),
-			color(0, 0, 0, 255), color(0, 0, 0, 255),
-			color(0, 0, 0, 255)
-		};
-		constexpr lambert_textured::fragment::input frag = {
-			glm::vec3(0.0f, 1.0f, 0.0f),
-			glm::vec2(0.125f, 0.125f)
-		};
-		constexpr lambert_textured::fragment::uniform_buffer ubo = {
-			sampler<rast::color::rgba8>(mip_data, 4, 4),
-			sampler<rast::color::rgba8>(mip_data, 4, 4),
-			glm::vec3(0.0f, 1.0f, 0.0f),
-			glm::vec3(0.5f), glm::vec3(0.0f)
-		};
-		constexpr rast::color::rgba8 texture_read = ubo.texture.sample_nearest(frag.uv.x, frag.uv.y);
-		static_assert(texture_read.x == 0);
-		static_assert(texture_read.y == 0);
-		static_assert(texture_read.z == 0);
-		static_assert(texture_read.w == 255);
-
-		//constexpr auto texture_read2 = static_cast<float>(texture_read.r);
-		//static_assert(texture_read2 == 0.0f);
-
-		//constexpr auto res = lambert_textured::fragment::shade(frag, ubo);
-		//static_assert(res.a()[0] == 255);
-		//static_assert(res.a()[1] == 255);
-		//static_assert(res.a()[2] == 255);
-		//static_assert(res.a()[3] == 255);
-		//static_assert(res.r()[0] == 0);
-		//static_assert(res.r()[1] == 32);
-		//static_assert(res.r()[2] == 0);
-		//static_assert(res.r()[3] == 32);
-	}
 }

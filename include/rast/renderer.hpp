@@ -11,6 +11,7 @@
 #include "viewport.hpp"
 #include "tile.hpp"
 #include "perspective_divide.hpp"
+#include "function_traits.hpp"
 
 namespace rast {
 	template <typename VertexT>
@@ -93,7 +94,19 @@ namespace rast {
 			draw_array<Shader, Rasterizer, Clipper>(framebuffer, vertex_buffer.begin(), vertex_buffer.end(), uniform_buffer, viewport, tile);
 		}
 
-		template <auto VertexShader, auto Clipper, typename IndexIter, typename VertexIter, typename ...Args>
+		template <auto VertexShader>
+		struct clipper_function {
+		private:
+			using shader_type = decltype(VertexShader);
+			using vertex_type = function_return_type<shader_type>;
+			using vertex_pointer = std::add_pointer_t<vertex_type>;
+		public:
+			using type = vertex_pointer(*)(vertex_pointer);
+		};
+		template <auto VertexShader>
+		using clipper_function_t = typename clipper_function<VertexShader>::type;
+
+		template <auto VertexShader, clipper_function_t<VertexShader> Clipper, typename IndexIter, typename VertexIter, typename ...Args>
 		inline static auto* run_vertex_shader_indexed(
 			IndexIter index_begin,
 			IndexIter index_end,
@@ -125,7 +138,7 @@ namespace rast {
 			return end;
 		}
 
-		template <auto VertexShader, auto Clipper, typename IndexBuffer, typename VertexBuffer, typename ...Args>
+		template <auto VertexShader, clipper_function_t<VertexShader> Clipper, typename IndexBuffer, typename VertexBuffer, typename ...Args>
 		inline static auto* run_vertex_shader_indexed(
 			const IndexBuffer& index_buffer,
 			const VertexBuffer& vertex_buffer,
@@ -140,7 +153,7 @@ namespace rast {
 			);
 		}
 
-		template <auto VertexShader, auto Clipper, typename VertexT, typename ...Args>
+		template <auto VertexShader, clipper_function_t<VertexShader> Clipper, typename VertexT, typename ...Args>
 		inline static auto* run_vertex_shader_indexed(
 			const mesh::indexed<VertexT>& mesh,
 			std::invoke_result_t<decltype(VertexShader), VertexT, Args...>* output,

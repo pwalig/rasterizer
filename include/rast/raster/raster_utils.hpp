@@ -98,6 +98,7 @@ namespace rast::raster {
 		inline constexpr uint8_t clockwise = 2;
 		inline constexpr uint8_t primitive_id = 4;
 		inline constexpr uint8_t draw_call_id = 8;
+		inline constexpr uint8_t instance = 16;
 	}
 
 	template <auto RasterizeOne, cull Cull = cull_default, uint8_t Extensions = extensions::none,
