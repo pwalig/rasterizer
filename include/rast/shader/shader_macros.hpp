@@ -1,5 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
 #include "../math/vec.hpp"
 #include "../is_discardable.hpp"
 #include "../simd.hpp"

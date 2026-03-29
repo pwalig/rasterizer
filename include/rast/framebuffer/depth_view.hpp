@@ -31,23 +31,42 @@ namespace rast::framebuffer {
 		}
 
 		inline depth_view(
-			color_format* ColorData, depth_format* DepthData, uint32_t Width, uint32_t Height, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) noexcept : sized2d_base(Width, Height), _color_data(ColorData), _depth_data(DepthData), near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) { }
+			color_format* ColorData, depth_format* DepthData,
+			size_type Width, size_type Height,
+			float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) noexcept : sized2d_base(Width, Height),
+			_color_data(ColorData), _depth_data(DepthData),
+			near(Near), far(Far), near_clip(NearClip), far_clip(FarClip) {}
 		
 		template <typename ImageLike1, typename ImageLike2>
 		inline depth_view(
-			ImageLike1& ColorImage, ImageLike2& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) : depth_view(ColorImage.data(), DepthImage.data(), ColorImage.width(), ColorImage.height(), Near, Far, NearClip, FarClip) { }
+			ImageLike1& ColorImage, ImageLike2& DepthImage,
+			float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : depth_view(
+			ColorImage.data(), DepthImage.data(),
+			ColorImage.width(), ColorImage.height(),
+			Near, Far, NearClip, FarClip
+		) {}
 
 		template <typename ImageLike>
 		inline depth_view(
-			color_format* ColorData, ImageLike& DepthImage, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) : depth_view(ColorData, DepthImage.data(), DepthImage.width(), DepthImage.height(), Near, Far, NearClip, FarClip) {}
+			color_format* ColorData, ImageLike& DepthImage,
+			float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : depth_view(
+			ColorData, DepthImage.data(),
+			DepthImage.width(), DepthImage.height(),
+			Near, Far, NearClip, FarClip
+		) {}
 
 		template <typename ImageLike>
 		inline depth_view(
-			ImageLike& ColorImage, depth_format* DepthData, float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
-		) : depth_view(ColorImage.data(), DepthData, ColorImage.width(), ColorImage.height(), Near, Far, NearClip, FarClip) { }
+			ImageLike& ColorImage, depth_format* DepthData,
+			float Near, float Far, float NearClip = 0.0f, float FarClip = 1.0f
+		) : depth_view(
+			ColorImage.data(), DepthData,
+			ColorImage.width(), ColorImage.height(),
+			Near, Far, NearClip, FarClip
+		) {}
 
 		template <typename VertexT, typename ...Args>
 		inline constexpr void operator()(
@@ -58,7 +77,7 @@ namespace rast::framebuffer {
 		) {
 			// depth test
 			depth_format& oldDepth = this->depth(x, y);
-			float depth = get_float_depth(triangle, partial_coefs);
+			float depth = interpol::depth(triangle, partial_coefs);
 			depth_format newDepth = float_depth_to_depth_format<depth_format>(depth);
 			if (DepthTest(newDepth, oldDepth)) {
 				oldDepth = newDepth;

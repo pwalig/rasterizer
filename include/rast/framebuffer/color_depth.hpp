@@ -15,14 +15,14 @@
 
 namespace rast::framebuffer {
 	template<
-		typename ColorFormat, typename DepthFormat,
+		typename ColorFormat,
 		auto FragmentShader,
 		auto AlphaBlend = default_alpha_blend::blend<ColorFormat>,
-		depth_test::function::type<DepthFormat> DepthTest = depth_test::less
+		depth_test::function_t<> DepthTest = depth_test::less
 	> class color_depth : public sized2d_base {
 	public:
 		using color_format = ColorFormat;
-		using depth_format = DepthFormat;
+		using depth_format = float;
 		using size_type = typename sized2d_base::size_type;
 
 	private:
@@ -36,63 +36,57 @@ namespace rast::framebuffer {
 		inline constexpr depth_format& depth(size_type x, size_type y) {
 			return _depth_data[data_offset(x, y)];
 		}
-		template <size_t Count>
-		inline math::_scalar<depth_format*, Count> depth_data(
-			math::u32x<Count> x, math::u32x<Count> y
-		) {
-			return math::vectorize<Count>(_depth_data) + (y * math::vectorize<Count>(_width) + x);
-		}
 
 	public:
-		inline constexpr color_depth(
+		constexpr color_depth(
 			color_format* ColorData, depth_format* DepthData,
 			size_type Width, size_type Height
 		) noexcept : sized2d_base(Width, Height), _color_data(ColorData), _depth_data(DepthData) { }
 
 		template <typename ImageLike1, typename ImageLike2>
-		inline constexpr color_depth(ImageLike1& ColorImage, ImageLike2& DepthImage) :
+		constexpr color_depth(ImageLike1& ColorImage, ImageLike2& DepthImage) :
 			color_depth(ColorImage.data(), DepthImage.data(), ColorImage.width(), ColorImage.height())
 		{
 			static_assert(std::is_same_v<typename ImageLike1::value_type, color_format>);
-			static_assert(std::is_same_v<typename ImageLike2::value_type, DepthFormat>);
+			static_assert(std::is_same_v<typename ImageLike2::value_type, depth_format>);
 			assert(ColorImage.width() == DepthImage.width());
 			assert(ColorImage.height() == DepthImage.height());
 		}
 
 		template <typename ImageLike>
-		inline constexpr color_depth(color_format* ColorData, ImageLike& DepthImage) :
+		constexpr color_depth(color_format* ColorData, ImageLike& DepthImage) :
 			color_depth(ColorData, DepthImage.data(), DepthImage.width(), DepthImage.height())
 		{
 			static_assert(std::is_same_v<typename ImageLike::value_type, depth_format>);
 		}
 		
 		template <typename ImageLike>
-		inline constexpr color_depth(ImageLike& ColorImage, depth_format* DepthData) :
+		constexpr color_depth(ImageLike& ColorImage, depth_format* DepthData) :
 			color_depth(ColorImage.data(), DepthData, ColorImage.width(), ColorImage.height())
 		{
 			static_assert(std::is_same_v<typename ImageLike::value_type, color_format>);
 		}
 
-		void clear_color(color_format clear_value) {
+		constexpr void clear_color(color_format clear_value) {
 			std::fill_n(_color_data, area(), clear_value);
 		}
 
-		void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
+		constexpr void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
 			std::fill_n(_depth_data, area(), clear_value);
 		}
 
 		template <typename VertexT, typename ...Args>
-		inline void operator()(
+		inline constexpr void operator()(
 			size_type x, size_type y,
 			const VertexT* triangle,
 			glm::vec3 partial_coefs,
 			Args&&... args
 		) {
 			depth_format& oldDepth = depth(x, y);
-			depth_format newDepth = get_depth<depth_format>(triangle, partial_coefs);
+			depth_format newDepth = interpol::depth(triangle, partial_coefs);
 			if (DepthTest(newDepth, oldDepth)) {
 				auto frag = FragmentShader(
-					interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::coefs::perspective(partial_coefs, triangle)),
+					interpol::perspective(triangle, partial_coefs),
 					std::forward<Args>(args)...
 				);
 				if constexpr (is_discardable_v<decltype(frag)>) {
@@ -123,28 +117,19 @@ namespace rast::framebuffer {
 			alignas(Count * sizeof(int)) float depths[Count];
 			for (size_t i = 0; i < Count; ++i) if (mask[static_cast<int>(i)]) depths[i] = _depth_data[offsets[i]];
 			simd::f32x_<Count> old_depth = simd::load<float, Count>(depths);
-			simd::f32x_<Count> new_depth = get_float_depth(
-				triangle[0].rastPos.z,
-				triangle[1].rastPos.z,
-				triangle[2].rastPos.z,
-				partial_coefs
-			);
+
+			simd::f32x_<Count> new_depth = interpol::depth(triangle, partial_coefs);
 			simd::f32x_<Count> depth_mask = new_depth < old_depth;
 			mask &= simd::reinterpret<int, 4>(depth_mask);
 			if (simd::movemask(mask)) {
 				simd::store(depths, new_depth);
 				auto colors = std::array<color_format, Count>();
-				for (size_t i = 0; i < Count; ++i) if (mask[static_cast<int>(i)]) colors[i] = _color_data[offsets[i]];
+				for (size_t i = 0; i < Count; ++i)
+					if (mask[static_cast<int>(i)])
+						colors[i] = _color_data[offsets[i]];
 				auto frag = FragmentShader(
-					interpol::interpolate(
-						triangle[0].data, triangle[1].data, triangle[2].data,
-						interpol::coefs::perspective(
-							partial_coefs,
-							triangle[0].rastPos.w,
-							triangle[1].rastPos.w,
-							triangle[2].rastPos.w
-						)
-					), std::forward<Args>(args)...
+					interpol::perspective(triangle, partial_coefs),
+					std::forward<Args>(args)...
 				);
 				if constexpr (is_discardable_v<decltype(frag)>) {
 					mask &= simd::i32x_<Count>(frag);

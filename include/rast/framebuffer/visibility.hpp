@@ -73,7 +73,7 @@ namespace rast::framebuffer {
 			size_t primitive_id
 		) {
 			depth_format& oldDepth = depth(x, y);
-			depth_format newDepth = get_depth<depth_format>(triangle, partial_coefs);
+			depth_format newDepth = interpol::depth(triangle, partial_coefs);
 			if (DepthTest(newDepth, oldDepth)) {
 				visibility_(x, y) = visibility_format{ primitive_id, draw_call_id, partial_coefs };
 				oldDepth = newDepth;
@@ -90,7 +90,7 @@ namespace rast::framebuffer {
 			visibility_format vd = _visibility_data[off];
 			const VertexT* triangle = triangles + (3 * vd.primitive_id);
 			image.data()[off] = FragmentShader(
-				interpol::interpolate(triangle[0].data, triangle[1].data, triangle[2].data, interpol::coefs::perspective(vd.interpolation_coefs, triangle)),
+				interpol::perspective(triangle, vd.interpolation_coefs),
 				(args[vd.draw_call_id] , ...)
 			);
 		}
@@ -111,12 +111,7 @@ namespace rast::framebuffer {
 			alignas(Count * sizeof(float)) float depths[Count];
 			for (size_t i = 0; i < Count; ++i) if (mask[static_cast<int>(i)]) depths[i] = _depth_data[offsets[i]];
 			simd::f32x_<Count> old_depth = simd::load<float, Count>(depths);
-			simd::f32x_<Count> new_depth = get_float_depth(
-				triangle[0].rastPos.z,
-				triangle[1].rastPos.z,
-				triangle[2].rastPos.z,
-				partial_coefs
-			);
+			simd::f32x_<Count> new_depth = interpol::depth(triangle, partial_coefs);
 			simd::f32x_<Count> depth_mask = new_depth < old_depth;
 			mask &= simd::reinterpret<int, 4>(depth_mask);
 			if (simd::movemask(mask)) {

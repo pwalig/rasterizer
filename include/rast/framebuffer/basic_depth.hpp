@@ -4,7 +4,7 @@
 
 namespace rast::framebuffer {
 	template <typename DepthFormat>
-	struct basic_depth : public sized2d_base {
+	struct basic_depth : sized2d_base {
 		using depth_format = DepthFormat;
 		using size_type = typename sized2d_base::size_type;
 		using value_type = depth_format;
@@ -17,21 +17,22 @@ namespace rast::framebuffer {
 		pointer _depth_data;
 
 	public:
-		inline constexpr basic_depth(pointer DepthData, size_type Width, size_type Height) noexcept :
-			sized2d_base(Width, Height), _depth_data(DepthData) { }
+		constexpr basic_depth(
+			pointer DepthData, size_type Width, size_type Height
+		) noexcept : sized2d_base(Width, Height), _depth_data(DepthData) {}
 
 		template <typename ImageLike>
-		inline constexpr basic_depth(ImageLike& DepthImage) noexcept : 
+		constexpr basic_depth(ImageLike& DepthImage) noexcept : 
 			basic_depth(DepthImage.data(), DepthImage.width(), DepthImage.height()) {}
 
-		inline constexpr reference depth(size_type x, size_type y) {
+		constexpr reference depth(size_type x, size_type y) {
 			return _depth_data[data_offset(x, y)];
 		}
 
-		inline constexpr const_reference depth(size_type x, size_type y) const {
+		constexpr const_reference depth(size_type x, size_type y) const {
 			return _depth_data[data_offset(x, y)];
 		}
-		inline void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
+		void clear_depth_buffer(depth_format clear_value = std::numeric_limits<depth_format>::max()) {
 			std::fill_n(_depth_data, area(), clear_value);
 		}
 	};

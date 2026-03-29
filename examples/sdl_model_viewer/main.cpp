@@ -159,11 +159,11 @@ struct application {
 	using DepthBuffer = rast::image<depth_format>;
 	using color_format = rast::color::rgba8;
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
-	using Framebuffer = rast::framebuffer::color_depth<color_format, depth_format, rast::shader::lambert_textured::fragment::simd_shade<4>, rast::shader::lambert_textured::fragment::simd_blend<4>, rast::depth_test::less>;
+	using Framebuffer = rast::framebuffer::color_depth<color_format, rast::shader::lambert_textured::fragment::simd_shade<4>, rast::shader::lambert_textured::fragment::simd_blend<4>, rast::depth_test::less>;
 
 	using g_format = rast::shader::deferred::first_pass::fragment::output;
 	using GBuffer = rast::image<g_format>;
-	using GFramebuffer = rast::framebuffer::color_depth<g_format, depth_format, rast::shader::deferred::first_pass::fragment::shade, rast::alpha_blend::replace<g_format>, rast::depth_test::less>;
+	using GFramebuffer = rast::framebuffer::color_depth<g_format, rast::shader::deferred::first_pass::fragment::shade, rast::alpha_blend::replace<g_format>, rast::depth_test::less>;
 	GBuffer g_buffer;
 
 	SDL_Window *window = NULL;

@@ -43,6 +43,8 @@ namespace rast::depth_test {
 		template <typename depth_format>
 		using type = bool (*)(depth_format, depth_format);
 	}
+	template <typename DepthFormat = float>
+	using function_t = decltype(less(std::declval<DepthFormat>(), std::declval<DepthFormat>()))(*)(DepthFormat, DepthFormat);
 
 	template <typename depth_format>
 	inline const std::vector<function::type<depth_format>> functions = {

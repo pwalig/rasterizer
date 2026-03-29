@@ -9,29 +9,34 @@ namespace rast::framebuffer {
 	template <typename ColorFormat,
 		auto FragmentShader,
 		auto AlphaBlend = default_alpha_blend::blend
-	> struct color : public sized2d_base {
+	> struct color : sized2d_base {
 		using color_format = ColorFormat;
 		using size_type = typename sized2d_base::size_type;
 
 	private:
 		color_format* _color_data;
 
-		inline constexpr color_format& at(uint32_t x, uint32_t y) { return _color_data[y * _width + x]; }
+		constexpr color_format& at(size_type x, size_type y) {
+			return _color_data[y * _width + x];
+		}
 
 	public:
-		inline constexpr color(color_format* ColorData, uint32_t Width, uint32_t Height) : noexcept
-			_color_data(ColorData), _width(Width), _height(Height) { }
-		template <typename ImageLike>
-		inline constexpr color(ImageLike& ColorImage) :
-			color(ColorImage.data(), ColorImage.width(), ColorImage.height()) {}
+		constexpr color(
+			color_format* ColorData, size_type Width, size_type Height
+		) : noexcept _color_data(ColorData), _width(Width), _height(Height) {}
 
-		void clear(const color& clear_value) {
+		template <typename ImageLike>
+		constexpr color(ImageLike& ColorImage) : color(
+			ColorImage.data(), ColorImage.width(), ColorImage.height()
+		) {}
+
+		constexpr void clear(const color& clear_value) {
 			std::fill_n(_color_data, area(), clear_value);
 		}
 
 		template <typename VertexT, typename ...Args>
 		inline constexpr void operator()(
-			uint32_t x, uint32_t y,
+			size_type x, size_type y,
 			const VertexT* triangle,
 			glm::vec3 partial_coefs,
 			Args&&... args
