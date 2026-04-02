@@ -79,16 +79,16 @@ namespace rast::framebuffer {
 				oldDepth = newDepth;
 			}
 		}
-		template <auto FragmentShader, typename ImageLike, typename VertexT, typename ...Args>
+		template <auto FragmentShader, typename ImageLike, typename ...Args>
 		inline void resolve(
 			ImageLike& image,
 			size_type x, size_type y,
-			const VertexT* triangles,
+			auto vertex_buffer,
 			const Args*... args
 		) {
 			size_type off = y * _width + x;
 			visibility_format vd = _visibility_data[off];
-			const VertexT* triangle = triangles + (3 * vd.primitive_id);
+			const auto* triangle = vertex_buffer[vd.draw_call_id] + (3 * vd.primitive_id);
 			image.data()[off] = FragmentShader(
 				interpol::perspective(triangle, vd.interpolation_coefs),
 				(args[vd.draw_call_id] , ...)

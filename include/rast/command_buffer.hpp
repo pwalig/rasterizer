@@ -9,6 +9,30 @@
 #include "function_traits.hpp"
 
 namespace rast {
+	inline void parallelize_by_tile(auto& framebuffer, auto& tp, auto callable) {
+		float stride = (float)framebuffer.width() / tp.thread_count();
+		for (size_t i = 0; i < tp.thread_count(); ++i) {
+			tp.enque([&framebuffer, i, stride, callable]() {
+				callable(framebuffer, rast::tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height()));
+			});
+		}
+	}
+
+	inline void process_parallelized_by_tile(auto& framebuffer, auto& tp, auto callable) {
+		parallelize_by_tile(
+			framebuffer,
+			tp,
+			[&framebuffer, call = std::move(callable)](decltype(framebuffer)& framebuf, tile t) {
+				renderer::process_tile(
+					t,
+					[&framebuffer, call = std::move(call)](uint32_t x, uint32_t y) {
+						call(framebuffer, x, y);
+					}
+				);
+			}
+		);
+	}
+
 	template <typename Shader, uint8_t Extensions = raster::extensions::none>
 	class command_buffer {
 		using vertex_output = function_return_type<decltype(Shader::vertex::shade)>;
@@ -21,6 +45,12 @@ namespace rast {
 			range<vertex_output> raster_range;
 			const typename Shader::uniform_buffer ubo;
 			const viewport viewport;
+		};
+		struct intermediate_buffer_view {
+			std::vector<command>& commands;
+			vertex_output* operator[](size_t draw_call_id) {
+				return commands[draw_call_id].raster_range.begin;
+			}
 		};
 
 		std::vector<command> commands;
@@ -69,25 +99,36 @@ namespace rast {
 
 		template<typename Rasterizer, typename Clipper, cull Cull = cull_default>
 		void submit_fragment(auto& framebuffer, auto& tp, const auto&... args) {
-			float stride = (float)framebuffer.width() / tp.thread_count();
-			for (size_t i = 0; i < tp.thread_count(); ++i) {
-				tp.enque([&framebuffer, &cmds = (this->commands), i, stride, &args...]() {
-					rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
-					if constexpr (Extensions & raster::extensions::draw_call_id) {
-						size_t draw_call_id = 0;
-						for (const command& cmd : cmds)
+			parallelize_by_tile(framebuffer, tp,
+				[&cmds = (this->commands), &args...](auto& framebuf, rast::tile tile) {
+					size_t draw_call_id = 0;
+					for (const command& cmd : cmds) {
+						auto rasterize = [&](auto&... inner_args) {
 							Rasterizer::template rasterize<Cull, Extensions>(
-								framebuffer, cmd.raster_range.begin, cmd.raster_range.end,
-								cmd.viewport, tile, cmd.ubo, args..., draw_call_id++
+								framebuf, cmd.raster_range.begin, cmd.raster_range.end,
+								cmd.viewport, tile, inner_args...
 							);
+						};
+						if constexpr (Extensions & raster::extensions::visibility)
+							rasterize(args..., draw_call_id++);
+						else if constexpr (Extensions & raster::extensions::draw_call_id)
+							rasterize(cmd.ubo, args..., draw_call_id++);
+						else
+							rasterize(cmd.ubo, args...);
 					}
-					else for (const command& cmd : cmds)
-							Rasterizer::template rasterize<Cull, Extensions>(
-								framebuffer, cmd.raster_range.begin, cmd.raster_range.end,
-								cmd.viewport, tile, cmd.ubo, args...
-							);
 				});
-			}
+		}
+
+		template<typename Rasterizer, typename Clipper, cull Cull = cull_default>
+		void resolve_visibility_buffer(auto& framebuffer, auto& result_image, auto& tp, const auto&... args) {
+			parallelize_by_tile(framebuffer, tp,
+				[&cmds = (this->commands), &result_image, &args...](auto& framebuf, rast::tile tile) {
+					renderer::process_tile(tile, [&framebuf, &result_image, &cmds, &args...](uint32_t x, uint32_t y) {
+						framebuf.template resolve<Shader::fragment::shade>(
+							result_image, x, y, intermediate_buffer_view{ cmds }, args...
+						);
+					});
+				});
 		}
 
 		template<typename Rasterizer, typename Clipper, cull Cull = cull_default>
@@ -171,20 +212,17 @@ namespace rast {
 		}
 	};
 
-	template <auto FragmentShader, typename ImageView>
+	template <auto FragmentShader>
 	inline void shade_screen_quad(
-		ImageView& framebuffer, auto& tp, const auto&... args
+		auto& framebuffer, auto& tp, const auto&... args
 	) {
-		float stride = (float)framebuffer.width() / tp.thread_count();
-		for (size_t i = 0; i < tp.thread_count(); ++i) {
-			tp.enque([&framebuffer, &args..., i, stride]() {
-				rast::tile tile((int)(i * stride), 0, (int)((i + 1) * stride), framebuffer.height());
+		parallelize_by_tile(framebuffer, tp,
+			[&args...](auto& framebuf, rast::tile t) {
 				rast::renderer::draw_screen_quad<FragmentShader>(
-					framebuffer,
-					rast::viewport(0, 0, framebuffer.width(), framebuffer.height()),
-					tile, args...
+					framebuf,
+					rast::viewport(0, 0, framebuf.width(), framebuf.height()),
+					t, args...
 				);
 			});
-		}
 	}
 }

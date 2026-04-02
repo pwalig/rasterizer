@@ -16,6 +16,7 @@
 #include "rast/shader/lambert_textured.hpp"
 #include "rast/shader/deferred.hpp"
 #include "rast/framebuffer/color_depth.hpp"
+#include "rast/framebuffer/visibility.hpp"
 #include "rast/command_buffer.hpp"
 #include "rast/clip/sutherland_hodgman.hpp"
 #include "fly_cam.hpp"
@@ -161,6 +162,9 @@ struct application {
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 	using Framebuffer = rast::framebuffer::color_depth<color_format, rast::shader::lambert_textured::fragment::simd_shade<4>, rast::shader::lambert_textured::fragment::simd_blend<4>, rast::depth_test::less>;
 
+	using visibility_format = rast::framebuffer::visibility<>::visibility_format;
+	using VisibilityBuffer = rast::image<visibility_format>;
+
 	using g_format = rast::shader::deferred::first_pass::fragment::output;
 	using GBuffer = rast::image<g_format>;
 	using GFramebuffer = rast::framebuffer::color_depth<g_format, rast::shader::deferred::first_pass::fragment::shade, rast::alpha_blend::replace<g_format>, rast::depth_test::less>;
@@ -178,9 +182,11 @@ struct application {
 	scene scene;
 
 	rast::image<depth_format> depth_buffer;
+	VisibilityBuffer visibility_buffer;
+	std::vector<rast::shader::lambert_textured::uniform_buffer> uniform_buffer_array;
 
-	inline const static bool is_deffered = false;
-	inline const static bool render_on_demand_only = true;
+	inline static constexpr bool is_deffered = false;
+	inline static constexpr bool render_on_demand_only = true;
 	bool request_frame = true;
 
 	template <typename Shader, typename Framebuffer, typename ThreadPool>
@@ -196,7 +202,10 @@ struct application {
 		scene.draw<Shader>(PV,
 			[viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
 			(const scene::mesh_type& mesh, const typename Shader::uniform_buffer& ubo)
-			{ cmd_buffer.draw_indexed(mesh, ubo, viewport); }
+			{
+				//uniform_buffer_array.push_back(ubo);
+				cmd_buffer.draw_indexed(mesh, ubo, viewport);
+			}
 		);
 		cmd_buffer.template submit<rasterizer, clipper>(framebuf, tp);
 	}
@@ -229,6 +238,7 @@ SDL_AppResult SDL_AppInit([[maybe_unused]]void **appstate, int argc, char ** arg
 	app.V = glm::lookAt(glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	app.depth_buffer = rast::image<application::depth_format>(width, height);
+	app.visibility_buffer = rast::image<application::visibility_format>(width, height);
 	if constexpr(application::is_deffered) app.g_buffer = application::GBuffer(width, height);
 	
 	if (argc == 1) app.scene = scene::assimp_load("scene.gltf");
@@ -251,6 +261,7 @@ SDL_AppResult SDL_AppEvent([[maybe_unused]]void *appstate, SDL_Event *event)
 		app.P = glm::perspective(glm::radians(app.fov), (float)event->window.data1 / (float)event->window.data2, app.near, app.far);
 
 		app.depth_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
+		app.visibility_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
 		if constexpr(application::is_deffered) app.g_buffer.resize<rast::resize_filter::dont_care>(event->window.data1, event->window.data2);
 		app.request_frame = true;
 	}

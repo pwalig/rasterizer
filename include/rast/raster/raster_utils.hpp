@@ -65,7 +65,7 @@ namespace rast::raster {
 		simd::i32x_<Count> zero = simd::setzero<int, Count>();
 		// 0 - ((y > 0) | ((y == 0) & (x < 0)))
 		// subtracting from 0 to turn -1 into 1
-		// because cmp instructions fill register with ones or zeroes
+		// because cmp instructions fill register with ones if true
 		// register of just ones is -1 if treated as signed
 		return zero - ((y > zero) | ((y == zero) & (x < zero)));
 	}
@@ -98,7 +98,8 @@ namespace rast::raster {
 		inline constexpr uint8_t clockwise = 2;
 		inline constexpr uint8_t primitive_id = 4;
 		inline constexpr uint8_t draw_call_id = 8;
-		inline constexpr uint8_t instance = 16;
+		inline constexpr uint8_t visibility = 16 | draw_call_id | primitive_id;
+		inline constexpr uint8_t instance = 32;
 	}
 
 	template <auto RasterizeOne, cull Cull = cull_default, uint8_t Extensions = extensions::none,
@@ -162,14 +163,20 @@ namespace rast::raster {
 				}
 				glm::ivec3 Cy = Dx * (glm::ivec3(min.y << 4) - ySrc) - fill_convention(Dx, Dy);
 				glm::ivec3 Cx = Dy * (glm::ivec3(min.x << 4) - xSrc);
+				auto rasterize_one = [&](auto... inner_args) {
+					RasterizeOne(output, vertices,
+						Cx, Cy, Dx * 16, Dy * 16, min, max,
+						args..., inner_args...
+					);
+				};
 				if constexpr (Extensions & extensions::primitive_id) {
 					if constexpr (Extensions & extensions::clockwise)
-						RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args..., primitive_id, clockwise);
-					else RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args..., primitive_id);
+						rasterize_one(primitive_id, clockwise);
+					else rasterize_one(primitive_id);
 				} else {
 					if constexpr (Extensions & extensions::clockwise)
-						RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args..., clockwise);
-					else RasterizeOne(output, vertices, Cx, Cy, Dx * 16, Dy * 16, min, max, args...);
+						rasterize_one(clockwise);
+					else rasterize_one();
 				}
 			}
 		}

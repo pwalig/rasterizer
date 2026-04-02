@@ -238,6 +238,19 @@ namespace rast {
 			);
 		}
 
+		inline constexpr static void process_tile(
+			const tile& t,
+			auto callable
+		) {
+			glm::vec<2, uint32_t> min = t.min / 16;
+			glm::vec<2, uint32_t> max = t.max / 16;
+			for (uint32_t y = min.y; y < max.y; ++y) {
+				for (uint32_t x = min.x; x < max.x; ++x) {
+					callable(x, y);
+				}
+			}
+		}
+
 		template <auto FragmentShader, typename ImageView, typename ...Args>
 		inline static void draw_screen_quad(
 			ImageView& imageView,
