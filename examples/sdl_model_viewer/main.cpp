@@ -162,8 +162,9 @@ struct application {
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 	using Framebuffer = rast::framebuffer::color_depth<color_format, rast::shader::lambert_textured::fragment::simd_shade<4>, rast::shader::lambert_textured::fragment::simd_blend<4>, rast::depth_test::less>;
 
-	using visibility_format = rast::framebuffer::visibility<>::visibility_format;
+	using visibility_format = rast::framebuffer::visibility<color_format>::visibility_format;
 	using VisibilityBuffer = rast::image<visibility_format>;
+	using VisibilityFramebuffer = rast::framebuffer::visibility<color_format>;
 
 	using g_format = rast::shader::deferred::first_pass::fragment::output;
 	using GBuffer = rast::image<g_format>;
@@ -198,16 +199,19 @@ struct application {
 		using rasterizer = rast::raster::vbbox_scan;
 		static rast::command_buffer<Shader> cmd_buffer;
 		cmd_buffer.reset();
+		uniform_buffer_array.clear();
 		glm::mat4 PV = P * V;
 		scene.draw<Shader>(PV,
-			[viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
+			[&ubos = (this->uniform_buffer_array), viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
 			(const scene::mesh_type& mesh, const typename Shader::uniform_buffer& ubo)
 			{
-				//uniform_buffer_array.push_back(ubo);
 				cmd_buffer.draw_indexed(mesh, ubo, viewport);
+				ubos.push_back(ubo);
 			}
 		);
 		cmd_buffer.template submit<rasterizer, clipper>(framebuf, tp);
+		//tp.wait();
+		//cmd_buffer.resolve_visibility_buffer(framebuf, , tp, uniform_buffer_array.data());
 	}
 };
 
@@ -378,6 +382,10 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 
 		// no depth
 		//rast::framebuffer::rgba8 framebuf((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
+		
+		// visibility
+		//application::VisibilityFramebuffer framebuf(app.visibility_buffer, app.depth_buffer);
+		//framebuf.clear_depth_buffer();
 
 		app.draw<rast::shader::lambert_textured>(framebuf, tp);
 	}

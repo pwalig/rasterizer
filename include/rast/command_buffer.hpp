@@ -119,7 +119,6 @@ namespace rast {
 				});
 		}
 
-		template<typename Rasterizer, typename Clipper, cull Cull = cull_default>
 		void resolve_visibility_buffer(auto& framebuffer, auto& result_image, auto& tp, const auto&... args) {
 			parallelize_by_tile(framebuffer, tp,
 				[&cmds = (this->commands), &result_image, &args...](auto& framebuf, rast::tile tile) {

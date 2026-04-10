@@ -9,11 +9,13 @@
 #include "utils.hpp"
 #include "basic_depth.hpp"
 #include "../simd.hpp"
+#include "../image.hpp"
 
 namespace rast::framebuffer {
-	template <depth_test::function::type<float> DepthTest = depth_test::less>
-	class visibility : public basic_depth<float> {
-	public:
+	template<typename ColorFormat,
+		depth_test::function::type<float> DepthTest = depth_test::less>
+	struct visibility : public basic_depth<float> {
+		using color_format = ColorFormat;
 		struct visibility_format {
 			size_t primitive_id;
 			uint32_t draw_call_id;
@@ -23,6 +25,7 @@ namespace rast::framebuffer {
 		using size_type = typename sized2d_base::size_type;
 
 	private:
+		color_format* _color_data;
 		visibility_format* _visibility_data;
 
 	protected:
@@ -32,9 +35,9 @@ namespace rast::framebuffer {
 
 	public:
 		inline constexpr visibility(
-			visibility_format* ColorData, depth_format* DepthData,
+			depth_format* ColorData, visibility_format* VisibilityData, depth_format* DepthData,
 			size_type Width, size_type Height
-		) noexcept : basic_depth<float>(DepthData, Width, Height), _visibility_data(ColorData) { }
+		) noexcept : basic_depth<float>(DepthData, Width, Height), _visibility_data(VisibilityData) { }
 
 		template <typename ImageLike1, typename ImageLike2>
 		inline constexpr visibility(ImageLike1& VisibilityImage, ImageLike2& DepthImage) :
