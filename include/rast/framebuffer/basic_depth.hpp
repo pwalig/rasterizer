@@ -13,7 +13,7 @@ namespace rast::framebuffer {
 		using const_reference = std::add_lvalue_reference_t<std::add_const_t<value_type>>;
 		using const_pointer = std::add_pointer_t<std::add_const_t<value_type>>;
 
-	private:
+	protected:
 		pointer _depth_data;
 
 	public:

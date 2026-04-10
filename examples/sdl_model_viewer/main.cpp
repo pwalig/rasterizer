@@ -162,9 +162,9 @@ struct application {
 	using blending = rast::alpha_blend::func<rast::alpha_blend::factor::src_alpha, rast::alpha_blend::factor::one_minus_src_alpha, rast::alpha_blend::equation::add>;
 	using Framebuffer = rast::framebuffer::color_depth<color_format, rast::shader::lambert_textured::fragment::simd_shade<4>, rast::shader::lambert_textured::fragment::simd_blend<4>, rast::depth_test::less>;
 
-	using visibility_format = rast::framebuffer::visibility<color_format>::visibility_format;
+	using visibility_format = rast::framebuffer::visibility<>::visibility_format;
 	using VisibilityBuffer = rast::image<visibility_format>;
-	using VisibilityFramebuffer = rast::framebuffer::visibility<color_format>;
+	using VisibilityFramebuffer = rast::framebuffer::visibility<>;
 
 	using g_format = rast::shader::deferred::first_pass::fragment::output;
 	using GBuffer = rast::image<g_format>;
@@ -186,9 +186,37 @@ struct application {
 	VisibilityBuffer visibility_buffer;
 	std::vector<rast::shader::lambert_textured::uniform_buffer> uniform_buffer_array;
 
+	enum struct DrawMode { forward, depth_view, deffered, visibility };
+	inline static constexpr DrawMode draw_mode = DrawMode::visibility;
+
 	inline static constexpr bool is_deffered = false;
 	inline static constexpr bool render_on_demand_only = true;
 	bool request_frame = true;
+
+	template <typename Shader>
+	inline void draw_with_visibility(
+		auto& visframbuf,
+		auto& colorview,
+		auto& tp
+	) {
+		using clipper = rast::sutherland_hodgman;
+		using rasterizer = rast::raster::vbbox_scan;
+		static rast::command_buffer<Shader, rast::raster::extensions::visibility> cmd_buffer;
+		cmd_buffer.reset();
+		uniform_buffer_array.clear();
+		glm::mat4 PV = P * V;
+		scene.draw<Shader>(PV,
+			[&ubos = (this->uniform_buffer_array), viewport = rast::viewport(0, 0, visframbuf.width(), visframbuf.height())]
+			(const scene::mesh_type& mesh, const typename Shader::uniform_buffer& ubo)
+			{
+				cmd_buffer.draw_indexed(mesh, ubo, viewport);
+				ubos.push_back(ubo);
+			}
+		);
+		cmd_buffer.template submit<rasterizer, clipper>(visframbuf, tp);
+		tp.wait();
+		cmd_buffer.resolve_visibility_buffer(visframbuf, colorview, tp, uniform_buffer_array.data());
+	}
 
 	template <typename Shader, typename Framebuffer, typename ThreadPool>
 	inline void draw(
@@ -199,19 +227,15 @@ struct application {
 		using rasterizer = rast::raster::vbbox_scan;
 		static rast::command_buffer<Shader> cmd_buffer;
 		cmd_buffer.reset();
-		uniform_buffer_array.clear();
 		glm::mat4 PV = P * V;
 		scene.draw<Shader>(PV,
-			[&ubos = (this->uniform_buffer_array), viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
+			[viewport = rast::viewport(0, 0, framebuf.width(), framebuf.height())]
 			(const scene::mesh_type& mesh, const typename Shader::uniform_buffer& ubo)
 			{
 				cmd_buffer.draw_indexed(mesh, ubo, viewport);
-				ubos.push_back(ubo);
 			}
 		);
 		cmd_buffer.template submit<rasterizer, clipper>(framebuf, tp);
-		//tp.wait();
-		//cmd_buffer.resolve_visibility_buffer(framebuf, , tp, uniform_buffer_array.data());
 	}
 };
 
@@ -350,7 +374,7 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 
 	// prepare framebuffers
 	// deffered
-	if constexpr (application::is_deffered) {
+	if constexpr (application::draw_mode == application::DrawMode::deffered) {
 		application::GFramebuffer framebuf(app.g_buffer, app.depth_buffer);
 		framebuf.clear_depth_buffer();
 		framebuf.clear_color({glm::vec3(0.0f), rast::color::rgba8(0, 0, 0, 255)});
@@ -366,7 +390,7 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 		ubo.texture = rast::sampler<application::g_format>(app.g_buffer);
 		rast::shade_screen_quad<rast::shader::deferred::second_pass::fragment::shade>(out_framebuf, tp, ubo);
 	}
-	else {
+	else if constexpr (application::draw_mode == application::DrawMode::forward) {
 		// forward
 		application::Framebuffer framebuf((rast::color::rgba8*)app.surface->pixels, app.depth_buffer);
 		framebuf.clear_depth_buffer();
@@ -383,11 +407,15 @@ SDL_AppResult SDL_AppIterate([[maybe_unused]]void *appstate)
 		// no depth
 		//rast::framebuffer::rgba8 framebuf((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
 		
-		// visibility
-		//application::VisibilityFramebuffer framebuf(app.visibility_buffer, app.depth_buffer);
-		//framebuf.clear_depth_buffer();
-
 		app.draw<rast::shader::lambert_textured>(framebuf, tp);
+	}
+	else if constexpr (application::draw_mode == application::DrawMode::visibility) {
+		application::VisibilityFramebuffer framebuf(app.visibility_buffer, app.depth_buffer);
+		framebuf.clear_visibility();
+		framebuf.clear_depth_buffer();
+		auto colorview = rast::image<rast::color::rgba8>::view((rast::color::rgba8*)app.surface->pixels, app.surface->w, app.surface->h);
+		colorview.clear(rast::color::rgba8(25, 25, 50, 255));
+		app.draw_with_visibility<rast::shader::lambert_textured>(framebuf, colorview, tp);
 	}
 
 	// present to screen

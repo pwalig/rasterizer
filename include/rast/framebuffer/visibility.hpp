@@ -6,26 +6,27 @@
 
 #include "../interpolation.hpp"
 #include "../depth_test.hpp"
-#include "utils.hpp"
 #include "basic_depth.hpp"
 #include "../simd.hpp"
-#include "../image.hpp"
 
 namespace rast::framebuffer {
-	template<typename ColorFormat,
-		depth_test::function::type<float> DepthTest = depth_test::less>
+	struct visibility_format {
+		size_t primitive_id;
+		uint32_t draw_call_id;
+		glm::vec3 interpolation_coefs;
+
+		static const visibility_format clear_value;
+		inline explicit operator bool() const { return draw_call_id != std::numeric_limits<uint32_t>::max(); }
+	};
+	inline constexpr visibility_format visibility_format::clear_value = { std::numeric_limits<size_t>::max(), std::numeric_limits<uint32_t>::max(), glm::vec3() };
+
+	template<depth_test::function::type<float> DepthTest = depth_test::less>
 	struct visibility : public basic_depth<float> {
-		using color_format = ColorFormat;
-		struct visibility_format {
-			size_t primitive_id;
-			uint32_t draw_call_id;
-			glm::vec3 interpolation_coefs;
-		};
 		using depth_format = float;
 		using size_type = typename sized2d_base::size_type;
+		using visibility_format = visibility_format;
 
 	private:
-		color_format* _color_data;
 		visibility_format* _visibility_data;
 
 	protected:
@@ -35,7 +36,7 @@ namespace rast::framebuffer {
 
 	public:
 		inline constexpr visibility(
-			depth_format* ColorData, visibility_format* VisibilityData, depth_format* DepthData,
+			visibility_format* VisibilityData, depth_format* DepthData,
 			size_type Width, size_type Height
 		) noexcept : basic_depth<float>(DepthData, Width, Height), _visibility_data(VisibilityData) { }
 
@@ -63,7 +64,7 @@ namespace rast::framebuffer {
 			static_assert(std::is_same_v<typename ImageLike::value_type, visibility_format>);
 		}
 
-		inline void clear_visibility(visibility_format clear_value = std::numeric_limits<visibility_format>::max()) {
+		inline void clear_visibility(visibility_format clear_value = visibility_format::clear_value) {
 			std::fill_n(_visibility_data, area(), clear_value);
 		}
 
@@ -72,7 +73,7 @@ namespace rast::framebuffer {
 			size_type x, size_type y,
 			const VertexT* triangle,
 			glm::vec3 partial_coefs,
-			uint32_t draw_call_id,
+			size_t draw_call_id,
 			size_t primitive_id
 		) {
 			depth_format& oldDepth = depth(x, y);
@@ -90,12 +91,15 @@ namespace rast::framebuffer {
 			const Args*... args
 		) {
 			size_type off = y * _width + x;
-			visibility_format vd = _visibility_data[off];
-			const auto* triangle = vertex_buffer[vd.draw_call_id] + (3 * vd.primitive_id);
-			image.data()[off] = FragmentShader(
-				interpol::perspective(triangle, vd.interpolation_coefs),
-				(args[vd.draw_call_id] , ...)
-			);
+			const visibility_format& vd = _visibility_data[off];
+			if (vd) {
+				const auto* triangle = vertex_buffer[vd.draw_call_id] + (3 * vd.primitive_id);
+				using color_format = ImageLike::value_type;
+				image.data()[off] = FragmentShader(
+					interpol::perspective(triangle, vd.interpolation_coefs),
+					(args[vd.draw_call_id] , ...)
+				);
+			}
 		}
 		template <size_t Count, typename VertexT, typename ...Args>
 		inline void draw(
@@ -103,7 +107,7 @@ namespace rast::framebuffer {
 			const VertexT* triangle,
 			glm::vec<3, simd::f32x_<Count>> partial_coefs,
 			simd::i32x_<Count> mask,
-			uint32_t draw_call_id,
+			size_t draw_call_id,
 			size_t primitive_id
 		) {
 			simd::u32x_<Count> off = data_offset(simd::cvt<size_type>(x), simd::cvt<size_type>(y));
@@ -119,10 +123,10 @@ namespace rast::framebuffer {
 			mask &= simd::reinterpret<int, 4>(depth_mask);
 			if (simd::movemask(mask)) {
 				simd::store(depths, new_depth);
-				for (size_t i = 0; i < Count; ++i) {
+				for (int i = 0; i < static_cast<int>(Count); ++i) {
 					if (mask[static_cast<int>(i)]) {
 						_visibility_data[offsets[i]] = visibility_format{
-							primitive_id, draw_call_id,
+							primitive_id, static_cast<uint32_t>(draw_call_id),
 							glm::vec3(partial_coefs.x[i], partial_coefs.y[i], partial_coefs.z[i])
 						};
 						_depth_data[offsets[i]] = depths[i];
@@ -136,7 +140,7 @@ namespace rast::framebuffer {
 			const VertexT* triangle,
 			glm::vec<3, simd::f32x4> partial_coefs,
 			simd::i32x4 mask,
-			uint32_t draw_call_id,
+			size_t draw_call_id,
 			size_t primitive_id
 		) {
 			draw<4>(x, y, triangle, partial_coefs, mask, draw_call_id, primitive_id);
@@ -147,7 +151,7 @@ namespace rast::framebuffer {
 			const VertexT* triangle,
 			glm::vec<3, simd::f32x8> partial_coefs,
 			simd::i32x8 mask,
-			uint32_t draw_call_id,
+			size_t draw_call_id,
 			size_t primitive_id
 		) {
 			draw<8>(x, y, triangle, partial_coefs, mask, draw_call_id, primitive_id);

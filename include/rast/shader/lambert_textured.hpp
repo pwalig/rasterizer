@@ -166,7 +166,24 @@ namespace rast::shader {
 				return simd_f32_to_u8(color);
 			}
 
-			inline static output shade(const input& frag, const uniform_buffer& uniforms) {
+			inline static rast::color::rgba8 shade(const input& frag, const uniform_buffer& uniforms) {
+				using world = global_uniforms;
+				glm::vec3 N = glm::normalize(frag.normal);
+				float nl = std::clamp(glm::dot(N, world::light_direction), 0.0f, 1.0f);
+				glm::vec4 color;
+				if (uniforms.texture) {
+					//color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y));
+					if (linear) color = uniforms.texture.template sample_linear<color_interpolator>(frag.uv.x, frag.uv.y, mip_to_sample);
+					else color = convert::uint_to_f01<uint8_t, float>(uniforms.texture.sample_nearest(frag.uv.x, frag.uv.y, mip_to_sample));
+				}
+				else color = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+				color.r *= (nl * world::light_color.r + world::ambient.r);
+				color.g *= (nl * world::light_color.g + world::ambient.g);
+				color.b *= (nl * world::light_color.b + world::ambient.b);
+				color.a = 1.0f;
+				return convert::f01_to_uint<float, uint8_t>(color);
+			}
+			inline static output shade1(const input& frag, const uniform_buffer& uniforms) {
 				using world = global_uniforms;
 				glm::vec3 N = glm::normalize(frag.normal);
 				float nl = std::clamp(glm::dot(N, world::light_direction), 0.0f, 1.0f);

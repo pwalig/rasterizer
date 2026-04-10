@@ -48,7 +48,7 @@ namespace rast {
 		};
 		struct intermediate_buffer_view {
 			std::vector<command>& commands;
-			vertex_output* operator[](size_t draw_call_id) {
+			const vertex_output* operator[](size_t draw_call_id) {
 				return commands[draw_call_id].raster_range.begin;
 			}
 		};
@@ -103,10 +103,10 @@ namespace rast {
 				[&cmds = (this->commands), &args...](auto& framebuf, rast::tile tile) {
 					size_t draw_call_id = 0;
 					for (const command& cmd : cmds) {
-						auto rasterize = [&](auto&... inner_args) {
+						auto rasterize = [&](auto&&... inner_args) {
 							Rasterizer::template rasterize<Cull, Extensions>(
 								framebuf, cmd.raster_range.begin, cmd.raster_range.end,
-								cmd.viewport, tile, inner_args...
+								cmd.viewport, tile, std::forward<decltype(inner_args)>(inner_args)...
 							);
 						};
 						if constexpr (Extensions & raster::extensions::visibility)
